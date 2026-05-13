@@ -14,16 +14,370 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      credit_transactions: {
+        Row: {
+          created_at: string
+          delta: number
+          id: string
+          reason: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          delta: number
+          id?: string
+          reason: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          delta?: number
+          id?: string
+          reason?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      message_logs: {
+        Row: {
+          chat_id: number
+          created_at: string
+          error: string | null
+          id: string
+          ok: boolean
+          scheduled_message_id: string
+          telegram_message_id: number | null
+          user_id: string
+        }
+        Insert: {
+          chat_id: number
+          created_at?: string
+          error?: string | null
+          id?: string
+          ok: boolean
+          scheduled_message_id: string
+          telegram_message_id?: number | null
+          user_id: string
+        }
+        Update: {
+          chat_id?: number
+          created_at?: string
+          error?: string | null
+          id?: string
+          ok?: boolean
+          scheduled_message_id?: string
+          telegram_message_id?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_logs_scheduled_message_id_fkey"
+            columns: ["scheduled_message_id"]
+            isOneToOne: false
+            referencedRelation: "scheduled_messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      premium_emojis: {
+        Row: {
+          created_at: string
+          custom_emoji_id: string
+          id: string
+          name: string
+          preview_char: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          custom_emoji_id: string
+          id?: string
+          name: string
+          preview_char?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          custom_emoji_id?: string
+          id?: string
+          name?: string
+          preview_char?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          credits: number
+          display_name: string | null
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          credits?: number
+          display_name?: string | null
+          id: string
+          updated_at?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          credits?: number
+          display_name?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      room_chats: {
+        Row: {
+          chat_id: number
+          chat_title: string | null
+          id: string
+          room_id: string
+          user_id: string
+        }
+        Insert: {
+          chat_id: number
+          chat_title?: string | null
+          id?: string
+          room_id: string
+          user_id: string
+        }
+        Update: {
+          chat_id?: number
+          chat_title?: string | null
+          id?: string
+          room_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "room_chats_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rooms: {
+        Row: {
+          created_at: string
+          default_account_id: string | null
+          description: string | null
+          id: string
+          name: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          default_account_id?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          default_account_id?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rooms_default_account_id_fkey"
+            columns: ["default_account_id"]
+            isOneToOne: false
+            referencedRelation: "telegram_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scheduled_messages: {
+        Row: {
+          account_id: string | null
+          content: string
+          created_at: string
+          id: string
+          last_error: string | null
+          parse_mode: string
+          room_id: string
+          scheduled_at: string
+          sent_at: string | null
+          status: Database["public"]["Enums"]["message_status"]
+          user_id: string
+        }
+        Insert: {
+          account_id?: string | null
+          content: string
+          created_at?: string
+          id?: string
+          last_error?: string | null
+          parse_mode?: string
+          room_id: string
+          scheduled_at: string
+          sent_at?: string | null
+          status?: Database["public"]["Enums"]["message_status"]
+          user_id: string
+        }
+        Update: {
+          account_id?: string | null
+          content?: string
+          created_at?: string
+          id?: string
+          last_error?: string | null
+          parse_mode?: string
+          room_id?: string
+          scheduled_at?: string
+          sent_at?: string | null
+          status?: Database["public"]["Enums"]["message_status"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scheduled_messages_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "telegram_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scheduled_messages_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      telegram_accounts: {
+        Row: {
+          bot_first_name: string | null
+          bot_token: string
+          bot_username: string | null
+          created_at: string
+          id: string
+          is_active: boolean
+          label: string
+          last_check_at: string | null
+          last_error: string | null
+          status: Database["public"]["Enums"]["account_status"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          bot_first_name?: string | null
+          bot_token: string
+          bot_username?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          label: string
+          last_check_at?: string | null
+          last_error?: string | null
+          status?: Database["public"]["Enums"]["account_status"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          bot_first_name?: string | null
+          bot_token?: string
+          bot_username?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          label?: string
+          last_check_at?: string | null
+          last_error?: string | null
+          status?: Database["public"]["Enums"]["account_status"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      telegram_chats: {
+        Row: {
+          account_id: string
+          cached_at: string
+          chat_id: number
+          id: string
+          title: string | null
+          type: string | null
+          user_id: string
+          username: string | null
+        }
+        Insert: {
+          account_id: string
+          cached_at?: string
+          chat_id: number
+          id?: string
+          title?: string | null
+          type?: string | null
+          user_id: string
+          username?: string | null
+        }
+        Update: {
+          account_id?: string
+          cached_at?: string
+          chat_id?: number
+          id?: string
+          title?: string | null
+          type?: string | null
+          user_id?: string
+          username?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "telegram_chats_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "telegram_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      account_status: "unknown" | "ok" | "error"
+      app_role: "admin" | "user"
+      message_status: "pending" | "sending" | "sent" | "failed" | "cancelled"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +504,10 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      account_status: ["unknown", "ok", "error"],
+      app_role: ["admin", "user"],
+      message_status: ["pending", "sending", "sent", "failed", "cancelled"],
+    },
   },
 } as const
