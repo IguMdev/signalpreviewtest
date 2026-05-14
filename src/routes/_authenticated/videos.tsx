@@ -30,12 +30,12 @@ export const Route = createFileRoute("/_authenticated/videos")({
   component: VideosPage,
 });
 
-const MAX_BYTES = 20 * 1024 * 1024;
+const MAX_BYTES = 1024 * 1024 * 1024;
 const MAX_DURATION = 60;
 
 async function validateVideoFile(file: File): Promise<{ duration: number }> {
   if (file.size > MAX_BYTES) {
-    throw new Error("O vídeo deve ter no máximo 20 MB.");
+    throw new Error("O vídeo deve ter no máximo 1 GB.");
   }
   return new Promise((resolve, reject) => {
     const url = URL.createObjectURL(file);
@@ -195,7 +195,7 @@ function VideosPage() {
         <h1 className="text-2xl font-bold tracking-tight">Vídeos redondos</h1>
         <p className="text-sm text-muted-foreground">
           Envie vídeos no formato "video note" (redondo) do Telegram. Exigências do Telegram: vídeo
-          quadrado (1:1), MP4 com codec H.264, até 60s e 20 MB. Se não for quadrado, o Telegram envia
+          quadrado (1:1), MP4 com codec H.264, até 60s e 1 GB. Se não for quadrado, o Telegram envia
           como vídeo normal.
         </p>
       </div>
@@ -203,7 +203,7 @@ function VideosPage() {
       <Card className="p-5 space-y-4">
         <div className="flex flex-col sm:flex-row gap-3 sm:items-end">
           <div className="flex-1 space-y-2">
-            <Label>Vídeo quadrado MP4/H.264 (≤ 60s, ≤ 20 MB)</Label>
+            <Label>Vídeo quadrado MP4/H.264 (≤ 60s, ≤ 1 GB)</Label>
             <Input ref={fileRef} type="file" accept="video/*" onChange={onPickFile} />
           </div>
           <div className="flex-1 space-y-2">
