@@ -13,7 +13,11 @@ export const ASSETS_CATALOG: Record<AssetCategory, string[]> = {
     "DOGEUSDT","ETHOTC","ETHUSDT","LTCUSDT","LTCUSDTOTC","SOLOTC","SOLUSDT",
     "SUIUSDT","XRPUSDT",
   ],
-  "Ações": [],
+  "Ações": [
+    "AAPL","AMZN","BABA","BA","CSCO","DIS","FB","FORD","GOOGL","IBM","INTC",
+    "JNJ","JPM","KO","MA","MCD","META","MSFT","NFLX","NIKE","NVDA","PYPL",
+    "SBUX","SPOT","TSLA","V","VISA","XOM",
+  ],
   OTC: [
     "AAPLOTC","AMZNOTC","AUDCHFOTC","AUDJPYOTC","AVAXOTC","CADCHFOTC","DISOTC",
     "DOGEOTC","EURAUDOTC","EURCADOTC","EURCHFOTC","EURGBPOTC","EURJPYOTC",
