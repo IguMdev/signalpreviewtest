@@ -71,7 +71,7 @@ export const getMemberStats = createServerFn({ method: "GET" })
         .from("telegram_member_events")
         .select("id, chat_title, chat_id, tg_first_name, tg_username, event_type, occurred_at")
         .order("occurred_at", { ascending: false })
-        .limit(15),
+        .limit(200),
     ]);
 
     const list = events ?? [];
