@@ -16,7 +16,6 @@ import {
   Moon,
   Sun,
   Video,
-  Sparkles as SparklesIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
