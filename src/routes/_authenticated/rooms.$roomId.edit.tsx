@@ -1086,6 +1086,8 @@ function TemplateEditor({
 }) {
   const [content, setContent] = useState<string>(existing?.content ?? "");
   const [imagePath, setImagePath] = useState<string | null>(existing?.image_path ?? null);
+  const [imageMime, setImageMime] = useState<string | null>(existing?.image_mime ?? null);
+  const [imageExt, setImageExt] = useState<string | null>(existing?.image_ext ?? null);
   const [newLabel, setNewLabel] = useState("");
   const [newUrl, setNewUrl] = useState("");
   const sendTest = useServerFn(sendRoomTest);
@@ -1094,18 +1096,20 @@ function TemplateEditor({
   useEffect(() => {
     setContent(existing?.content ?? "");
     setImagePath(existing?.image_path ?? null);
-  }, [existing?.id, existing?.content, existing?.image_path]);
+    setImageMime(existing?.image_mime ?? null);
+    setImageExt(existing?.image_ext ?? null);
+  }, [existing?.id, existing?.content, existing?.image_path, existing?.image_mime, existing?.image_ext]);
 
   const saveTpl = useMutation({
     mutationFn: async () => {
       const { data: u } = await supabase.auth.getUser();
       if (existing) {
         const { error } = await supabase.from("room_templates")
-          .update({ content, image_path: imagePath }).eq("id", existing.id);
+          .update({ content, image_path: imagePath, image_mime: imageMime, image_ext: imageExt }).eq("id", existing.id);
         if (error) throw error;
       } else {
         const { error } = await supabase.from("room_templates").insert({
-          room_id: roomId, user_id: u.user!.id, kind, content, parse_mode: "HTML", image_path: imagePath,
+          room_id: roomId, user_id: u.user!.id, kind, content, parse_mode: "HTML", image_path: imagePath, image_mime: imageMime, image_ext: imageExt,
         });
         if (error) throw error;
       }
@@ -1140,7 +1144,7 @@ function TemplateEditor({
   const onTest = async () => {
     try {
       setTesting(true);
-      await sendTest({ data: { roomId, text: content, imagePath: imagePath ?? undefined } });
+      await sendTest({ data: { roomId, text: content, imagePath: imagePath ?? undefined, imageMime: imageMime ?? undefined, imageExt: imageExt ?? undefined } });
       toast.success("Teste enviado");
     } catch (e: any) { toast.error(e.message); }
     finally { setTesting(false); }
@@ -1169,8 +1173,8 @@ function TemplateEditor({
         <ImageAttachment
           tone={imageTone}
           roomId={roomId}
-          value={imagePath}
-          onChange={setImagePath}
+          value={{ path: imagePath, mime: imageMime, ext: imageExt }}
+          onChange={(v) => { setImagePath(v.path); setImageMime(v.mime); setImageExt(v.ext); }}
         />
       )}
 
@@ -1228,12 +1232,12 @@ function ImageAttachment({
 }: {
   tone: string;
   roomId: string;
-  value: string | null;
-  onChange: (path: string | null) => void;
+  value: { path: string | null; mime?: string | null; ext?: string | null };
+  onChange: (v: { path: string | null; mime: string | null; ext: string | null }) => void;
 }) {
   const [uploading, setUploading] = useState(false);
-  const publicUrl = value
-    ? supabase.storage.from("room-images").getPublicUrl(value).data.publicUrl
+  const publicUrl = value.path
+    ? supabase.storage.from("room-images").getPublicUrl(value.path).data.publicUrl
     : null;
 
   const handleUpload = async (file: File) => {
@@ -1241,13 +1245,13 @@ function ImageAttachment({
       setUploading(true);
       const { data: u } = await supabase.auth.getUser();
       if (!u.user) throw new Error("Não autenticado");
-      const ext = file.name.split(".").pop() || "png";
+      const ext = (file.name.split(".").pop() || "png").toLowerCase();
       const path = `${u.user.id}/${roomId}/templates/${crypto.randomUUID()}.${ext}`;
       const { error } = await supabase.storage
         .from("room-images")
         .upload(path, file, { upsert: true, contentType: file.type });
       if (error) throw error;
-      onChange(path);
+      onChange({ path, mime: file.type || null, ext });
       toast.success("Imagem enviada");
     } catch (e: any) {
       toast.error(e.message);
@@ -1271,7 +1275,7 @@ function ImageAttachment({
           )}
         </div>
         <div className="flex flex-wrap gap-2 justify-end">
-          <Button variant="outline" size="sm" onClick={() => onChange(null)} disabled={!value || uploading}>
+          <Button variant="outline" size="sm" onClick={() => onChange({ path: null, mime: null, ext: null })} disabled={!value.path || uploading}>
             Remover arquivo
           </Button>
           <Button asChild size="sm" variant="secondary" disabled={uploading}>
@@ -1280,7 +1284,7 @@ function ImageAttachment({
               <input
                 type="file"
                 className="sr-only"
-                accept="image/png,image/jpeg,image/gif,image/webp"
+                accept="image/png,image/jpeg,image/gif,image/webp,application/x-tgsticker,video/webm,.tgs"
                 onChange={(e) => {
                   const f = e.target.files?.[0];
                   if (f) handleUpload(f);
@@ -1341,6 +1345,8 @@ function SessionMessageEditor({
   const [enabled, setEnabled] = useState<boolean>(existing?.enabled ?? true);
   const [lead, setLead] = useState<string>(String(existing?.lead_minutes ?? 5));
   const [imagePath, setImagePath] = useState<string | null>(existing?.image_path ?? null);
+  const [imageMime, setImageMime] = useState<string | null>(existing?.image_mime ?? null);
+  const [imageExt, setImageExt] = useState<string | null>(existing?.image_ext ?? null);
   const sendTest = useServerFn(sendRoomTest);
   const [testing, setTesting] = useState(false);
 
@@ -1349,7 +1355,9 @@ function SessionMessageEditor({
     setEnabled(existing?.enabled ?? true);
     setLead(String(existing?.lead_minutes ?? 5));
     setImagePath(existing?.image_path ?? null);
-  }, [existing?.id, existing?.content, existing?.enabled, existing?.lead_minutes, existing?.image_path]);
+    setImageMime(existing?.image_mime ?? null);
+    setImageExt(existing?.image_ext ?? null);
+  }, [existing?.id, existing?.content, existing?.enabled, existing?.lead_minutes, existing?.image_path, existing?.image_mime, existing?.image_ext]);
 
   const save = useMutation({
     mutationFn: async () => {
@@ -1359,6 +1367,8 @@ function SessionMessageEditor({
         enabled,
         lead_minutes: parseInt(lead, 10) || 0,
         image_path: imagePath,
+        image_mime: imageMime,
+        image_ext: imageExt,
       };
       if (existing) {
         const { error } = await supabase.from("room_session_messages").update(payload).eq("id", existing.id);
@@ -1377,7 +1387,7 @@ function SessionMessageEditor({
   const onTest = async () => {
     try {
       setTesting(true);
-      await sendTest({ data: { roomId, text: content, imagePath: imagePath ?? undefined } });
+      await sendTest({ data: { roomId, text: content, imagePath: imagePath ?? undefined, imageMime: imageMime ?? undefined, imageExt: imageExt ?? undefined } });
       toast.success("Teste enviado");
     } catch (e: any) { toast.error(e.message); }
     finally { setTesting(false); }
@@ -1406,8 +1416,8 @@ function SessionMessageEditor({
       <ImageAttachment
         tone={kind === "open" ? "INÍCIO" : "TÉRMINO"}
         roomId={roomId}
-        value={imagePath}
-        onChange={setImagePath}
+        value={{ path: imagePath, mime: imageMime, ext: imageExt }}
+        onChange={(v) => { setImagePath(v.path); setImageMime(v.mime); setImageExt(v.ext); }}
       />
       <div className="flex items-center justify-between gap-3 pt-2 border-t border-border">
         <Button variant="secondary" size="sm" onClick={onTest} disabled={testing}>
@@ -1448,7 +1458,7 @@ function ReportsCard({ roomId }: { roomId: string }) {
         .replaceAll("{TOTAL_LOSSES}", "3")
         .replaceAll("{TOTAL_OPERACOES}", "10")
         .replaceAll("{WIN_RATE}", "70");
-      await sendTest({ data: { roomId, text: sample, imagePath: imagePath ?? undefined } });
+      await sendTest({ data: { roomId, text: sample, imagePath: imagePath ?? undefined, imageMime: imageMime ?? undefined, imageExt: imageExt ?? undefined } });
       toast.success("Teste enviado");
     } catch (e: any) { toast.error(e.message); }
     finally { setTesting(false); }
@@ -1459,6 +1469,8 @@ function ReportsCard({ roomId }: { roomId: string }) {
   const [tpl, setTpl] = useState<string>("");
   const [includeStats, setIncludeStats] = useState<boolean>(true);
   const [imagePath, setImagePath] = useState<string | null>(null);
+  const [imageMime, setImageMime] = useState<string | null>(null);
+  const [imageExt, setImageExt] = useState<string | null>(null);
 
   useEffect(() => {
     if (!report.data) return;
@@ -1467,7 +1479,9 @@ function ReportsCard({ roomId }: { roomId: string }) {
     setTpl(report.data.template ?? "");
     setIncludeStats(report.data.include_stats ?? true);
     setImagePath(report.data.image_path ?? null);
-  }, [report.data?.id, report.data?.enabled, report.data?.delay_minutes, report.data?.template, report.data?.include_stats, report.data?.image_path]);
+    setImageMime((report.data as any).image_mime ?? null);
+    setImageExt((report.data as any).image_ext ?? null);
+  }, [report.data?.id, report.data?.enabled, report.data?.delay_minutes, report.data?.template, report.data?.include_stats, report.data?.image_path, (report.data as any)?.image_mime, (report.data as any)?.image_ext]);
 
   const save = useMutation({
     mutationFn: async () => {
@@ -1478,6 +1492,8 @@ function ReportsCard({ roomId }: { roomId: string }) {
         template: tpl,
         include_stats: includeStats,
         image_path: imagePath,
+        image_mime: imageMime,
+        image_ext: imageExt,
       };
       if (report.data) {
         const { error } = await supabase.from("room_reports").update(payload).eq("id", report.data.id);
@@ -1524,8 +1540,8 @@ function ReportsCard({ roomId }: { roomId: string }) {
       <ImageAttachment
         tone="RELATÓRIO"
         roomId={roomId}
-        value={imagePath}
-        onChange={setImagePath}
+        value={{ path: imagePath, mime: imageMime, ext: imageExt }}
+        onChange={(v) => { setImagePath(v.path); setImageMime(v.mime); setImageExt(v.ext); }}
       />
       <div className="flex items-center justify-between pt-2 border-t border-border">
         <Button variant="secondary" size="sm" onClick={onTest} disabled={testing}>

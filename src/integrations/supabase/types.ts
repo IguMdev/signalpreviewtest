@@ -493,6 +493,8 @@ export type Database = {
           delay_minutes: number
           enabled: boolean
           id: string
+          image_ext: string | null
+          image_mime: string | null
           image_path: string | null
           include_stats: boolean
           room_id: string
@@ -506,6 +508,8 @@ export type Database = {
           delay_minutes?: number
           enabled?: boolean
           id?: string
+          image_ext?: string | null
+          image_mime?: string | null
           image_path?: string | null
           include_stats?: boolean
           room_id: string
@@ -519,6 +523,8 @@ export type Database = {
           delay_minutes?: number
           enabled?: boolean
           id?: string
+          image_ext?: string | null
+          image_mime?: string | null
           image_path?: string | null
           include_stats?: boolean
           room_id?: string
@@ -543,6 +549,8 @@ export type Database = {
           created_at: string
           enabled: boolean
           id: string
+          image_ext: string | null
+          image_mime: string | null
           image_path: string | null
           kind: Database["public"]["Enums"]["session_msg_kind"]
           lead_minutes: number
@@ -555,6 +563,8 @@ export type Database = {
           created_at?: string
           enabled?: boolean
           id?: string
+          image_ext?: string | null
+          image_mime?: string | null
           image_path?: string | null
           kind: Database["public"]["Enums"]["session_msg_kind"]
           lead_minutes?: number
@@ -567,6 +577,8 @@ export type Database = {
           created_at?: string
           enabled?: boolean
           id?: string
+          image_ext?: string | null
+          image_mime?: string | null
           image_path?: string | null
           kind?: Database["public"]["Enums"]["session_msg_kind"]
           lead_minutes?: number
@@ -633,6 +645,8 @@ export type Database = {
           content: string
           created_at: string
           id: string
+          image_ext: string | null
+          image_mime: string | null
           image_path: string | null
           kind: Database["public"]["Enums"]["template_kind"]
           parse_mode: string
@@ -644,6 +658,8 @@ export type Database = {
           content?: string
           created_at?: string
           id?: string
+          image_ext?: string | null
+          image_mime?: string | null
           image_path?: string | null
           kind: Database["public"]["Enums"]["template_kind"]
           parse_mode?: string
@@ -655,6 +671,8 @@ export type Database = {
           content?: string
           created_at?: string
           id?: string
+          image_ext?: string | null
+          image_mime?: string | null
           image_path?: string | null
           kind?: Database["public"]["Enums"]["template_kind"]
           parse_mode?: string
