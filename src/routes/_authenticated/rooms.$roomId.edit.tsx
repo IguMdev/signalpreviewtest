@@ -19,12 +19,12 @@ import {
 } from "lucide-react";
 import { ASSETS_CATALOG, type AssetCategory } from "@/lib/assets-catalog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Sparkles, Heart, Users } from "lucide-react";
+import { Sparkles, Heart, Users, MessageCircle, Forward } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import {
   getRoomEngagementSettings,
   upsertRoomEngagementSettings,
-  getMySubscription,
+  getMySubscriptions,
 } from "@/lib/engagement.functions";
 
 export const Route = createFileRoute("/_authenticated/rooms/$roomId/edit")({
@@ -245,14 +245,14 @@ function BaseConfigCard({ room }: { room: RoomData }) {
 function EngagementCard({ roomId }: { roomId: string }) {
   const qc = useQueryClient();
   const fetchSettings = useServerFn(getRoomEngagementSettings);
-  const fetchSub = useServerFn(getMySubscription);
+  const fetchSubs = useServerFn(getMySubscriptions);
   const saveSettings = useServerFn(upsertRoomEngagementSettings);
 
   const { data: settings } = useQuery({
     queryKey: ["room-eng-settings", roomId],
     queryFn: () => fetchSettings({ data: { roomId } }),
   });
-  const { data: sub } = useQuery({ queryKey: ["engagement-sub"], queryFn: () => fetchSub() });
+  const { data: subs } = useQuery({ queryKey: ["engagement-subs"], queryFn: () => fetchSubs() });
 
   const [autoReact, setAutoReact] = useState(false);
   const [reactionsPerSignal, setReactionsPerSignal] = useState(30);
@@ -262,6 +262,11 @@ function EngagementCard({ roomId }: { roomId: string }) {
   const [delayMax, setDelayMax] = useState(60);
   const [autoMembers, setAutoMembers] = useState(false);
   const [membersPerDay, setMembersPerDay] = useState(50);
+  const [welcomeEnabled, setWelcomeEnabled] = useState(false);
+  const [welcomeMessage, setWelcomeMessage] = useState("Seja bem-vindo(a) ao grupo! 🎉");
+  const [forwarderEnabled, setForwarderEnabled] = useState(false);
+  const [forwarderSource, setForwarderSource] = useState<string>("");
+  const [forwarderTargets, setForwarderTargets] = useState<string>("");
 
   useEffect(() => {
     if (!settings) return;
@@ -273,6 +278,11 @@ function EngagementCard({ roomId }: { roomId: string }) {
     setDelayMax(s.delay_seconds_max);
     setAutoMembers(s.auto_members_enabled);
     setMembersPerDay(s.members_per_day);
+    setWelcomeEnabled(s.welcome_bot_enabled ?? false);
+    setWelcomeMessage(s.welcome_message ?? "Seja bem-vindo(a) ao grupo! 🎉");
+    setForwarderEnabled(s.forwarder_enabled ?? false);
+    setForwarderSource(s.forwarder_source_chat_id ? String(s.forwarder_source_chat_id) : "");
+    setForwarderTargets((s.forwarder_target_chat_ids ?? []).join(", "));
   }, [settings]);
 
   const save = useMutation({
@@ -287,6 +297,16 @@ function EngagementCard({ roomId }: { roomId: string }) {
           delaySecondsMax: delayMax,
           autoMembersEnabled: autoMembers,
           membersPerDay,
+          welcomeBotEnabled: welcomeEnabled,
+          welcomeMessage,
+          forwarderEnabled,
+          forwarderSourceChatId: forwarderSource.trim() ? Number(forwarderSource.trim()) : null,
+          forwarderTargetChatIds: forwarderTargets
+            .split(",")
+            .map((s) => s.trim())
+            .filter(Boolean)
+            .map(Number)
+            .filter((n) => Number.isFinite(n)),
         },
       }),
     onSuccess: () => {
@@ -296,7 +316,13 @@ function EngagementCard({ roomId }: { roomId: string }) {
     onError: (e: any) => toast.error(e.message ?? "Erro ao salvar"),
   });
 
-  const hasSub = !!sub && (sub as any).status === "active";
+  const subList = (subs ?? []) as any[];
+  const activeBots = new Set(subList.filter((s) => s.status === "active").map((s) => s.plan?.bot_type));
+  const hasReact = activeBots.has("interacoes");
+  const hasMembers = activeBots.has("inscritos");
+  const hasWelcome = activeBots.has("boasvindas");
+  const hasForwarder = activeBots.has("encaminhador");
+  const hasAnySub = activeBots.size > 0;
 
   return (
     <Card className="p-5 space-y-4">
@@ -307,33 +333,28 @@ function EngagementCard({ roomId }: { roomId: string }) {
             Engajamento Bot
           </h2>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Reações e novos membros automáticos para impulsionar a sala.
+            Configure os bots ativos para esta sala.
           </p>
         </div>
-        {!hasSub && (
+        {!hasAnySub && (
           <Button asChild size="sm" variant="outline">
-            <Link to="/engagement">Assinar plano</Link>
+            <Link to="/engagement">Ver planos</Link>
           </Button>
         )}
       </div>
-
-      {!hasSub && (
-        <div className="rounded-lg border border-dashed border-border p-3 text-xs text-muted-foreground">
-          Você precisa de um plano de Engajamento ativo para usar este recurso.
-        </div>
-      )}
 
       <div className="grid md:grid-cols-2 gap-4">
         {/* Reações */}
         <div className="rounded-lg border border-border p-4 space-y-3">
           <div className="flex items-center justify-between">
-            <Label className="flex items-center gap-2"><Heart className="size-4" /> Reações automáticas</Label>
-            <Switch checked={autoReact} onCheckedChange={setAutoReact} disabled={!hasSub} />
+            <Label className="flex items-center gap-2"><Heart className="size-4" /> BotInterações</Label>
+            <Switch checked={autoReact} onCheckedChange={setAutoReact} disabled={!hasReact} />
           </div>
+          {!hasReact && <p className="text-xs text-muted-foreground">Requer plano BotInterações ativo.</p>}
           <div className="space-y-1.5">
             <Label className="text-xs">Reações por sinal</Label>
             <Input type="number" min={1} max={10000} value={reactionsPerSignal}
-              onChange={(e) => setReactionsPerSignal(Number(e.target.value))} disabled={!hasSub} />
+              onChange={(e) => setReactionsPerSignal(Number(e.target.value))} disabled={!hasReact} />
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs">Emojis usados</Label>
@@ -348,8 +369,8 @@ function EngagementCard({ roomId }: { roomId: string }) {
               ))}
             </div>
             <div className="flex gap-2">
-              <Input value={emojiInput} onChange={(e) => setEmojiInput(e.target.value)} placeholder="🔥" className="w-20" disabled={!hasSub} />
-              <Button size="sm" variant="outline" type="button" disabled={!hasSub || !emojiInput.trim()}
+              <Input value={emojiInput} onChange={(e) => setEmojiInput(e.target.value)} placeholder="🔥" className="w-20" disabled={!hasReact} />
+              <Button size="sm" variant="outline" type="button" disabled={!hasReact || !emojiInput.trim()}
                 onClick={() => { setEmojis([...emojis, emojiInput.trim()]); setEmojiInput(""); }}>
                 <Plus className="size-3" />
               </Button>
@@ -358,11 +379,11 @@ function EngagementCard({ roomId }: { roomId: string }) {
           <div className="grid grid-cols-2 gap-2">
             <div className="space-y-1.5">
               <Label className="text-xs">Delay mín (s)</Label>
-              <Input type="number" min={0} value={delayMin} onChange={(e) => setDelayMin(Number(e.target.value))} disabled={!hasSub} />
+              <Input type="number" min={0} value={delayMin} onChange={(e) => setDelayMin(Number(e.target.value))} disabled={!hasReact} />
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs">Delay máx (s)</Label>
-              <Input type="number" min={0} value={delayMax} onChange={(e) => setDelayMax(Number(e.target.value))} disabled={!hasSub} />
+              <Input type="number" min={0} value={delayMax} onChange={(e) => setDelayMax(Number(e.target.value))} disabled={!hasReact} />
             </div>
           </div>
         </div>
@@ -370,22 +391,72 @@ function EngagementCard({ roomId }: { roomId: string }) {
         {/* Membros */}
         <div className="rounded-lg border border-border p-4 space-y-3">
           <div className="flex items-center justify-between">
-            <Label className="flex items-center gap-2"><Users className="size-4" /> Novos membros</Label>
-            <Switch checked={autoMembers} onCheckedChange={setAutoMembers} disabled={!hasSub} />
+            <Label className="flex items-center gap-2"><Users className="size-4" /> BotInscritos</Label>
+            <Switch checked={autoMembers} onCheckedChange={setAutoMembers} disabled={!hasMembers} />
           </div>
+          {!hasMembers && <p className="text-xs text-muted-foreground">Requer plano BotInscritos ativo.</p>}
           <div className="space-y-1.5">
             <Label className="text-xs">Membros por dia</Label>
             <Input type="number" min={1} max={50000} value={membersPerDay}
-              onChange={(e) => setMembersPerDay(Number(e.target.value))} disabled={!hasSub} />
+              onChange={(e) => setMembersPerDay(Number(e.target.value))} disabled={!hasMembers} />
             <p className="text-xs text-muted-foreground">
               Distribuído ao longo do dia para parecer crescimento orgânico.
             </p>
           </div>
         </div>
+
+        {/* BotBoasVindas */}
+        <div className="rounded-lg border border-border p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <Label className="flex items-center gap-2"><MessageCircle className="size-4" /> BotBoasVindas</Label>
+            <Switch checked={welcomeEnabled} onCheckedChange={setWelcomeEnabled} disabled={!hasWelcome} />
+          </div>
+          {!hasWelcome && <p className="text-xs text-muted-foreground">Requer plano BotBoasVindas ativo.</p>}
+          <div className="space-y-1.5">
+            <Label className="text-xs">Mensagem de boas-vindas</Label>
+            <Textarea
+              value={welcomeMessage}
+              onChange={(e) => setWelcomeMessage(e.target.value)}
+              disabled={!hasWelcome}
+              rows={3}
+              placeholder="Seja bem-vindo(a) ao grupo! 🎉"
+            />
+            <p className="text-xs text-muted-foreground">
+              Suporta HTML básico: &lt;b&gt;, &lt;i&gt;, &lt;a&gt;.
+            </p>
+          </div>
+        </div>
+
+        {/* BotEncaminhador */}
+        <div className="rounded-lg border border-border p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <Label className="flex items-center gap-2"><Forward className="size-4" /> BotEncaminhador</Label>
+            <Switch checked={forwarderEnabled} onCheckedChange={setForwarderEnabled} disabled={!hasForwarder} />
+          </div>
+          {!hasForwarder && <p className="text-xs text-muted-foreground">Requer plano BotEncaminhador ativo.</p>}
+          <div className="space-y-1.5">
+            <Label className="text-xs">Chat de origem (chat_id)</Label>
+            <Input
+              value={forwarderSource}
+              onChange={(e) => setForwarderSource(e.target.value)}
+              disabled={!hasForwarder}
+              placeholder="-1001234567890"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Chats de destino (separados por vírgula)</Label>
+            <Input
+              value={forwarderTargets}
+              onChange={(e) => setForwarderTargets(e.target.value)}
+              disabled={!hasForwarder}
+              placeholder="-100123, -100456"
+            />
+          </div>
+        </div>
       </div>
 
       <div className="flex justify-end pt-2 border-t border-border">
-        <Button size="sm" onClick={() => save.mutate()} disabled={save.isPending || !hasSub}>
+        <Button size="sm" onClick={() => save.mutate()} disabled={save.isPending}>
           {save.isPending ? "Salvando..." : "Salvar seção"}
         </Button>
       </div>
