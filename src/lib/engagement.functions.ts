@@ -223,3 +223,16 @@ export const listMyEngagementOrders = createServerFn({ method: "GET" })
     if (error) throw new Error(error.message);
     return data ?? [];
   });
+
+export const listMyPaymentHistory = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabase } = context;
+    const { data, error } = await supabase
+      .from("user_engagement_subscriptions")
+      .select("*, plan:engagement_plans(name, price_brl, bot_type)")
+      .order("created_at", { ascending: false })
+      .limit(50);
+    if (error) throw new Error(error.message);
+    return data ?? [];
+  });
