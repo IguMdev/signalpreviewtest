@@ -29,6 +29,32 @@ async function sendVideoNoteToChat(opts: {
   return (await res.json()) as { ok: boolean; result?: { message_id: number }; description?: string };
 }
 
+async function sendVideoToChat(opts: {
+  botToken: string | null | undefined;
+  chatId: number | string;
+  fileBytes: ArrayBuffer;
+  filename: string;
+  mimeType: string;
+  duration?: number | null;
+}) {
+  if (!opts.botToken) {
+    return { ok: false, description: "Conta sem bot_token" } as { ok: boolean; result?: { message_id: number }; description?: string };
+  }
+  const form = new FormData();
+  form.append("chat_id", String(opts.chatId));
+  if (opts.duration) form.append("duration", String(opts.duration));
+  form.append(
+    "video",
+    new Blob([opts.fileBytes], { type: opts.mimeType || "video/mp4" }),
+    opts.filename,
+  );
+  const res = await fetch(`https://api.telegram.org/bot${opts.botToken}/sendVideo`, {
+    method: "POST",
+    body: form,
+  });
+  return (await res.json()) as { ok: boolean; result?: { message_id: number }; description?: string };
+}
+
 export const sendVideoNoteNow = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) =>
@@ -43,7 +69,7 @@ export const sendVideoNoteNow = createServerFn({ method: "POST" })
 
     const { data: video, error: vErr } = await supabase
       .from("videos")
-      .select("id, storage_path, mime_type, duration_seconds, title")
+      .select("id, storage_path, mime_type, duration_seconds, title, kind")
       .eq("id", data.videoId)
       .maybeSingle();
     if (vErr || !video) throw new Error("Vídeo não encontrado");
@@ -63,7 +89,8 @@ export const sendVideoNoteNow = createServerFn({ method: "POST" })
 
     const results: { chatId: string | number; ok: boolean; error?: string }[] = [];
     for (const chatId of data.chatIds) {
-      const r = await sendVideoNoteToChat({
+      const sender = (video as any).kind === "normal" ? sendVideoToChat : sendVideoNoteToChat;
+      const r = await sender({
         botToken: acc.bot_token,
         chatId,
         fileBytes: bytes,
