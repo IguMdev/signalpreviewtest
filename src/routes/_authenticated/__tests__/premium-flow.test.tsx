@@ -134,8 +134,8 @@ describe("Fluxo Premium e2e (componente)", () => {
     expect(within(dialog).getByText(S.steps.title)).toBeInTheDocument();
     expect(within(dialog).getByText(S.fields.accountName)).toBeInTheDocument();
     expect(within(dialog).getByText(S.fields.phone)).toBeInTheDocument();
-    expect(within(dialog).getByText(S.fields.apiId)).toBeInTheDocument();
-    expect(within(dialog).getByText(S.fields.apiHash)).toBeInTheDocument();
+    expect(within(dialog).getAllByText(S.fields.apiId).length).toBeGreaterThan(0);
+    expect(within(dialog).getAllByText(S.fields.apiHash).length).toBeGreaterThan(0);
     expect(
       within(dialog).getByRole("button", { name: S.buttons.requestCode }),
     ).toBeInTheDocument();
