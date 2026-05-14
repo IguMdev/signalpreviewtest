@@ -350,6 +350,27 @@ function DashboardPage() {
                 </div>
               </div>
             )}
+
+            {visibleChatActivity.length > 0 && (
+              <div>
+                <h3 className="text-sm font-medium mb-2">Entradas e saídas {tab === "group" ? "por grupo" : "por canal"}</h3>
+                <div className="space-y-2">
+                  {visibleChatActivity.map((c) => (
+                    <div key={c.chat_id} className="flex items-center justify-between p-3 rounded-lg bg-muted/50 gap-3">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium truncate">{c.chat_title || `Chat ${c.chat_id}`}</p>
+                        <p className="text-xs text-muted-foreground">ID: {c.chat_id}</p>
+                      </div>
+                      <div className="flex gap-3 text-sm tabular-nums shrink-0">
+                        <span className="text-emerald-500">+{c.joins}</span>
+                        <span className="text-rose-500">-{c.leaves}</span>
+                        <span className="font-semibold">= {c.joins - c.leaves}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </TabsContent>
         </Tabs>
       </Card>
