@@ -1078,15 +1078,14 @@ function ReportsCard({ roomId }: { roomId: string }) {
   const [delay, setDelay] = useState<string>("1");
   const [tpl, setTpl] = useState<string>("");
   const [includeStats, setIncludeStats] = useState<boolean>(true);
-  const [hydrated, setHydrated] = useState(false);
 
-  if (report.data && !hydrated) {
+  useEffect(() => {
+    if (!report.data) return;
     setEnabled(report.data.enabled);
     setDelay(String(report.data.delay_minutes ?? 1));
     setTpl(report.data.template ?? "");
     setIncludeStats(report.data.include_stats ?? true);
-    setHydrated(true);
-  }
+  }, [report.data?.id, report.data?.enabled, report.data?.delay_minutes, report.data?.template, report.data?.include_stats]);
 
   const save = useMutation({
     mutationFn: async () => {
@@ -1137,8 +1136,9 @@ function ReportsCard({ roomId }: { roomId: string }) {
       <div className="space-y-1.5">
         <Label className="text-xs">Template do relatório</Label>
         <Textarea value={tpl} onChange={(e) => setTpl(e.target.value)} rows={6} className="font-mono text-sm"
-          placeholder={"📊 RELATÓRIO {SESSAO}\n✅ Wins: {WINS}\n🔴 Losses: {LOSSES}\n🎯 Winrate: {WINRATE}%"} />
+          placeholder={"📊 RELATÓRIO {SESSAO_NOME}\n✅ Wins: {TOTAL_WINS}\n🔴 Losses: {TOTAL_LOSSES}\n📈 Operações: {TOTAL_OPERACOES}\n🎯 Win rate: {WIN_RATE}%"} />
       </div>
+      <ImageAttachmentMock tone="RELATÓRIO" />
       <div className="flex justify-end pt-2 border-t border-border">
         <Button size="sm" onClick={() => save.mutate()} disabled={save.isPending}>
           {save.isPending ? "Salvando..." : "Salvar seção"}
