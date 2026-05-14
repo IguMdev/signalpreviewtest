@@ -75,6 +75,7 @@ type Schedule = {
   parse_mode: string;
   times: string[];
   weekdays: number[];
+  weekday_overrides: Record<string, string[]> | null;
   is_premium: boolean;
   is_active: boolean;
   timezone: string;
@@ -229,6 +230,7 @@ function MensagensPage() {
       parse_mode: "HTML",
       times: [],
       weekdays: [],
+      weekday_overrides: {},
       is_premium: false,
       is_active: true,
       timezone: "America/Sao_Paulo",
@@ -479,6 +481,7 @@ function ScheduleDialog({
     parseMode: "HTML" | "Markdown" | "MarkdownV2";
     times: string[];
     weekdays: number[];
+    weekdayOverrides: Record<string, string[]>;
     isPremium: boolean;
     isActive: boolean;
     timezone: string;
@@ -494,6 +497,8 @@ function ScheduleDialog({
   const [uploading, setUploading] = useState(false);
   const [times, setTimes] = useState<string[]>([]);
   const [weekdays, setWeekdays] = useState<number[]>([]);
+  const [weekdayOverrides, setWeekdayOverrides] = useState<Record<string, string[]>>({});
+  const [overrideInputs, setOverrideInputs] = useState<Record<string, string>>({});
   const [isPremium, setIsPremium] = useState(false);
   const [isActive, setIsActive] = useState(true);
   const [newTime, setNewTime] = useState("");
@@ -511,6 +516,8 @@ function ScheduleDialog({
       setImageMime(editing.image_mime ?? "");
       setTimes(editing.times);
       setWeekdays(editing.weekdays);
+      setWeekdayOverrides(editing.weekday_overrides ?? {});
+      setOverrideInputs({});
       setIsPremium(editing.is_premium);
       setIsActive(editing.is_active);
       setNewTime("");
@@ -807,6 +814,95 @@ function ScheduleDialog({
                 </Button>
               </div>
             </Card>
+
+            {/* Horários por dia (override) */}
+            {weekdays.length > 0 && (
+              <Card className="p-5 space-y-3">
+                <h3 className="font-semibold">Horários específicos por dia (opcional)</h3>
+                <p className="text-xs text-muted-foreground">
+                  Defina horários diferentes para um dia da semana. Quando houver
+                  horários aqui, o horário padrão acima <strong>não</strong> será
+                  enviado nesse dia.
+                </p>
+                <div className="space-y-2">
+                  {WEEKDAYS.filter((d) => weekdays.includes(d.value)).map((d) => {
+                    const key = String(d.value);
+                    const list = weekdayOverrides[key] ?? [];
+                    const input = overrideInputs[key] ?? "";
+                    const addOverride = () => {
+                      if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(input)) return;
+                      if (list.includes(input)) return;
+                      setWeekdayOverrides({
+                        ...weekdayOverrides,
+                        [key]: [...list, input].sort(),
+                      });
+                      setOverrideInputs({ ...overrideInputs, [key]: "" });
+                    };
+                    return (
+                      <div key={key} className="rounded-md border p-3 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium">{d.label}</span>
+                          {list.length === 0 ? (
+                            <span className="text-xs text-muted-foreground">
+                              usa padrão
+                            </span>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const next = { ...weekdayOverrides };
+                                delete next[key];
+                                setWeekdayOverrides(next);
+                              }}
+                              className="text-xs text-destructive hover:underline"
+                            >
+                              limpar
+                            </button>
+                          )}
+                        </div>
+                        {list.length > 0 && (
+                          <div className="flex flex-wrap gap-1.5">
+                            {list.map((t) => (
+                              <Badge key={t} variant="secondary" className="gap-1 pr-1">
+                                <Clock className="size-3" />
+                                {t}
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const next = list.filter((x) => x !== t);
+                                    const copy = { ...weekdayOverrides };
+                                    if (next.length === 0) delete copy[key];
+                                    else copy[key] = next;
+                                    setWeekdayOverrides(copy);
+                                  }}
+                                  className="ml-1 hover:bg-background/40 rounded p-0.5"
+                                >
+                                  <X className="size-3" />
+                                </button>
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
+                        <div className="flex gap-2">
+                          <Input
+                            type="time"
+                            value={input}
+                            onChange={(e) =>
+                              setOverrideInputs({ ...overrideInputs, [key]: e.target.value })
+                            }
+                            className="max-w-[140px]"
+                          />
+                          <Button type="button" size="sm" variant="secondary" onClick={addOverride}>
+                            <Plus className="size-4" />
+                            Adicionar
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </Card>
+            )}
           </div>
         </div>
         <DialogFooter className="gap-2 sm:gap-2">
@@ -825,6 +921,7 @@ function ScheduleDialog({
                 parseMode: "HTML",
                 times,
                 weekdays,
+                weekdayOverrides,
                 isPremium,
                 isActive,
                 timezone: "America/Sao_Paulo",

@@ -19,6 +19,9 @@ const ScheduleInput = z.object({
   parseMode: z.enum(["HTML", "Markdown", "MarkdownV2"]).default("HTML"),
   times: z.array(z.string().regex(TimeRe)).min(1).max(24),
   weekdays: z.array(z.number().int().min(1).max(7)).min(1).max(7),
+  weekdayOverrides: z
+    .record(z.string().regex(/^[1-7]$/), z.array(z.string().regex(TimeRe)).max(24))
+    .default({}),
   isPremium: z.boolean().default(false),
   isActive: z.boolean().default(true),
   timezone: z.string().default("America/Sao_Paulo"),
@@ -41,6 +44,11 @@ export const upsertSchedule = createServerFn({ method: "POST" })
       parse_mode: data.parseMode,
       times: Array.from(new Set(data.times)).sort(),
       weekdays: Array.from(new Set(data.weekdays)).sort(),
+      weekday_overrides: Object.fromEntries(
+        Object.entries(data.weekdayOverrides ?? {})
+          .map(([k, v]) => [k, Array.from(new Set(v)).sort()] as const)
+          .filter(([, v]) => v.length > 0),
+      ),
       is_premium: data.isPremium,
       is_active: data.isActive,
       timezone: data.timezone,
