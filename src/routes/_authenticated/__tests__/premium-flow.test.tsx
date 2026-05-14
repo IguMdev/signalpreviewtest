@@ -68,7 +68,7 @@ vi.mock("sonner", () => ({
 }));
 
 // Importa o componente após os mocks.
-import TelegramAccountsRoute from "@/routes/_authenticated/telegram-accounts";
+import { Route as TelegramAccountsRoute } from "@/routes/_authenticated/telegram-accounts";
 import { premiumStrings as S } from "@/lib/premium-strings";
 
 const Page = (TelegramAccountsRoute as unknown as { component?: React.FC }).component
