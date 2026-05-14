@@ -45,7 +45,7 @@ export type Database = {
           error: string | null
           id: string
           ok: boolean
-          scheduled_message_id: string
+          scheduled_message_id: string | null
           telegram_message_id: number | null
           user_id: string
         }
@@ -55,7 +55,7 @@ export type Database = {
           error?: string | null
           id?: string
           ok: boolean
-          scheduled_message_id: string
+          scheduled_message_id?: string | null
           telegram_message_id?: number | null
           user_id: string
         }
@@ -65,7 +65,7 @@ export type Database = {
           error?: string | null
           id?: string
           ok?: boolean
-          scheduled_message_id?: string
+          scheduled_message_id?: string | null
           telegram_message_id?: number | null
           user_id?: string
         }
