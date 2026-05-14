@@ -16,5 +16,9 @@ jobs:
       - run: bun install --frozen-lockfile
       - name: Checagem de escapes Unicode
         run: bun run check:unicode
+      - name: Typecheck (detecta nomes/imports ausentes)
+        run: bun run typecheck
+      - name: Lint (eslint — no-undef)
+        run: bun run lint
       - name: Testes (vitest)
         run: bun run test
