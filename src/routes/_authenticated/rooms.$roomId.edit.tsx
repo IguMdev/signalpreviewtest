@@ -18,6 +18,7 @@ import {
   Home, ChevronRight, ExternalLink, Plus, Trash2, Info, X,
 } from "lucide-react";
 import { ASSETS_CATALOG, type AssetCategory } from "@/lib/assets-catalog";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 export const Route = createFileRoute("/_authenticated/rooms/$roomId/edit")({
   component: EditRoomPage,
@@ -94,6 +95,9 @@ function EditRoomPage() {
       <BaseConfigCard room={r} />
       <MessagesInfoCard />
       <WindowsCard roomId={roomId} />
+      <TemplatesCard roomId={roomId} />
+      <SessionMessagesCard roomId={roomId} />
+      <ReportsCard roomId={roomId} />
       <TimezoneCard room={r} />
       <StopLossCard room={r} />
       <MarketTipsCard room={r} />
