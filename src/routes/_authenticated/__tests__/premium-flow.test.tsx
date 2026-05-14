@@ -11,7 +11,7 @@ const confirmCodeMock = vi
 const syncEmojisMock = vi.fn().mockResolvedValue({ ok: true, count: 0 });
 
 vi.mock("@tanstack/react-router", () => ({
-  createFileRoute: () => () => ({}),
+  createFileRoute: () => (config: Record<string, unknown>) => config,
   Link: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   useRouter: () => ({ invalidate: vi.fn() }),
 }));
