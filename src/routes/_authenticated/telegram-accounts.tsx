@@ -6,6 +6,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
 import { verifyAccount, sendTestMessage, refreshChats } from "@/lib/accounts.functions";
 import { enableMemberTracking } from "@/lib/telegram-tracking.functions";
+import {
+  requestPremiumCode,
+  confirmPremiumCode,
+  syncPremiumEmojis,
+} from "@/lib/premium-account.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -38,6 +43,7 @@ import {
   Users as UsersIcon,
   UserCircle,
   Activity,
+  KeyRound,
 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/telegram-accounts")({
@@ -51,6 +57,9 @@ function TelegramAccountsPage() {
   const sendTest = useServerFn(sendTestMessage);
   const refresh = useServerFn(refreshChats);
   const enableTrack = useServerFn(enableMemberTracking);
+  const reqCode = useServerFn(requestPremiumCode);
+  const confirmCode = useServerFn(confirmPremiumCode);
+  const syncEmojis = useServerFn(syncPremiumEmojis);
 
   const accounts = useQuery({
     queryKey: ["telegram-accounts"],
@@ -69,6 +78,14 @@ function TelegramAccountsPage() {
   const [token, setToken] = useState("");
   const [accountType, setAccountType] = useState<"bot" | "premium">("bot");
   const [phone, setPhone] = useState("");
+  const [apiId, setApiId] = useState("");
+  const [apiHash, setApiHash] = useState("");
+  const [premiumStep, setPremiumStep] = useState<"form" | "code">("form");
+  const [pendingAccountId, setPendingAccountId] = useState<string | null>(null);
+  const [smsCode, setSmsCode] = useState("");
+  const [twoFa, setTwoFa] = useState("");
+  const [needs2fa, setNeeds2fa] = useState(false);
+  const [loadingPremium, setLoadingPremium] = useState(false);
 
   const createMut = useMutation({
     mutationFn: async () => {
@@ -92,6 +109,93 @@ function TelegramAccountsPage() {
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
+  function resetDialog() {
+    setLabel("");
+    setToken("");
+    setPhone("");
+    setApiId("");
+    setApiHash("");
+    setSmsCode("");
+    setTwoFa("");
+    setNeeds2fa(false);
+    setPremiumStep("form");
+    setPendingAccountId(null);
+    setAccountType("bot");
+  }
+
+  async function handleRequestCode() {
+    if (!label || !phone || !apiId || !apiHash) {
+      toast.error("Preencha todos os campos");
+      return;
+    }
+    const idNum = Number(apiId);
+    if (!Number.isInteger(idNum) || idNum <= 0) {
+      toast.error("API ID inv\u00e1lido");
+      return;
+    }
+    setLoadingPremium(true);
+    try {
+      // 1) cria a conta no banco
+      const { data: row, error } = await supabase
+        .from("telegram_accounts")
+        .insert({
+          user_id: user!.id,
+          label,
+          bot_token: null,
+          account_type: "premium",
+          phone,
+          tg_api_id: idNum,
+          tg_api_hash: apiHash,
+        })
+        .select("id")
+        .single();
+      if (error) throw error;
+      // 2) chama o servi\u00e7o externo
+      await reqCode({
+        data: { accountId: row.id, apiId: idNum, apiHash, phone },
+      });
+      setPendingAccountId(row.id);
+      setPremiumStep("code");
+      toast.success("C\u00f3digo enviado pelo Telegram");
+      qc.invalidateQueries({ queryKey: ["telegram-accounts"] });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Falha");
+    } finally {
+      setLoadingPremium(false);
+    }
+  }
+
+  async function handleConfirmCode() {
+    if (!pendingAccountId || !smsCode) return;
+    setLoadingPremium(true);
+    try {
+      const r = await confirmCode({
+        data: {
+          accountId: pendingAccountId,
+          code: smsCode,
+          password: twoFa || undefined,
+        },
+      });
+      if (r.needsPassword) {
+        setNeeds2fa(true);
+        toast.message("Esta conta tem 2FA \u2014 informe a senha de nuvem");
+        return;
+      }
+      toast.success("Conta conectada!");
+      // Sincroniza emojis em background
+      syncEmojis({ data: { accountId: pendingAccountId } })
+        .then((s) => toast.success(`${s.count} emojis premium sincronizados`))
+        .catch(() => {});
+      setOpenNew(false);
+      resetDialog();
+      qc.invalidateQueries({ queryKey: ["telegram-accounts"] });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Falha");
+    } finally {
+      setLoadingPremium(false);
+    }
+  }
 
   const deleteMut = useMutation({
     mutationFn: async (id: string) => {
@@ -124,14 +228,23 @@ function TelegramAccountsPage() {
               Adicionar Conta
             </Button>
           </DialogTrigger>
-          <DialogContent>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Adicionar conta Telegram</DialogTitle>
+            <DialogTitle>
+              {accountType === "premium" ? "Adicionar Conta Premium" : "Adicionar conta Telegram"}
+            </DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label>Tipo da conta</Label>
-                <Select value={accountType} onValueChange={(v) => setAccountType(v as "bot" | "premium")}>
+              <Select
+                value={accountType}
+                onValueChange={(v) => {
+                  setAccountType(v as "bot" | "premium");
+                  setPremiumStep("form");
+                  setPendingAccountId(null);
+                }}
+              >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -141,53 +254,118 @@ function TelegramAccountsPage() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
-                <Label>{accountType === "bot" ? "Rótulo / Nome do bot" : "Nome da conta"}</Label>
-                <Input
-                  value={label}
-                  onChange={(e) => setLabel(e.target.value)}
-                  placeholder={accountType === "bot" ? "Ex: Bot principal" : "Ex: Leonardo Ferreira"}
-                />
-              </div>
-              {accountType === "bot" ? (
+
+            {accountType === "bot" && (
+              <>
+                <div className="space-y-2">
+                  <Label>R\u00f3tulo / Nome do bot</Label>
+                  <Input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Ex: Bot principal" />
+                </div>
                 <div className="space-y-2">
                   <Label>Bot Token</Label>
-                  <Input
-                    value={token}
-                    onChange={(e) => setToken(e.target.value)}
-                    placeholder="123456:ABC-..."
-                    type="password"
-                  />
+                  <Input value={token} onChange={(e) => setToken(e.target.value)} placeholder="123456:ABC-..." type="password" />
                   <p className="text-xs text-muted-foreground">
                     Crie um bot com o @BotFather no Telegram para obter o token.
                   </p>
                 </div>
-              ) : (
-                <div className="space-y-2">
-                  <Label>Telefone</Label>
-                  <Input
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    placeholder="+55 11 99999-0000"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Conta premium para envios personalizados como usuário pessoal.
-                  </p>
+              </>
+            )}
+
+            {accountType === "premium" && premiumStep === "form" && (
+              <>
+                <div className="rounded-xl border border-primary/30 bg-primary/10 p-4 text-sm space-y-2">
+                  <p className="font-semibold">Como conectar sua conta Telegram:</p>
+                  <p className="font-medium">📱 Passo a passo:</p>
+                  <ol className="list-decimal pl-5 space-y-1 text-muted-foreground">
+                    <li>Acesse <a href="https://my.telegram.org" target="_blank" rel="noreferrer" className="underline">my.telegram.org</a> e fa\u00e7a login</li>
+                    <li>V\u00e1 em "API Development Tools" e crie uma aplica\u00e7\u00e3o</li>
+                    <li>Copie o <b>API ID</b> e <b>API Hash</b></li>
+                    <li>Preencha todos os campos abaixo</li>
+                    <li>Clique em "Solicitar C\u00f3digo" para receber no Telegram</li>
+                    <li>Digite o c\u00f3digo e clique em "Conectar"</li>
+                  </ol>
+                  <div className="rounded-md bg-primary/20 px-3 py-2 text-xs">
+                    💡 <b>Dica:</b> As credenciais API s\u00e3o necess\u00e1rias para conectar sua conta pessoal.
+                  </div>
                 </div>
-              )}
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Nome da Conta</Label>
+                    <Input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Ex: Minha Conta Premium" />
+                    <p className="text-xs text-muted-foreground">Nome para identificar esta conta no sistema</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>N\u00famero do Telefone</Label>
+                    <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+5511999999999" />
+                    <p className="text-xs text-muted-foreground">N\u00famero completo com c\u00f3digo do pa\u00eds (ex: +55)</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>API ID</Label>
+                    <Input value={apiId} onChange={(e) => setApiId(e.target.value)} placeholder="12345678" inputMode="numeric" />
+                    <p className="text-xs text-muted-foreground">API ID obtido em my.telegram.org</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>API Hash</Label>
+                    <Input value={apiHash} onChange={(e) => setApiHash(e.target.value)} placeholder="abcdef1234567890..." />
+                    <p className="text-xs text-muted-foreground">API Hash obtido em my.telegram.org</p>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {accountType === "premium" && premiumStep === "code" && (
+              <div className="space-y-4">
+                <div className="rounded-xl border border-primary/30 bg-primary/10 p-4 text-sm flex items-start gap-3">
+                  <KeyRound className="size-5 mt-0.5" />
+                  <div>
+                    <p className="font-semibold">Digite o c\u00f3digo recebido no Telegram</p>
+                    <p className="text-muted-foreground text-xs mt-1">
+                      Verifique a conversa com o "Telegram" no app. O c\u00f3digo expira em ~5 minutos.
+                    </p>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>C\u00f3digo</Label>
+                  <Input
+                    value={smsCode}
+                    onChange={(e) => setSmsCode(e.target.value.replace(/\D/g, ""))}
+                    placeholder="12345"
+                    inputMode="numeric"
+                    maxLength={6}
+                    autoFocus
+                  />
+                </div>
+                {needs2fa && (
+                  <div className="space-y-2">
+                    <Label>Senha 2FA (verifica\u00e7\u00e3o em duas etapas)</Label>
+                    <Input type="password" value={twoFa} onChange={(e) => setTwoFa(e.target.value)} />
+                  </div>
+                )}
+              </div>
+            )}
             </div>
             <DialogFooter>
-              <Button variant="ghost" onClick={() => setOpenNew(false)}>Cancelar</Button>
+            <Button variant="ghost" onClick={() => { setOpenNew(false); resetDialog(); }}>
+              Cancelar
+            </Button>
+            {accountType === "bot" && (
               <Button
                 onClick={() => createMut.mutate()}
-                disabled={
-                  !label ||
-                  (accountType === "bot" ? !token : !phone) ||
-                  createMut.isPending
-                }
+                disabled={!label || !token || createMut.isPending}
               >
                 {createMut.isPending ? "Salvando..." : "Salvar"}
               </Button>
+            )}
+            {accountType === "premium" && premiumStep === "form" && (
+              <Button onClick={handleRequestCode} disabled={loadingPremium}>
+                {loadingPremium ? "Enviando..." : "Solicitar C\u00f3digo"}
+              </Button>
+            )}
+            {accountType === "premium" && premiumStep === "code" && (
+              <Button onClick={handleConfirmCode} disabled={loadingPremium || !smsCode}>
+                {loadingPremium ? "Conectando..." : "Conectar"}
+              </Button>
+            )}
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -253,6 +431,14 @@ function TelegramAccountsPage() {
                 try {
                   await enableTrack({ data: { accountId: a.id } });
                   toast.success("Rastreamento de membros ativado. Adicione o bot como admin do grupo.");
+                } catch (e) {
+                  toast.error(e instanceof Error ? e.message : "Falha");
+                }
+              }}
+              onSyncEmojis={async () => {
+                try {
+                  const r = await syncEmojis({ data: { accountId: a.id } });
+                  toast.success(`${r.count} emojis premium sincronizados`);
                 } catch (e) {
                   toast.error(e instanceof Error ? e.message : "Falha");
                 }
