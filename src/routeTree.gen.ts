@@ -14,6 +14,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedTelegramAccountsRouteImport } from './routes/_authenticated/telegram-accounts'
+import { Route as AuthenticatedPremiumEmojisRouteImport } from './routes/_authenticated/premium-emojis'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 
 const SignupRoute = SignupRouteImport.update({
@@ -41,6 +42,12 @@ const AuthenticatedTelegramAccountsRoute =
     path: '/telegram-accounts',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedPremiumEmojisRoute =
+  AuthenticatedPremiumEmojisRouteImport.update({
+    id: '/premium-emojis',
+    path: '/premium-emojis',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -52,6 +59,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/premium-emojis': typeof AuthenticatedPremiumEmojisRoute
   '/telegram-accounts': typeof AuthenticatedTelegramAccountsRoute
 }
 export interface FileRoutesByTo {
@@ -59,6 +67,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/premium-emojis': typeof AuthenticatedPremiumEmojisRoute
   '/telegram-accounts': typeof AuthenticatedTelegramAccountsRoute
 }
 export interface FileRoutesById {
@@ -68,13 +77,26 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/premium-emojis': typeof AuthenticatedPremiumEmojisRoute
   '/_authenticated/telegram-accounts': typeof AuthenticatedTelegramAccountsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/login' | '/signup' | '/dashboard' | '/telegram-accounts'
+  fullPaths:
+    | '/'
+    | '/login'
+    | '/signup'
+    | '/dashboard'
+    | '/premium-emojis'
+    | '/telegram-accounts'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/login' | '/signup' | '/dashboard' | '/telegram-accounts'
+  to:
+    | '/'
+    | '/login'
+    | '/signup'
+    | '/dashboard'
+    | '/premium-emojis'
+    | '/telegram-accounts'
   id:
     | '__root__'
     | '/'
@@ -82,6 +104,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/signup'
     | '/_authenticated/dashboard'
+    | '/_authenticated/premium-emojis'
     | '/_authenticated/telegram-accounts'
   fileRoutesById: FileRoutesById
 }
@@ -129,6 +152,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedTelegramAccountsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/premium-emojis': {
+      id: '/_authenticated/premium-emojis'
+      path: '/premium-emojis'
+      fullPath: '/premium-emojis'
+      preLoaderRoute: typeof AuthenticatedPremiumEmojisRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/dashboard': {
       id: '/_authenticated/dashboard'
       path: '/dashboard'
@@ -141,11 +171,13 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedPremiumEmojisRoute: typeof AuthenticatedPremiumEmojisRoute
   AuthenticatedTelegramAccountsRoute: typeof AuthenticatedTelegramAccountsRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedPremiumEmojisRoute: AuthenticatedPremiumEmojisRoute,
   AuthenticatedTelegramAccountsRoute: AuthenticatedTelegramAccountsRoute,
 }
 
