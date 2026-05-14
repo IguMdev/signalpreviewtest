@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
@@ -160,6 +160,29 @@ function RoomsPage() {
     if (search && !r.name.toLowerCase().includes(search.toLowerCase())) return false;
     return true;
   });
+
+  // Auto-correção: quando o nome da sala foi salvo como o username do bot,
+  // troca pelo título real do chat/grupo vinculado.
+  const fixedRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (!rooms.data) return;
+    const toFix = rooms.data.filter((r) => {
+      if (fixedRef.current.has(r.id)) return false;
+      const username = r.telegram_accounts?.bot_username?.toLowerCase();
+      const chatTitle = r.room_chats?.[0]?.chat_title;
+      const nameNorm = r.name.replace(/^@/, "").toLowerCase();
+      return !!username && !!chatTitle && nameNorm === username && chatTitle !== r.name;
+    });
+    if (!toFix.length) return;
+    (async () => {
+      for (const r of toFix) {
+        fixedRef.current.add(r.id);
+        const newName = r.room_chats[0].chat_title!;
+        await supabase.from("rooms").update({ name: newName }).eq("id", r.id);
+      }
+      qc.invalidateQueries({ queryKey: ["rooms-list"] });
+    })();
+  }, [rooms.data, qc]);
 
   function fmtDate(d: string | null) {
     if (!d) return "—";
