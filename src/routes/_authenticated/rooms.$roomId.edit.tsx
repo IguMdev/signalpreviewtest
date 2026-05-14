@@ -1479,7 +1479,10 @@ function SessionMessageEditor({
   existing: any;
   onChanged: () => void;
 }) {
-  const [content, setContent] = useState<string>(existing?.content ?? "");
+  const defaultContent = kind === "open"
+    ? "🚀 SESSÃO COMEÇA EM {MINUTOS} MIN!\nPrepare-se para os sinais!"
+    : "🏁 SESSÃO ENCERRADA\nObrigado por operar conosco!";
+  const [content, setContent] = useState<string>(existing?.content ?? defaultContent);
   const [enabled, setEnabled] = useState<boolean>(existing?.enabled ?? true);
   const [lead, setLead] = useState<string>(String(existing?.lead_minutes ?? 5));
   const [imagePath, setImagePath] = useState<string | null>(existing?.image_path ?? null);
@@ -1489,7 +1492,7 @@ function SessionMessageEditor({
   const [testing, setTesting] = useState(false);
 
   useEffect(() => {
-    setContent(existing?.content ?? "");
+    setContent(existing?.content ?? defaultContent);
     setEnabled(existing?.enabled ?? true);
     setLead(String(existing?.lead_minutes ?? 5));
     setImagePath(existing?.image_path ?? null);
@@ -1609,7 +1612,8 @@ function ReportsCard({ roomId }: { roomId: string }) {
 
   const [enabled, setEnabled] = useState<boolean>(false);
   const [delay, setDelay] = useState<string>("1");
-  const [tpl, setTpl] = useState<string>("");
+  const REPORT_DEFAULT = "📊 RELATÓRIO {SESSAO_NOME}\n✅ Wins: {TOTAL_WINS}\n🔴 Losses: {TOTAL_LOSSES}\n📈 Operações: {TOTAL_OPERACOES}\n🎯 Win rate: {WIN_RATE}%";
+  const [tpl, setTpl] = useState<string>(REPORT_DEFAULT);
   const [includeStats, setIncludeStats] = useState<boolean>(true);
   const [imagePath, setImagePath] = useState<string | null>(null);
   const [imageMime, setImageMime] = useState<string | null>(null);
@@ -1619,7 +1623,7 @@ function ReportsCard({ roomId }: { roomId: string }) {
     if (!report.data) return;
     setEnabled(report.data.enabled);
     setDelay(String(report.data.delay_minutes ?? 1));
-    setTpl(report.data.template ?? "");
+    setTpl(report.data.template ?? REPORT_DEFAULT);
     setIncludeStats(report.data.include_stats ?? true);
     setImagePath(report.data.image_path ?? null);
     setImageMime((report.data as any).image_mime ?? null);
