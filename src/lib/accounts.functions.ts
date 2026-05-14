@@ -147,12 +147,28 @@ export const sendRoomTest = createServerFn({ method: "POST" })
     if (data.imagePath) {
       const bucket = data.imageBucket || "room-images";
       const { data: pub } = supabase.storage.from(bucket).getPublicUrl(data.imagePath);
-      r = await callTelegram<{ message_id: number }>(acc.bot_token, "sendPhoto", {
-        chat_id: chat.chat_id,
-        photo: pub.publicUrl,
-        caption: text || undefined,
-        parse_mode: "HTML",
-      });
+      const lower = data.imagePath.toLowerCase();
+      const isSticker = lower.endsWith(".webp") || lower.endsWith(".tgs") || lower.endsWith(".webm");
+      if (isSticker) {
+        r = await callTelegram<{ message_id: number }>(acc.bot_token, "sendSticker", {
+          chat_id: chat.chat_id,
+          sticker: pub.publicUrl,
+        });
+        if (r.ok && text) {
+          await callTelegram<{ message_id: number }>(acc.bot_token, "sendMessage", {
+            chat_id: chat.chat_id,
+            text,
+            parse_mode: "HTML",
+          });
+        }
+      } else {
+        r = await callTelegram<{ message_id: number }>(acc.bot_token, "sendPhoto", {
+          chat_id: chat.chat_id,
+          photo: pub.publicUrl,
+          caption: text || undefined,
+          parse_mode: "HTML",
+        });
+      }
     } else {
       if (!text) throw new Error("Mensagem vazia");
       r = await callTelegram<{ message_id: number }>(acc.bot_token, "sendMessage", {
