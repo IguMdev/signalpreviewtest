@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useParams, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import {
-  Home, ChevronRight, ExternalLink, Plus, Trash2, Info, X,
+  Home, ChevronRight, ExternalLink, Plus, Trash2, Info, X, Upload, ImageIcon, Send, Smile, RotateCcw,
 } from "lucide-react";
 import { ASSETS_CATALOG, type AssetCategory } from "@/lib/assets-catalog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -104,10 +104,10 @@ function EditRoomPage() {
 
       {/* Sticky footer */}
       <div className="fixed bottom-0 left-0 right-0 lg:left-[var(--sidebar-width,16rem)] bg-background/95 backdrop-blur border-t border-border p-4 flex justify-end gap-2 z-40">
-        <Button variant="outline" onClick={() => navigate({ to: "/rooms" })}>Cancelar</Button>
         <Button onClick={() => toast.success("Use os botões 'Salvar' de cada seção para persistir mudanças")}>
           Salvar
         </Button>
+        <Button variant="outline" onClick={() => navigate({ to: "/rooms" })}>Cancelar</Button>
       </div>
     </div>
   );
