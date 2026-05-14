@@ -723,7 +723,7 @@ function WindowItem({ window: w, roomId }: { window: any; roomId: string }) {
         Usar Todos os Ativos
       </label>
 
-      <WindowAssets selected={filter} setSelected={setFilter} roomId={roomId} windowId={w.id} useAll={useAll} />
+      <WindowAssets selected={filter} setSelected={setFilter} roomId={roomId} windowId={w.id} useAll={useAll} setUseAll={setUseAll} />
 
       <div className="flex justify-end pt-2 border-t border-border">
         <Button
