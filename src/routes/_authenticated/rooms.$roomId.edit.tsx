@@ -19,6 +19,13 @@ import {
 } from "lucide-react";
 import { ASSETS_CATALOG, type AssetCategory } from "@/lib/assets-catalog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Sparkles, Heart, Users } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
+import {
+  getRoomEngagementSettings,
+  upsertRoomEngagementSettings,
+  getMySubscription,
+} from "@/lib/engagement.functions";
 
 export const Route = createFileRoute("/_authenticated/rooms/$roomId/edit")({
   component: EditRoomPage,
@@ -98,6 +105,7 @@ function EditRoomPage() {
       <TemplatesCard roomId={roomId} />
       <SessionMessagesCard roomId={roomId} />
       <ReportsCard roomId={roomId} />
+      <EngagementCard roomId={roomId} />
       <TimezoneCard room={r} />
       <StopLossCard room={r} />
       <MarketTipsCard room={r} />
@@ -227,6 +235,157 @@ function BaseConfigCard({ room }: { room: RoomData }) {
 
       <div className="flex justify-end pt-2 border-t border-border">
         <Button size="sm" onClick={() => save.mutate()} disabled={save.isPending}>
+          {save.isPending ? "Salvando..." : "Salvar seção"}
+        </Button>
+      </div>
+    </Card>
+  );
+}
+
+function EngagementCard({ roomId }: { roomId: string }) {
+  const qc = useQueryClient();
+  const fetchSettings = useServerFn(getRoomEngagementSettings);
+  const fetchSub = useServerFn(getMySubscription);
+  const saveSettings = useServerFn(upsertRoomEngagementSettings);
+
+  const { data: settings } = useQuery({
+    queryKey: ["room-eng-settings", roomId],
+    queryFn: () => fetchSettings({ data: { roomId } }),
+  });
+  const { data: sub } = useQuery({ queryKey: ["engagement-sub"], queryFn: () => fetchSub() });
+
+  const [autoReact, setAutoReact] = useState(false);
+  const [reactionsPerSignal, setReactionsPerSignal] = useState(30);
+  const [emojis, setEmojis] = useState<string[]>(["👍", "❤️", "🔥"]);
+  const [emojiInput, setEmojiInput] = useState("");
+  const [delayMin, setDelayMin] = useState(5);
+  const [delayMax, setDelayMax] = useState(60);
+  const [autoMembers, setAutoMembers] = useState(false);
+  const [membersPerDay, setMembersPerDay] = useState(50);
+
+  useEffect(() => {
+    if (!settings) return;
+    const s = settings as any;
+    setAutoReact(s.auto_react_enabled);
+    setReactionsPerSignal(s.reactions_per_signal);
+    setEmojis(s.react_emojis ?? ["👍"]);
+    setDelayMin(s.delay_seconds_min);
+    setDelayMax(s.delay_seconds_max);
+    setAutoMembers(s.auto_members_enabled);
+    setMembersPerDay(s.members_per_day);
+  }, [settings]);
+
+  const save = useMutation({
+    mutationFn: () =>
+      saveSettings({
+        data: {
+          roomId,
+          autoReactEnabled: autoReact,
+          reactionsPerSignal,
+          reactEmojis: emojis,
+          delaySecondsMin: delayMin,
+          delaySecondsMax: delayMax,
+          autoMembersEnabled: autoMembers,
+          membersPerDay,
+        },
+      }),
+    onSuccess: () => {
+      toast.success("Configurações de engajamento salvas");
+      qc.invalidateQueries({ queryKey: ["room-eng-settings", roomId] });
+    },
+    onError: (e: any) => toast.error(e.message ?? "Erro ao salvar"),
+  });
+
+  const hasSub = !!sub && (sub as any).status === "active";
+
+  return (
+    <Card className="p-5 space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="font-semibold flex items-center gap-2">
+            <Sparkles className="size-4 text-primary" />
+            Engajamento Bot
+          </h2>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Reações e novos membros automáticos para impulsionar a sala.
+          </p>
+        </div>
+        {!hasSub && (
+          <Button asChild size="sm" variant="outline">
+            <Link to="/engagement">Assinar plano</Link>
+          </Button>
+        )}
+      </div>
+
+      {!hasSub && (
+        <div className="rounded-lg border border-dashed border-border p-3 text-xs text-muted-foreground">
+          Você precisa de um plano de Engajamento ativo para usar este recurso.
+        </div>
+      )}
+
+      <div className="grid md:grid-cols-2 gap-4">
+        {/* Reações */}
+        <div className="rounded-lg border border-border p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <Label className="flex items-center gap-2"><Heart className="size-4" /> Reações automáticas</Label>
+            <Switch checked={autoReact} onCheckedChange={setAutoReact} disabled={!hasSub} />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Reações por sinal</Label>
+            <Input type="number" min={1} max={10000} value={reactionsPerSignal}
+              onChange={(e) => setReactionsPerSignal(Number(e.target.value))} disabled={!hasSub} />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Emojis usados</Label>
+            <div className="flex flex-wrap gap-1">
+              {emojis.map((e, i) => (
+                <Badge key={i} variant="secondary" className="gap-1">
+                  {e}
+                  <button onClick={() => setEmojis(emojis.filter((_, idx) => idx !== i))} className="hover:text-destructive">
+                    <X className="size-3" />
+                  </button>
+                </Badge>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <Input value={emojiInput} onChange={(e) => setEmojiInput(e.target.value)} placeholder="🔥" className="w-20" disabled={!hasSub} />
+              <Button size="sm" variant="outline" type="button" disabled={!hasSub || !emojiInput.trim()}
+                onClick={() => { setEmojis([...emojis, emojiInput.trim()]); setEmojiInput(""); }}>
+                <Plus className="size-3" />
+              </Button>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="space-y-1.5">
+              <Label className="text-xs">Delay mín (s)</Label>
+              <Input type="number" min={0} value={delayMin} onChange={(e) => setDelayMin(Number(e.target.value))} disabled={!hasSub} />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Delay máx (s)</Label>
+              <Input type="number" min={0} value={delayMax} onChange={(e) => setDelayMax(Number(e.target.value))} disabled={!hasSub} />
+            </div>
+          </div>
+        </div>
+
+        {/* Membros */}
+        <div className="rounded-lg border border-border p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <Label className="flex items-center gap-2"><Users className="size-4" /> Novos membros</Label>
+            <Switch checked={autoMembers} onCheckedChange={setAutoMembers} disabled={!hasSub} />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Membros por dia</Label>
+            <Input type="number" min={1} max={50000} value={membersPerDay}
+              onChange={(e) => setMembersPerDay(Number(e.target.value))} disabled={!hasSub} />
+            <p className="text-xs text-muted-foreground">
+              Distribuído ao longo do dia para parecer crescimento orgânico.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex justify-end pt-2 border-t border-border">
+        <Button size="sm" onClick={() => save.mutate()} disabled={save.isPending || !hasSub}>
           {save.isPending ? "Salvando..." : "Salvar seção"}
         </Button>
       </div>

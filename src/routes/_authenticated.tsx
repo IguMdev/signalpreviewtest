@@ -16,6 +16,7 @@ import {
   Moon,
   Sun,
   Video,
+  Sparkles as SparklesIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -31,6 +32,7 @@ const navItems = [
   { to: "/rooms", label: "Salas", icon: Users },
   { to: "/mensagens", label: "Agendamentos", icon: CalendarClock },
   { to: "/videos", label: "Vídeos redondos", icon: Video },
+  { to: "/engagement", label: "Engajamento Bot", icon: SparklesIcon },
   { to: "/recarga", label: "Recarga", icon: Wallet },
   { to: "/perfil", label: "Minha conta", icon: UserCircle },
 ] as const;

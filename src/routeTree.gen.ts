@@ -19,8 +19,10 @@ import { Route as AuthenticatedRecargaRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedPremiumEmojisRouteImport } from './routes/_authenticated/premium-emojis'
 import { Route as AuthenticatedPerfilRouteImport } from './routes/_authenticated/perfil'
 import { Route as AuthenticatedMensagensRouteImport } from './routes/_authenticated/mensagens'
+import { Route as AuthenticatedEngagementRouteImport } from './routes/_authenticated/engagement'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedRoomsIndexRouteImport } from './routes/_authenticated/rooms.index'
+import { Route as ApiPublicKirvanoWebhookRouteImport } from './routes/api/public/kirvano/webhook'
 import { Route as ApiPublicCronDispatchRecurringRouteImport } from './routes/api/public/cron/dispatch-recurring'
 import { Route as AuthenticatedRoomsRoomIdEditRouteImport } from './routes/_authenticated/rooms.$roomId.edit'
 
@@ -75,6 +77,11 @@ const AuthenticatedMensagensRoute = AuthenticatedMensagensRouteImport.update({
   path: '/mensagens',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedEngagementRoute = AuthenticatedEngagementRouteImport.update({
+  id: '/engagement',
+  path: '/engagement',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -84,6 +91,11 @@ const AuthenticatedRoomsIndexRoute = AuthenticatedRoomsIndexRouteImport.update({
   id: '/rooms/',
   path: '/rooms/',
   getParentRoute: () => AuthenticatedRoute,
+} as any)
+const ApiPublicKirvanoWebhookRoute = ApiPublicKirvanoWebhookRouteImport.update({
+  id: '/api/public/kirvano/webhook',
+  path: '/api/public/kirvano/webhook',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPublicCronDispatchRecurringRoute =
   ApiPublicCronDispatchRecurringRouteImport.update({
@@ -103,6 +115,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/engagement': typeof AuthenticatedEngagementRoute
   '/mensagens': typeof AuthenticatedMensagensRoute
   '/perfil': typeof AuthenticatedPerfilRoute
   '/premium-emojis': typeof AuthenticatedPremiumEmojisRoute
@@ -112,11 +125,13 @@ export interface FileRoutesByFullPath {
   '/rooms/': typeof AuthenticatedRoomsIndexRoute
   '/rooms/$roomId/edit': typeof AuthenticatedRoomsRoomIdEditRoute
   '/api/public/cron/dispatch-recurring': typeof ApiPublicCronDispatchRecurringRoute
+  '/api/public/kirvano/webhook': typeof ApiPublicKirvanoWebhookRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/engagement': typeof AuthenticatedEngagementRoute
   '/mensagens': typeof AuthenticatedMensagensRoute
   '/perfil': typeof AuthenticatedPerfilRoute
   '/premium-emojis': typeof AuthenticatedPremiumEmojisRoute
@@ -127,6 +142,7 @@ export interface FileRoutesByTo {
   '/rooms': typeof AuthenticatedRoomsIndexRoute
   '/rooms/$roomId/edit': typeof AuthenticatedRoomsRoomIdEditRoute
   '/api/public/cron/dispatch-recurring': typeof ApiPublicCronDispatchRecurringRoute
+  '/api/public/kirvano/webhook': typeof ApiPublicKirvanoWebhookRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -134,6 +150,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/engagement': typeof AuthenticatedEngagementRoute
   '/_authenticated/mensagens': typeof AuthenticatedMensagensRoute
   '/_authenticated/perfil': typeof AuthenticatedPerfilRoute
   '/_authenticated/premium-emojis': typeof AuthenticatedPremiumEmojisRoute
@@ -144,6 +161,7 @@ export interface FileRoutesById {
   '/_authenticated/rooms/': typeof AuthenticatedRoomsIndexRoute
   '/_authenticated/rooms/$roomId/edit': typeof AuthenticatedRoomsRoomIdEditRoute
   '/api/public/cron/dispatch-recurring': typeof ApiPublicCronDispatchRecurringRoute
+  '/api/public/kirvano/webhook': typeof ApiPublicKirvanoWebhookRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -152,6 +170,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/signup'
     | '/dashboard'
+    | '/engagement'
     | '/mensagens'
     | '/perfil'
     | '/premium-emojis'
@@ -161,11 +180,13 @@ export interface FileRouteTypes {
     | '/rooms/'
     | '/rooms/$roomId/edit'
     | '/api/public/cron/dispatch-recurring'
+    | '/api/public/kirvano/webhook'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/login'
     | '/signup'
     | '/dashboard'
+    | '/engagement'
     | '/mensagens'
     | '/perfil'
     | '/premium-emojis'
@@ -176,12 +197,14 @@ export interface FileRouteTypes {
     | '/rooms'
     | '/rooms/$roomId/edit'
     | '/api/public/cron/dispatch-recurring'
+    | '/api/public/kirvano/webhook'
   id:
     | '__root__'
     | '/_authenticated'
     | '/login'
     | '/signup'
     | '/_authenticated/dashboard'
+    | '/_authenticated/engagement'
     | '/_authenticated/mensagens'
     | '/_authenticated/perfil'
     | '/_authenticated/premium-emojis'
@@ -192,6 +215,7 @@ export interface FileRouteTypes {
     | '/_authenticated/rooms/'
     | '/_authenticated/rooms/$roomId/edit'
     | '/api/public/cron/dispatch-recurring'
+    | '/api/public/kirvano/webhook'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -199,6 +223,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   SignupRoute: typeof SignupRoute
   ApiPublicCronDispatchRecurringRoute: typeof ApiPublicCronDispatchRecurringRoute
+  ApiPublicKirvanoWebhookRoute: typeof ApiPublicKirvanoWebhookRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -273,6 +298,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedMensagensRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/engagement': {
+      id: '/_authenticated/engagement'
+      path: '/engagement'
+      fullPath: '/engagement'
+      preLoaderRoute: typeof AuthenticatedEngagementRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/dashboard': {
       id: '/_authenticated/dashboard'
       path: '/dashboard'
@@ -286,6 +318,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/rooms/'
       preLoaderRoute: typeof AuthenticatedRoomsIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
+    }
+    '/api/public/kirvano/webhook': {
+      id: '/api/public/kirvano/webhook'
+      path: '/api/public/kirvano/webhook'
+      fullPath: '/api/public/kirvano/webhook'
+      preLoaderRoute: typeof ApiPublicKirvanoWebhookRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/public/cron/dispatch-recurring': {
       id: '/api/public/cron/dispatch-recurring'
@@ -306,6 +345,7 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedEngagementRoute: typeof AuthenticatedEngagementRoute
   AuthenticatedMensagensRoute: typeof AuthenticatedMensagensRoute
   AuthenticatedPerfilRoute: typeof AuthenticatedPerfilRoute
   AuthenticatedPremiumEmojisRoute: typeof AuthenticatedPremiumEmojisRoute
@@ -319,6 +359,7 @@ interface AuthenticatedRouteChildren {
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedEngagementRoute: AuthenticatedEngagementRoute,
   AuthenticatedMensagensRoute: AuthenticatedMensagensRoute,
   AuthenticatedPerfilRoute: AuthenticatedPerfilRoute,
   AuthenticatedPremiumEmojisRoute: AuthenticatedPremiumEmojisRoute,
@@ -339,6 +380,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   SignupRoute: SignupRoute,
   ApiPublicCronDispatchRecurringRoute: ApiPublicCronDispatchRecurringRoute,
+  ApiPublicKirvanoWebhookRoute: ApiPublicKirvanoWebhookRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
