@@ -84,31 +84,53 @@ export function TourProvider({ children }: { children: ReactNode }) {
       targetRef.current = null;
       return;
     }
+    // If we still need to navigate to the step's route, skip polling — this
+    // effect will re-run automatically as soon as pathname matches.
+    if (step.route && location.pathname !== step.route) {
+      setRect(null);
+      targetRef.current = null;
+      return;
+    }
     let cancelled = false;
-    let attempts = 0;
-    const find = () => {
-      if (cancelled) return;
-      const el = document.querySelector(step.selector!);
-      if (el) {
-        targetRef.current = el;
-        const r = el.getBoundingClientRect();
-        setRect(r);
-        try {
-          el.scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" });
-        } catch {
-          /* ignore */
-        }
-      } else if (attempts < 30) {
-        attempts++;
-        setTimeout(find, 100);
-      } else {
-        targetRef.current = null;
-        setRect(null);
+    let observer: MutationObserver | null = null;
+    let timeoutId: number | null = null;
+
+    const apply = (el: Element) => {
+      targetRef.current = el;
+      setRect(el.getBoundingClientRect());
+      try {
+        el.scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" });
+      } catch {
+        /* ignore */
       }
     };
-    find();
+
+    const tryFind = () => {
+      if (cancelled) return true;
+      const el = document.querySelector(step.selector!);
+      if (el) {
+        apply(el);
+        return true;
+      }
+      return false;
+    };
+
+    if (!tryFind()) {
+      // Watch for the element appearing in the DOM (route content mounting).
+      observer = new MutationObserver(() => {
+        if (tryFind() && observer) observer.disconnect();
+      });
+      observer.observe(document.body, { childList: true, subtree: true });
+      // Hard timeout fallback so we don't observe forever.
+      timeoutId = window.setTimeout(() => {
+        if (observer) observer.disconnect();
+      }, 4000);
+    }
+
     return () => {
       cancelled = true;
+      if (observer) observer.disconnect();
+      if (timeoutId) window.clearTimeout(timeoutId);
     };
   }, [active, step, location.pathname]);
 
