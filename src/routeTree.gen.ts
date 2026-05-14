@@ -14,6 +14,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
 import { Route as AuthenticatedVideosRouteImport } from './routes/_authenticated/videos'
+import { Route as AuthenticatedTutorialRouteImport } from './routes/_authenticated/tutorial'
 import { Route as AuthenticatedTelegramAccountsRouteImport } from './routes/_authenticated/telegram-accounts'
 import { Route as AuthenticatedRecargaRouteImport } from './routes/_authenticated/recarga'
 import { Route as AuthenticatedPremiumEmojisRouteImport } from './routes/_authenticated/premium-emojis'
@@ -49,6 +50,11 @@ const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
 const AuthenticatedVideosRoute = AuthenticatedVideosRouteImport.update({
   id: '/videos',
   path: '/videos',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedTutorialRoute = AuthenticatedTutorialRouteImport.update({
+  id: '/tutorial',
+  path: '/tutorial',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedTelegramAccountsRoute =
@@ -128,6 +134,7 @@ export interface FileRoutesByFullPath {
   '/premium-emojis': typeof AuthenticatedPremiumEmojisRoute
   '/recarga': typeof AuthenticatedRecargaRoute
   '/telegram-accounts': typeof AuthenticatedTelegramAccountsRoute
+  '/tutorial': typeof AuthenticatedTutorialRoute
   '/videos': typeof AuthenticatedVideosRoute
   '/rooms/': typeof AuthenticatedRoomsIndexRoute
   '/rooms/$roomId/edit': typeof AuthenticatedRoomsRoomIdEditRoute
@@ -145,6 +152,7 @@ export interface FileRoutesByTo {
   '/premium-emojis': typeof AuthenticatedPremiumEmojisRoute
   '/recarga': typeof AuthenticatedRecargaRoute
   '/telegram-accounts': typeof AuthenticatedTelegramAccountsRoute
+  '/tutorial': typeof AuthenticatedTutorialRoute
   '/videos': typeof AuthenticatedVideosRoute
   '/': typeof AuthenticatedIndexRoute
   '/rooms': typeof AuthenticatedRoomsIndexRoute
@@ -165,6 +173,7 @@ export interface FileRoutesById {
   '/_authenticated/premium-emojis': typeof AuthenticatedPremiumEmojisRoute
   '/_authenticated/recarga': typeof AuthenticatedRecargaRoute
   '/_authenticated/telegram-accounts': typeof AuthenticatedTelegramAccountsRoute
+  '/_authenticated/tutorial': typeof AuthenticatedTutorialRoute
   '/_authenticated/videos': typeof AuthenticatedVideosRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/rooms/': typeof AuthenticatedRoomsIndexRoute
@@ -186,6 +195,7 @@ export interface FileRouteTypes {
     | '/premium-emojis'
     | '/recarga'
     | '/telegram-accounts'
+    | '/tutorial'
     | '/videos'
     | '/rooms/'
     | '/rooms/$roomId/edit'
@@ -203,6 +213,7 @@ export interface FileRouteTypes {
     | '/premium-emojis'
     | '/recarga'
     | '/telegram-accounts'
+    | '/tutorial'
     | '/videos'
     | '/'
     | '/rooms'
@@ -222,6 +233,7 @@ export interface FileRouteTypes {
     | '/_authenticated/premium-emojis'
     | '/_authenticated/recarga'
     | '/_authenticated/telegram-accounts'
+    | '/_authenticated/tutorial'
     | '/_authenticated/videos'
     | '/_authenticated/'
     | '/_authenticated/rooms/'
@@ -275,6 +287,13 @@ declare module '@tanstack/react-router' {
       path: '/videos'
       fullPath: '/videos'
       preLoaderRoute: typeof AuthenticatedVideosRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/tutorial': {
+      id: '/_authenticated/tutorial'
+      path: '/tutorial'
+      fullPath: '/tutorial'
+      preLoaderRoute: typeof AuthenticatedTutorialRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/telegram-accounts': {
@@ -372,6 +391,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedPremiumEmojisRoute: typeof AuthenticatedPremiumEmojisRoute
   AuthenticatedRecargaRoute: typeof AuthenticatedRecargaRoute
   AuthenticatedTelegramAccountsRoute: typeof AuthenticatedTelegramAccountsRoute
+  AuthenticatedTutorialRoute: typeof AuthenticatedTutorialRoute
   AuthenticatedVideosRoute: typeof AuthenticatedVideosRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedRoomsIndexRoute: typeof AuthenticatedRoomsIndexRoute
@@ -386,6 +406,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedPremiumEmojisRoute: AuthenticatedPremiumEmojisRoute,
   AuthenticatedRecargaRoute: AuthenticatedRecargaRoute,
   AuthenticatedTelegramAccountsRoute: AuthenticatedTelegramAccountsRoute,
+  AuthenticatedTutorialRoute: AuthenticatedTutorialRoute,
   AuthenticatedVideosRoute: AuthenticatedVideosRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedRoomsIndexRoute: AuthenticatedRoomsIndexRoute,
