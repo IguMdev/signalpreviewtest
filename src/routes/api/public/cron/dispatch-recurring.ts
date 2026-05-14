@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { callTelegram } from "@/lib/telegram.server";
 import { dispatchVideoNote } from "@/lib/videos.functions";
+import { triggerSignalReactions } from "@/lib/engagement.functions";
 
 function nowParts(tz: string) {
   const fmt = new Intl.DateTimeFormat("en-GB", {
@@ -130,6 +131,14 @@ export const Route = createFileRoute("/api/public/cron/dispatch-recurring")({
               error: r.ok ? null : r.description ?? "erro",
             });
             if (r.ok) okAny = true;
+            if (r.ok && r.result?.message_id) {
+              await triggerSignalReactions({
+                userId: s.user_id,
+                chatId: c.chat_id,
+                telegramMessageId: r.result.message_id,
+                roomId: s.room_id,
+              });
+            }
           }
 
           await supabaseAdmin

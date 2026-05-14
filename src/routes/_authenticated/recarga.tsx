@@ -1,10 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Input } from "@/components/ui/input";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
@@ -12,9 +14,10 @@ import {
   DoorOpen, Sparkles, ExternalLink, Crown,
   Users, Heart, MessageCircle, Forward,
   History, CheckCircle2, Clock, XCircle, AlertCircle,
+  Send,
 } from "lucide-react";
 import { toast } from "sonner";
-import { listEngagementPlans, getMySubscriptions, listMyPaymentHistory } from "@/lib/engagement.functions";
+import { listEngagementPlans, getMySubscriptions, listMyPaymentHistory, setSubscriptionTarget } from "@/lib/engagement.functions";
 import { useAuth } from "@/lib/auth-context";
 
 export const Route = createFileRoute("/_authenticated/recarga")({
@@ -218,6 +221,20 @@ function RecargaPage() {
                 </Card>
               )}
 
+              {sub && bot === "inscritos" && !sub.target_link && (
+                <ChooseChannelCard subscriptionId={sub.id} />
+              )}
+              {sub && bot === "inscritos" && sub.target_link && (
+                <Card className="bg-muted/30">
+                  <CardContent className="py-3 text-xs flex items-center justify-between gap-2">
+                    <span className="text-muted-foreground">Entrega para:</span>
+                    <a href={sub.target_link} target="_blank" rel="noreferrer" className="font-medium truncate text-primary">
+                      {sub.target_link}
+                    </a>
+                  </CardContent>
+                </Card>
+              )}
+
               <div className={`grid gap-3 ${plans.length >= 3 ? "md:grid-cols-2 lg:grid-cols-4" : "md:grid-cols-2"}`}>
                 {plans.map((p: any) => {
                   const isCurrent = activePlan?.id === p.id;
@@ -368,6 +385,53 @@ const STATUS_META: Record<string, { label: string; variant: "default" | "seconda
   failed:   { label: "Pagamento recusado",   variant: "destructive", icon: AlertCircle },
   expired:  { label: "Expirado",             variant: "outline",   icon: XCircle },
 };
+
+function ChooseChannelCard({ subscriptionId }: { subscriptionId: string }) {
+  const setTarget = useServerFn(setSubscriptionTarget);
+  const qc = useQueryClient();
+  const [link, setLink] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  async function submit() {
+    if (!/^https?:\/\/(t\.me|telegram\.me)\//i.test(link)) {
+      toast.error("Use um link público do Telegram (https://t.me/...)");
+      return;
+    }
+    setLoading(true);
+    try {
+      await setTarget({ data: { subscriptionId, targetLink: link.trim() } });
+      toast.success("Pedido despachado para o painel!");
+      qc.invalidateQueries({ queryKey: ["engagement-subs"] });
+    } catch (e: any) {
+      toast.error(e?.message ?? "Falha ao despachar");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <Card className="border-primary/40 bg-primary/5">
+      <CardContent className="py-3 space-y-2">
+        <div className="text-xs font-medium">Escolha o canal/grupo para receber os inscritos</div>
+        <p className="text-[11px] text-muted-foreground">
+          Cole o link público (ex: https://t.me/seucanal). A entrega é automática e única.
+        </p>
+        <div className="flex gap-2">
+          <Input
+            placeholder="https://t.me/seucanal"
+            value={link}
+            onChange={(e) => setLink(e.target.value)}
+            disabled={loading}
+          />
+          <Button size="sm" onClick={submit} disabled={loading || !link}>
+            <Send className="size-3 mr-1" />
+            {loading ? "Enviando…" : "Entregar"}
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
 
 function PaymentHistorySection({ rows, isLoading }: { rows: any[]; isLoading: boolean }) {
   return (
