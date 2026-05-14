@@ -1081,10 +1081,12 @@ const SIGNAL_PLACEHOLDERS = {
   list: "📋 LISTA DE SINAIS\n{LISTA_SINAIS}\n\nGerenciamento: {MARTINGALE} martingale(s)",
 };
 
-const RESULT_TEMPLATES: { kind: TemplateKind; title: string; placeholder: string; tone: string }[] = [
-  { kind: "win", title: "Vitória", placeholder: "✅ VITÓRIA no {ATIVO} 🟢", tone: "GAIN" },
-  { kind: "win_martingale", title: "Vitória Martingale", placeholder: "✅ VITÓRIA no martingale {ATIVO} 🟢", tone: "GAIN" },
-  { kind: "loss", title: "Derrota", placeholder: "🔴 DERROTA no {ATIVO}", tone: "LOSS" },
+const DEFAULT_GAIN_IMAGE = "_defaults/template-gain.png";
+const DEFAULT_LOSS_IMAGE = "_defaults/template-loss.png";
+const RESULT_TEMPLATES: { kind: TemplateKind; title: string; placeholder: string; tone: string; defaultImagePath?: string }[] = [
+  { kind: "win", title: "Vitória", placeholder: "✅ VITÓRIA no {ATIVO} 🟢", tone: "GAIN", defaultImagePath: DEFAULT_GAIN_IMAGE },
+  { kind: "win_martingale", title: "Vitória Martingale", placeholder: "✅ VITÓRIA no martingale {ATIVO} 🟢", tone: "GAIN", defaultImagePath: DEFAULT_GAIN_IMAGE },
+  { kind: "loss", title: "Derrota", placeholder: "🔴 DERROTA no {ATIVO}", tone: "LOSS", defaultImagePath: DEFAULT_LOSS_IMAGE },
 ];
 
 const DIRECTION_TEMPLATES: { kind: TemplateKind; title: string; placeholder: string }[] = [
