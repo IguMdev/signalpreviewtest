@@ -87,20 +87,20 @@ function AuthenticatedLayout() {
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="min-h-screen text-foreground">
       {/* Top bar */}
-      <header className="fixed top-0 inset-x-0 z-30 h-16 bg-card/80 backdrop-blur border-b border-border flex items-center px-4 gap-3">
+      <header className="fixed top-0 inset-x-0 z-30 h-16 glass border-b border-border/60 flex items-center px-4 gap-3">
         <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setSidebarOpen((v) => !v)}>
           <Menu className="size-5" />
         </Button>
         <Link to="/dashboard" className="flex items-center gap-2">
-          <div className="size-8 rounded-lg bg-primary text-primary-foreground grid place-items-center">
+          <div className="size-8 rounded-lg cyber-gradient text-primary-foreground grid place-items-center neon-glow">
             <Send className="size-4" />
           </div>
-          <span className="font-semibold tracking-tight">Sala de Sinais</span>
+          <span className="font-semibold tracking-tight cyber-text">Sala de Sinais</span>
         </Link>
         <div className="ml-auto flex items-center gap-3">
-          <div className="hidden sm:flex items-center gap-2 rounded-full bg-accent/60 px-3 py-1.5 text-sm">
+          <div className="hidden sm:flex items-center gap-2 rounded-full glass cyber-border px-3 py-1.5 text-sm">
             <Wallet className="size-4 text-primary" />
             <span className="font-medium">{profileQuery.data?.credits ?? 0}</span>
             <span className="text-muted-foreground text-xs">créditos</span>
@@ -109,7 +109,7 @@ function AuthenticatedLayout() {
             {dark ? <Sun className="size-4" /> : <Moon className="size-4" />}
           </Button>
           <Link to="/perfil" aria-label="Minha conta" className="shrink-0">
-            <Avatar className="size-8 ring-1 ring-border hover:ring-primary transition">
+            <Avatar className="size-8 ring-1 ring-primary/40 hover:ring-primary transition">
               <AvatarImage src={profileQuery.data?.avatar_url ?? undefined} alt={profileQuery.data?.display_name ?? "Perfil"} />
               <AvatarFallback className="text-xs">
                 {(profileQuery.data?.display_name?.[0] ?? user.email?.[0] ?? "U").toUpperCase()}
@@ -125,7 +125,7 @@ function AuthenticatedLayout() {
       {/* Sidebar */}
       <aside
         className={cn(
-          "fixed top-16 bottom-0 left-0 z-20 w-64 bg-card border-r border-border transition-transform",
+          "fixed top-16 bottom-0 left-0 z-20 w-64 glass border-r border-border/60 transition-transform",
           sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
         )}
       >
@@ -138,13 +138,13 @@ function AuthenticatedLayout() {
                 to={to}
                 onClick={() => setSidebarOpen(false)}
                 className={cn(
-                  "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition",
+                  "relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition",
                   active
-                    ? "bg-primary/10 text-primary"
-                    : "text-foreground/80 hover:bg-accent hover:text-foreground",
+                    ? "cyber-gradient-soft text-foreground cyber-border"
+                    : "text-foreground/70 hover:bg-white/5 hover:text-foreground",
                 )}
               >
-                <Icon className="size-4" />
+                <Icon className={cn("size-4", active && "text-primary")} />
                 {label}
               </Link>
             );
