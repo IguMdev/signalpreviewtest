@@ -1,9 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
 import { Card } from "@/components/ui/card";
-import { Send, Users, CalendarClock, Wallet, Sparkles } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Send, Users, CalendarClock, Wallet, Sparkles, CreditCard } from "lucide-react";
+import { getMySubscriptions } from "@/lib/engagement.functions";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   component: DashboardPage,
@@ -11,6 +14,7 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
 
 function DashboardPage() {
   const { user } = useAuth();
+  const fetchSubs = useServerFn(getMySubscriptions);
 
   const stats = useQuery({
     queryKey: ["dashboard-stats", user?.id],
@@ -49,11 +53,25 @@ function DashboardPage() {
     },
   });
 
+  const subsQ = useQuery({
+    queryKey: ["dashboard-subs", user?.id],
+    enabled: !!user,
+    queryFn: () => fetchSubs(),
+  });
+
+  const activeSubs = ((subsQ.data ?? []) as any[]).filter((s) => s.status === "active");
+  const monthlyTotal = activeSubs.reduce(
+    (sum, s) => sum + Number(s.plan?.price_brl ?? 0),
+    0,
+  );
+  const fmtBRL = (v: number) =>
+    v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
   const cards = [
+    { label: "Mensalidade atual", value: fmtBRL(monthlyTotal), icon: CreditCard },
     { label: "Créditos", value: stats.data?.credits ?? 0, icon: Wallet },
     { label: "Contas Telegram", value: stats.data?.accounts ?? 0, icon: Send },
     { label: "Grupos", value: stats.data?.rooms ?? 0, icon: Users },
-    { label: "Agendamentos pendentes", value: stats.data?.pending ?? 0, icon: CalendarClock },
   ];
 
   return (
@@ -74,6 +92,43 @@ function DashboardPage() {
           </Card>
         ))}
       </div>
+
+      <Card className="p-6">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="font-semibold">Planos ativos</h2>
+            <p className="text-xs text-muted-foreground">
+              Total mensal: <span className="font-semibold text-foreground">{fmtBRL(monthlyTotal)}</span>
+            </p>
+          </div>
+          <Link to="/recarga" className="text-sm text-primary hover:underline">
+            Gerenciar
+          </Link>
+        </div>
+        {activeSubs.length === 0 ? (
+          <div className="text-center py-10 text-muted-foreground text-sm">
+            <CreditCard className="size-8 mx-auto mb-2 opacity-50" />
+            Você ainda não tem planos ativos.
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {activeSubs.map((s) => (
+              <div
+                key={s.id}
+                className="flex items-center justify-between p-3 rounded-lg bg-muted/50"
+              >
+                <div className="min-w-0">
+                  <p className="text-sm font-medium truncate">{s.plan?.name ?? "Plano"}</p>
+                  <p className="text-xs text-muted-foreground capitalize">
+                    {s.plan?.bot_type ?? ""}
+                  </p>
+                </div>
+                <Badge variant="secondary">{fmtBRL(Number(s.plan?.price_brl ?? 0))}/mês</Badge>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
 
       <Card className="p-6">
         <div className="flex items-center justify-between mb-4">
