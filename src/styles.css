@@ -223,3 +223,31 @@
     border-radius: 9999px;
   }
 }
+
+/* Custom scrollbar — matches cyber/lime design system */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--primary) transparent;
+}
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background-image: var(--gradient-cyber);
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  box-shadow: var(--shadow-neon);
+}
+*::-webkit-scrollbar-thumb:hover {
+  background-image: var(--gradient-cyber);
+  background-clip: padding-box;
+  filter: brightness(1.15);
+}
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
