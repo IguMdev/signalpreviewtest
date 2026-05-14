@@ -757,6 +757,8 @@ function WindowAssets({
 }) {
   const [search, setSearch] = useState("");
   const [collapsed, setCollapsed] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<"all" | "open" | "closed">("all");
+  const [minPayoutOnly, setMinPayoutOnly] = useState(false);
   const qc = useQueryClient();
 
   // load per-asset open/payout from room_assets
@@ -804,6 +806,19 @@ function WindowAssets({
   }
 
   const totalSelected = useAll ? "todos" : `${selected.length} selecionado${selected.length === 1 ? "" : "s"}`;
+  const visibleAssetsByCategory = (Object.keys(ASSETS_CATALOG) as AssetCategory[]).map((cat) => ({
+    cat,
+    assets: ASSETS_CATALOG[cat].filter((code) => {
+      const meta = assets.data?.[code];
+      const isOpen = meta?.is_open !== false;
+      const payout = meta?.payout ?? DEFAULT_PAYOUT;
+      const normalizedPayout = (payout > 1 ? payout - 1 : payout) * 100;
+      const matchesSearch = code.toLowerCase().includes(search.toLowerCase());
+      const matchesStatus = statusFilter === "all" || (statusFilter === "open" ? isOpen : !isOpen);
+      const matchesPayout = !minPayoutOnly || normalizedPayout >= 70;
+      return matchesSearch && matchesStatus && matchesPayout;
+    }),
+  }));
 
   return (
     <div className="space-y-3 border rounded-md p-3 bg-background/40">
@@ -813,9 +828,27 @@ function WindowAssets({
           <Badge variant="outline" className="text-xs">{totalSelected}</Badge>
           {!collapsed && (
             <>
-              <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/40 hover:bg-emerald-500/20">Aberto</Badge>
-              <Badge variant="outline" className="text-muted-foreground">Fechado</Badge>
-              <Badge className="bg-emerald-600/30 text-emerald-200 border-emerald-600/40">≥ 70%</Badge>
+              <button
+                type="button"
+                onClick={() => setStatusFilter((current) => current === "open" ? "all" : "open")}
+                className={statusFilter === "open"
+                  ? "h-6 rounded-full border border-emerald-500/40 bg-emerald-500/20 px-3 text-xs font-medium text-emerald-300 hover:bg-emerald-500/30"
+                  : "h-6 rounded-full border border-border px-3 text-xs font-medium text-muted-foreground hover:bg-muted/40"}
+              >Aberto</button>
+              <button
+                type="button"
+                onClick={() => setStatusFilter((current) => current === "closed" ? "all" : "closed")}
+                className={statusFilter === "closed"
+                  ? "h-6 rounded-full border border-emerald-500/40 bg-emerald-500/20 px-3 text-xs font-medium text-emerald-300 hover:bg-emerald-500/30"
+                  : "h-6 rounded-full border border-border px-3 text-xs font-medium text-muted-foreground hover:bg-muted/40"}
+              >Fechado</button>
+              <button
+                type="button"
+                onClick={() => setMinPayoutOnly((current) => !current)}
+                className={minPayoutOnly
+                  ? "h-6 rounded-full border border-emerald-600/40 bg-emerald-600/30 px-3 text-xs font-medium text-emerald-200 hover:bg-emerald-600/40"
+                  : "h-6 rounded-full border border-border px-3 text-xs font-medium text-muted-foreground hover:bg-muted/40"}
+              >≥ 70%</button>
             </>
           )}
         </div>
@@ -834,13 +867,13 @@ function WindowAssets({
       />
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {(Object.keys(ASSETS_CATALOG) as AssetCategory[]).map((cat) => (
+        {visibleAssetsByCategory.map(({ cat, assets: categoryAssets }) => (
           <div key={cat} className="space-y-1.5">
             <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{cat}</h4>
             <div className="space-y-1">
-              {ASSETS_CATALOG[cat]
-                .filter((a) => a.toLowerCase().includes(search.toLowerCase()))
-                .map((code) => {
+              {categoryAssets.length === 0 ? (
+                <p className="text-xs text-muted-foreground py-1">Nenhum ativo</p>
+              ) : categoryAssets.map((code) => {
                   const meta = assets.data?.[code];
                   const checked = selected.includes(code);
                   return (
@@ -850,10 +883,11 @@ function WindowAssets({
                       <button
                         type="button"
                         onClick={() => toggleOpen.mutate(code)}
+                        disabled={toggleOpen.isPending}
                         title="Clique para alternar Aberto/Fechado"
                         className={meta?.is_open === false
-                          ? "h-4 text-[10px] px-1.5 rounded border border-border text-muted-foreground hover:bg-muted/40"
-                          : "h-4 text-[10px] px-1.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-500/30"}
+                          ? "relative z-10 h-6 min-w-14 cursor-pointer rounded border border-border px-2 text-[10px] font-medium text-muted-foreground hover:bg-muted/40 disabled:cursor-wait disabled:opacity-70"
+                          : "relative z-10 h-6 min-w-14 cursor-pointer rounded border border-emerald-500/40 bg-emerald-500/20 px-2 text-[10px] font-medium text-emerald-300 hover:bg-emerald-500/30 disabled:cursor-wait disabled:opacity-70"}
                       >
                         {meta?.is_open === false ? "Fechado" : "Aberto"}
                       </button>
