@@ -1,140 +1,149 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { listEngagementPlans, getMySubscription, listMyEngagementOrders } from "@/lib/engagement.functions";
+import { listEngagementPlans, getMySubscriptions, listMyEngagementOrders } from "@/lib/engagement.functions";
 import { useAuth } from "@/lib/auth-context";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Sparkles, Heart, Users, ExternalLink, Crown } from "lucide-react";
+import { Sparkles, Heart, Users, ExternalLink, Crown, MessageCircle, Forward } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/engagement")({
   component: EngagementPage,
 });
 
+type BotType = "inscritos" | "interacoes" | "boasvindas" | "encaminhador";
+
+const BOT_META: Record<BotType, { title: string; icon: any; tagline: string; quotaLabel: string }> = {
+  inscritos:    { title: "BotInscritos",    icon: Users,         tagline: "Novos membros para o seu canal",        quotaLabel: "membros/mês" },
+  interacoes:   { title: "BotInterações",   icon: Heart,         tagline: "Reações automáticas em cada sinal",     quotaLabel: "reações/sinal" },
+  boasvindas:   { title: "BotBoasVindas",   icon: MessageCircle, tagline: "Mensagem automática para novos membros", quotaLabel: "" },
+  encaminhador: { title: "BotEncaminhador", icon: Forward,       tagline: "Encaminha mensagens entre canais",       quotaLabel: "" },
+};
+
+const BOT_ORDER: BotType[] = ["inscritos", "interacoes", "boasvindas", "encaminhador"];
+
 function EngagementPage() {
   const { user } = useAuth();
   const fetchPlans = useServerFn(listEngagementPlans);
-  const fetchSub = useServerFn(getMySubscription);
+  const fetchSubs = useServerFn(getMySubscriptions);
   const fetchOrders = useServerFn(listMyEngagementOrders);
 
   const plansQ = useQuery({ queryKey: ["engagement-plans"], queryFn: () => fetchPlans() });
-  const subQ = useQuery({ queryKey: ["engagement-sub", user?.id], queryFn: () => fetchSub(), enabled: !!user });
+  const subsQ = useQuery({ queryKey: ["engagement-subs", user?.id], queryFn: () => fetchSubs(), enabled: !!user });
   const ordersQ = useQuery({ queryKey: ["engagement-orders", user?.id], queryFn: () => fetchOrders(), enabled: !!user });
 
-  const sub = subQ.data as any;
-  const plan = sub?.plan;
+  const subs = (subsQ.data ?? []) as any[];
+  const subByBot = new Map<BotType, any>();
+  for (const s of subs) {
+    const bt = s.plan?.bot_type as BotType | undefined;
+    if (bt && !subByBot.has(bt)) subByBot.set(bt, s);
+  }
 
-  const reactPct = plan?.monthly_reactions_quota
-    ? Math.min(100, ((sub?.reactions_used ?? 0) / plan.monthly_reactions_quota) * 100)
-    : 0;
-  const memberPct = plan?.monthly_members_quota
-    ? Math.min(100, ((sub?.members_used ?? 0) / plan.monthly_members_quota) * 100)
-    : 0;
+  const plansByBot = new Map<BotType, any[]>();
+  for (const p of (plansQ.data ?? []) as any[]) {
+    const bt = p.bot_type as BotType;
+    if (!plansByBot.has(bt)) plansByBot.set(bt, []);
+    plansByBot.get(bt)!.push(p);
+  }
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
           <Sparkles className="size-6 text-primary" />
-          Engajamento Bot
+          Conheça nossos planos
         </h1>
         <p className="text-muted-foreground text-sm mt-1">
-          Reações e membros bot para impulsionar seus canais de sinais.
+          Escolha um plano para cada bot e impulsione seus canais.
         </p>
       </div>
 
-      {/* Current subscription */}
-      {sub && plan ? (
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <Crown className="size-5 text-primary" />
-                Plano {plan.name} ativo
-              </CardTitle>
-              <p className="text-xs text-muted-foreground mt-1">
-                Renova em {sub.current_period_end ? new Date(sub.current_period_end).toLocaleDateString("pt-BR") : "—"}
-              </p>
-            </div>
-            <Badge variant={sub.status === "active" ? "default" : "secondary"}>{sub.status}</Badge>
-          </CardHeader>
-          <CardContent className="grid sm:grid-cols-2 gap-6">
-            <div>
-              <div className="flex items-center justify-between text-sm mb-2">
-                <span className="flex items-center gap-2"><Heart className="size-4" /> Reações</span>
-                <span className="text-muted-foreground">{sub.reactions_used} / {plan.monthly_reactions_quota}</span>
-              </div>
-              <Progress value={reactPct} />
-            </div>
-            <div>
-              <div className="flex items-center justify-between text-sm mb-2">
-                <span className="flex items-center gap-2"><Users className="size-4" /> Membros</span>
-                <span className="text-muted-foreground">{sub.members_used} / {plan.monthly_members_quota}</span>
-              </div>
-              <Progress value={memberPct} />
-            </div>
-          </CardContent>
-        </Card>
-      ) : (
-        <Card className="border-dashed">
-          <CardContent className="py-6 text-sm text-muted-foreground">
-            Você ainda não tem uma assinatura ativa. Escolha um plano abaixo.
-          </CardContent>
-        </Card>
-      )}
+      {/* One section per bot type */}
+      <div className="space-y-8">
+        {BOT_ORDER.map((bot) => {
+          const meta = BOT_META[bot];
+          const Icon = meta.icon;
+          const plans = plansByBot.get(bot) ?? [];
+          const sub = subByBot.get(bot);
+          const activePlan = sub?.plan;
+          const usagePct = activePlan?.monthly_quota
+            ? Math.min(100, ((sub?.units_used ?? 0) / activePlan.monthly_quota) * 100)
+            : 0;
 
-      {/* Plans grid */}
-      <div className="grid md:grid-cols-3 gap-4">
-        {plansQ.data?.map((p: any) => {
-          const isCurrent = plan?.id === p.id;
           return (
-            <Card key={p.id} className={isCurrent ? "border-primary" : ""}>
-              <CardHeader>
-                <CardTitle className="flex items-center justify-between">
-                  {p.name}
-                  {isCurrent && <Badge>Atual</Badge>}
-                </CardTitle>
-                <p className="text-sm text-muted-foreground">{p.description}</p>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="text-3xl font-bold">
-                  R$ {Number(p.price_brl).toFixed(2)}
-                  <span className="text-sm font-normal text-muted-foreground">/mês</span>
+            <section key={bot} className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="size-9 rounded-md bg-primary/10 flex items-center justify-center">
+                    <Icon className="size-5 text-primary" />
+                  </div>
+                  <div>
+                    <h2 className="font-semibold">{meta.title}</h2>
+                    <p className="text-xs text-muted-foreground">{meta.tagline}</p>
+                  </div>
                 </div>
-                <ul className="text-sm space-y-1.5">
-                  <li className="flex items-center gap-2">
-                    <Heart className="size-4 text-primary" />
-                    {p.monthly_reactions_quota.toLocaleString("pt-BR")} reações/mês
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <Users className="size-4 text-primary" />
-                    {p.monthly_members_quota.toLocaleString("pt-BR")} membros/mês
-                  </li>
-                </ul>
-                {p.kirvano_checkout_url ? (
-                  <Button
-                    asChild
-                    className="w-full"
-                    disabled={isCurrent}
-                  >
-                    <a
-                      href={`${p.kirvano_checkout_url}${p.kirvano_checkout_url.includes("?") ? "&" : "?"}utm_content=${user?.id ?? ""}`}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      {isCurrent ? "Plano atual" : "Assinar"}
-                      <ExternalLink className="size-4 ml-1" />
-                    </a>
-                  </Button>
-                ) : (
-                  <Button className="w-full" disabled variant="secondary">
-                    Em breve
-                  </Button>
+                {sub && (
+                  <Badge variant={sub.status === "active" ? "default" : "secondary"} className="gap-1">
+                    <Crown className="size-3" /> {sub.status}
+                  </Badge>
                 )}
-              </CardContent>
-            </Card>
+              </div>
+
+              {sub && activePlan && activePlan.monthly_quota > 0 && (
+                <Card className="bg-muted/30">
+                  <CardContent className="py-3 space-y-1.5">
+                    <div className="flex items-center justify-between text-xs">
+                      <span>{activePlan.name}</span>
+                      <span className="text-muted-foreground">
+                        {(sub.units_used ?? 0).toLocaleString("pt-BR")} / {activePlan.monthly_quota.toLocaleString("pt-BR")} {meta.quotaLabel}
+                      </span>
+                    </div>
+                    <Progress value={usagePct} />
+                  </CardContent>
+                </Card>
+              )}
+
+              <div className={`grid gap-3 ${plans.length >= 3 ? "md:grid-cols-2 lg:grid-cols-4" : "md:grid-cols-2"}`}>
+                {plans.map((p: any) => {
+                  const isCurrent = activePlan?.id === p.id;
+                  return (
+                    <Card key={p.id} className={isCurrent ? "border-primary" : ""}>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-base flex items-center justify-between">
+                          <span>{p.name}</span>
+                          {isCurrent && <Badge className="text-[10px]">Atual</Badge>}
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        <div className="text-2xl font-bold">
+                          R$ {Number(p.price_brl).toFixed(2)}
+                          <span className="text-xs font-normal text-muted-foreground">/mês</span>
+                        </div>
+                        <p className="text-xs text-muted-foreground min-h-[32px]">{p.description}</p>
+                        {p.kirvano_checkout_url ? (
+                          <Button asChild size="sm" className="w-full" disabled={isCurrent}>
+                            <a
+                              href={`${p.kirvano_checkout_url}${p.kirvano_checkout_url.includes("?") ? "&" : "?"}utm_content=${user?.id ?? ""}`}
+                              target="_blank"
+                              rel="noreferrer"
+                            >
+                              {isCurrent ? "Plano atual" : "Adquirir agora"}
+                              <ExternalLink className="size-3 ml-1" />
+                            </a>
+                          </Button>
+                        ) : (
+                          <Button size="sm" className="w-full" disabled variant="secondary">
+                            Em breve
+                          </Button>
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            </section>
           );
         })}
       </div>

@@ -36,6 +36,19 @@ export const getMySubscription = createServerFn({ method: "GET" })
     return data;
   });
 
+export const getMySubscriptions = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabase } = context;
+    const { data, error } = await supabase
+      .from("user_engagement_subscriptions")
+      .select("*, plan:engagement_plans(*)")
+      .in("status", ["pending", "active"])
+      .order("created_at", { ascending: false });
+    if (error) throw new Error(error.message);
+    return data ?? [];
+  });
+
 export const getRoomEngagementSettings = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ roomId: z.string().uuid() }).parse(d))
@@ -62,6 +75,11 @@ export const upsertRoomEngagementSettings = createServerFn({ method: "POST" })
       delaySecondsMax: z.number().int().min(0).max(3600),
       autoMembersEnabled: z.boolean(),
       membersPerDay: z.number().int().min(1).max(50000),
+      welcomeBotEnabled: z.boolean().optional(),
+      welcomeMessage: z.string().max(2000).optional(),
+      forwarderEnabled: z.boolean().optional(),
+      forwarderSourceChatId: z.number().int().nullable().optional(),
+      forwarderTargetChatIds: z.array(z.number().int()).max(50).optional(),
     }).parse(d),
   )
   .handler(async ({ data, context }) => {
@@ -79,6 +97,11 @@ export const upsertRoomEngagementSettings = createServerFn({ method: "POST" })
           delay_seconds_max: data.delaySecondsMax,
           auto_members_enabled: data.autoMembersEnabled,
           members_per_day: data.membersPerDay,
+          welcome_bot_enabled: data.welcomeBotEnabled ?? false,
+          welcome_message: data.welcomeMessage ?? null,
+          forwarder_enabled: data.forwarderEnabled ?? false,
+          forwarder_source_chat_id: data.forwarderSourceChatId ?? null,
+          forwarder_target_chat_ids: data.forwarderTargetChatIds ?? [],
         },
         { onConflict: "room_id" },
       );
@@ -109,21 +132,21 @@ export const dispatchEngagementBoost = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
 
-    // Verify active subscription + remaining quota
+    // Pick the subscription that matches this bot type
+    const botType = data.type === "reaction" ? "interacoes" : "inscritos";
     const { data: sub } = await supabase
       .from("user_engagement_subscriptions")
       .select("*, plan:engagement_plans(*)")
       .eq("status", "active")
+      .eq("bot_type", botType)
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
 
-    if (!sub) throw new Error("Você não tem uma assinatura de engajamento ativa.");
+    if (!sub) throw new Error(`Você não tem uma assinatura ativa de Bot${botType === "interacoes" ? "Interações" : "Inscritos"}.`);
 
     const plan = (sub as any).plan;
-    const usedField = data.type === "reaction" ? "reactions_used" : "members_used";
-    const quotaField = data.type === "reaction" ? "monthly_reactions_quota" : "monthly_members_quota";
-    const remaining = (plan?.[quotaField] ?? 0) - ((sub as any)[usedField] ?? 0);
+    const remaining = (plan?.monthly_quota ?? 0) - ((sub as any).units_used ?? 0);
     if (remaining < data.quantity) {
       throw new Error(`Cota insuficiente. Restam ${remaining}.`);
     }
@@ -171,12 +194,10 @@ export const dispatchEngagementBoost = createServerFn({ method: "POST" })
         .eq("id", order.id);
 
       // Decrement quota
-      const newUsed = ((sub as any)[usedField] ?? 0) + data.quantity;
-      const updatePayload: Record<string, number> = {};
-      updatePayload[usedField] = newUsed;
+      const newUsed = ((sub as any).units_used ?? 0) + data.quantity;
       await supabaseAdmin
         .from("user_engagement_subscriptions")
-        .update(updatePayload as never)
+        .update({ units_used: newUsed } as never)
         .eq("id", (sub as any).id);
 
       return { ok: true, orderId: order.id, smmOrderId: resp.order };

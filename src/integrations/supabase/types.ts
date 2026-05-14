@@ -102,12 +102,14 @@ export type Database = {
       }
       engagement_plans: {
         Row: {
+          bot_type: Database["public"]["Enums"]["engagement_bot_type"]
           created_at: string
           description: string | null
           id: string
           is_active: boolean
           kirvano_checkout_url: string | null
           monthly_members_quota: number
+          monthly_quota: number
           monthly_reactions_quota: number
           name: string
           price_brl: number
@@ -116,12 +118,14 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          bot_type: Database["public"]["Enums"]["engagement_bot_type"]
           created_at?: string
           description?: string | null
           id?: string
           is_active?: boolean
           kirvano_checkout_url?: string | null
           monthly_members_quota?: number
+          monthly_quota?: number
           monthly_reactions_quota?: number
           name: string
           price_brl: number
@@ -130,12 +134,14 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          bot_type?: Database["public"]["Enums"]["engagement_bot_type"]
           created_at?: string
           description?: string | null
           id?: string
           is_active?: boolean
           kirvano_checkout_url?: string | null
           monthly_members_quota?: number
+          monthly_quota?: number
           monthly_reactions_quota?: number
           name?: string
           price_brl?: number
@@ -393,6 +399,9 @@ export type Database = {
           created_at: string
           delay_seconds_max: number
           delay_seconds_min: number
+          forwarder_enabled: boolean
+          forwarder_source_chat_id: number | null
+          forwarder_target_chat_ids: number[]
           id: string
           members_per_day: number
           react_emojis: string[]
@@ -400,6 +409,8 @@ export type Database = {
           room_id: string
           updated_at: string
           user_id: string
+          welcome_bot_enabled: boolean
+          welcome_message: string | null
         }
         Insert: {
           auto_members_enabled?: boolean
@@ -407,6 +418,9 @@ export type Database = {
           created_at?: string
           delay_seconds_max?: number
           delay_seconds_min?: number
+          forwarder_enabled?: boolean
+          forwarder_source_chat_id?: number | null
+          forwarder_target_chat_ids?: number[]
           id?: string
           members_per_day?: number
           react_emojis?: string[]
@@ -414,6 +428,8 @@ export type Database = {
           room_id: string
           updated_at?: string
           user_id: string
+          welcome_bot_enabled?: boolean
+          welcome_message?: string | null
         }
         Update: {
           auto_members_enabled?: boolean
@@ -421,6 +437,9 @@ export type Database = {
           created_at?: string
           delay_seconds_max?: number
           delay_seconds_min?: number
+          forwarder_enabled?: boolean
+          forwarder_source_chat_id?: number | null
+          forwarder_target_chat_ids?: number[]
           id?: string
           members_per_day?: number
           react_emojis?: string[]
@@ -428,6 +447,8 @@ export type Database = {
           room_id?: string
           updated_at?: string
           user_id?: string
+          welcome_bot_enabled?: boolean
+          welcome_message?: string | null
         }
         Relationships: []
       }
@@ -954,6 +975,7 @@ export type Database = {
       }
       user_engagement_subscriptions: {
         Row: {
+          bot_type: Database["public"]["Enums"]["engagement_bot_type"] | null
           created_at: string
           current_period_end: string | null
           current_period_start: string | null
@@ -965,10 +987,12 @@ export type Database = {
           plan_id: string
           reactions_used: number
           status: Database["public"]["Enums"]["engagement_sub_status"]
+          units_used: number
           updated_at: string
           user_id: string
         }
         Insert: {
+          bot_type?: Database["public"]["Enums"]["engagement_bot_type"] | null
           created_at?: string
           current_period_end?: string | null
           current_period_start?: string | null
@@ -980,10 +1004,12 @@ export type Database = {
           plan_id: string
           reactions_used?: number
           status?: Database["public"]["Enums"]["engagement_sub_status"]
+          units_used?: number
           updated_at?: string
           user_id: string
         }
         Update: {
+          bot_type?: Database["public"]["Enums"]["engagement_bot_type"] | null
           created_at?: string
           current_period_end?: string | null
           current_period_start?: string | null
@@ -995,6 +1021,7 @@ export type Database = {
           plan_id?: string
           reactions_used?: number
           status?: Database["public"]["Enums"]["engagement_sub_status"]
+          units_used?: number
           updated_at?: string
           user_id?: string
         }
@@ -1079,6 +1106,11 @@ export type Database = {
       account_status: "unknown" | "ok" | "error"
       account_type: "bot" | "premium"
       app_role: "admin" | "user"
+      engagement_bot_type:
+        | "inscritos"
+        | "interacoes"
+        | "boasvindas"
+        | "encaminhador"
       engagement_order_status:
         | "pending"
         | "in_progress"
@@ -1231,6 +1263,12 @@ export const Constants = {
       account_status: ["unknown", "ok", "error"],
       account_type: ["bot", "premium"],
       app_role: ["admin", "user"],
+      engagement_bot_type: [
+        "inscritos",
+        "interacoes",
+        "boasvindas",
+        "encaminhador",
+      ],
       engagement_order_status: [
         "pending",
         "in_progress",

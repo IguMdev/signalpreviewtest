@@ -63,11 +63,13 @@ export const Route = createFileRoute("/api/public/kirvano/webhook")({
           const periodEnd = new Date(now);
           periodEnd.setMonth(periodEnd.getMonth() + 1);
 
-          // Cancel previous active subs for this user
+          // Cancel previous active subs for this user FOR THE SAME bot type
+          // (user can have multiple subs across different bots)
           await supabaseAdmin
             .from("user_engagement_subscriptions")
             .update({ status: "canceled" })
             .eq("user_id", userId)
+            .eq("bot_type", plan.bot_type)
             .in("status", ["active", "pending"]);
 
           const { error: insErr } = await supabaseAdmin
@@ -75,6 +77,7 @@ export const Route = createFileRoute("/api/public/kirvano/webhook")({
             .insert({
               user_id: userId,
               plan_id: plan.id,
+              bot_type: plan.bot_type,
               status: "active",
               current_period_start: now.toISOString(),
               current_period_end: periodEnd.toISOString(),
