@@ -1,0 +1,187 @@
+import { createFileRoute } from "@tanstack/react-router";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { useTour, type TourStep } from "@/components/tour/TourProvider";
+import {
+  PlayCircle,
+  LayoutDashboard,
+  Send,
+  Sparkles,
+  Users,
+  UserPlus,
+  CalendarClock,
+  Video,
+  Wallet,
+  UserCircle,
+} from "lucide-react";
+
+export const Route = createFileRoute("/_authenticated/tutorial")({
+  component: TutorialPage,
+});
+
+const steps: TourStep[] = [
+  {
+    id: "welcome",
+    title: "Bem-vindo ao tour guiado",
+    description: (
+      <>
+        Vamos passar por cada ferramenta da plataforma. Use os botões <b>Próximo</b> e
+        <b> Anterior</b> (ou as setas do teclado) para navegar. Pressione <b>Esc</b> para sair a
+        qualquer momento.
+      </>
+    ),
+    placement: "center",
+    route: "/tutorial",
+  },
+  {
+    id: "dashboard",
+    title: "Dashboard",
+    description:
+      "Visão geral da operação: créditos disponíveis, contas Telegram conectadas, bots ativos, salas, planos ativos e a evolução de membros por grupo / canal.",
+    selector: '[data-tour="nav-dashboard"]',
+    route: "/dashboard",
+    placement: "right",
+  },
+  {
+    id: "telegram-accounts",
+    title: "Contas Telegram",
+    description:
+      "Conecte e gerencie seus bots do Telegram aqui. Cada conta usa um token do BotFather e é o que de fato envia mensagens, vídeos e mídias para os grupos e canais.",
+    selector: '[data-tour="nav-telegram-accounts"]',
+    route: "/telegram-accounts",
+    placement: "right",
+  },
+  {
+    id: "premium-emojis",
+    title: "Emojis Premium",
+    description:
+      "Cadastre e organize seus emojis premium personalizados para deixar as mensagens dos canais com identidade visual única.",
+    selector: '[data-tour="nav-premium-emojis"]',
+    route: "/premium-emojis",
+    placement: "right",
+  },
+  {
+    id: "rooms",
+    title: "Salas",
+    description:
+      "Uma sala agrupa um conjunto de chats (grupos / canais) e a corretora vinculada. É a partir das salas que você dispara conteúdos, mensagens agendadas e vídeos.",
+    selector: '[data-tour="nav-rooms"]',
+    route: "/rooms",
+    placement: "right",
+  },
+  {
+    id: "membros",
+    title: "Membros",
+    description:
+      "Acompanhe entradas, saídas e o saldo de membros em cada grupo ou canal. Use os filtros para isolar uma sala específica e ver o histórico de eventos.",
+    selector: '[data-tour="nav-membros"]',
+    route: "/membros",
+    placement: "right",
+  },
+  {
+    id: "mensagens",
+    title: "Agendamentos",
+    description:
+      "Programe mensagens recorrentes ou pontuais para seus canais. Defina conteúdo, horário e qual sala / bot vai enviar — o sistema dispara automaticamente.",
+    selector: '[data-tour="nav-mensagens"]',
+    route: "/mensagens",
+    placement: "right",
+  },
+  {
+    id: "videos",
+    title: "Vídeos",
+    description: (
+      <>
+        Faça upload de vídeos para enviar ao Telegram em dois formatos:{" "}
+        <b>redondo</b> (video note quadrado, até 60s) ou <b>normal</b> (vídeo comum, até 50 MB).
+        Selecione o tipo antes de subir o arquivo.
+      </>
+    ),
+    selector: '[data-tour="nav-videos"]',
+    route: "/videos",
+    placement: "right",
+  },
+  {
+    id: "recarga",
+    title: "Recarga",
+    description:
+      "Adicione créditos à sua conta e gerencie seus planos ativos. Os créditos são consumidos por envios e funcionalidades premium.",
+    selector: '[data-tour="nav-recarga"]',
+    route: "/recarga",
+    placement: "right",
+  },
+  {
+    id: "perfil",
+    title: "Minha conta",
+    description:
+      "Atualize seus dados pessoais, foto de perfil e preferências. Aqui também ficam as opções de segurança da conta.",
+    selector: '[data-tour="nav-perfil"]',
+    route: "/perfil",
+    placement: "right",
+  },
+  {
+    id: "done",
+    title: "Tudo pronto!",
+    description:
+      "Você concluiu o tour. Pode rodar de novo a qualquer momento clicando em 'Iniciar tour' nesta página. Bons sinais!",
+    placement: "center",
+    route: "/tutorial",
+  },
+];
+
+const features = [
+  { icon: LayoutDashboard, label: "Dashboard", text: "Visão geral da sua operação." },
+  { icon: Send, label: "Contas Telegram", text: "Conecte os bots que enviam mensagens." },
+  { icon: Sparkles, label: "Emojis Premium", text: "Personalize a identidade visual." },
+  { icon: Users, label: "Salas", text: "Agrupe chats e corretora." },
+  { icon: UserPlus, label: "Membros", text: "Entradas, saídas e saldo." },
+  { icon: CalendarClock, label: "Agendamentos", text: "Mensagens programadas." },
+  { icon: Video, label: "Vídeos", text: "Redondos ou normais para o Telegram." },
+  { icon: Wallet, label: "Recarga", text: "Créditos e planos ativos." },
+  { icon: UserCircle, label: "Minha conta", text: "Perfil e segurança." },
+];
+
+function TutorialPage() {
+  const { start } = useTour();
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight">Tutorial</h1>
+        <p className="text-sm text-muted-foreground">
+          Faça um tour guiado pela plataforma. Vamos destacar cada ferramenta no menu e explicar
+          o que ela faz.
+        </p>
+      </div>
+
+      <Card className="p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div>
+          <h2 className="font-semibold">Tour interativo</h2>
+          <p className="text-sm text-muted-foreground">
+            {steps.length} passos · cerca de 2 minutos. Pode pausar e retomar quando quiser.
+          </p>
+        </div>
+        <Button onClick={() => start(steps)} size="lg">
+          <PlayCircle className="size-5" />
+          Iniciar tour
+        </Button>
+      </Card>
+
+      <div>
+        <h2 className="font-semibold mb-3">O que você vai aprender</h2>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {features.map(({ icon: Icon, label, text }) => (
+            <Card key={label} className="p-4 flex gap-3 items-start">
+              <div className="size-9 rounded-lg bg-primary/10 text-primary grid place-items-center shrink-0">
+                <Icon className="size-4" />
+              </div>
+              <div className="min-w-0">
+                <p className="font-medium text-sm">{label}</p>
+                <p className="text-xs text-muted-foreground">{text}</p>
+              </div>
+            </Card>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
