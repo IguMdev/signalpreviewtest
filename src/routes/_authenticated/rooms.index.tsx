@@ -29,7 +29,7 @@ import {
 import { toast } from "sonner";
 import { Plus, Trash2, Users, Pencil, FileText, CalendarClock, Search, RefreshCw, Power } from "lucide-react";
 
-export const Route = createFileRoute("/_authenticated/rooms")({
+export const Route = createFileRoute("/_authenticated/rooms/")({
   component: RoomsPage,
 });
 
