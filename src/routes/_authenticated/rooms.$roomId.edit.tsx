@@ -17,7 +17,7 @@ import { toast } from "sonner";
 import {
   Home, ChevronRight, ExternalLink, Plus, Trash2, Info, X, Upload, ImageIcon, Send, Smile, RotateCcw,
 } from "lucide-react";
-import { ASSETS_CATALOG, type AssetCategory } from "@/lib/assets-catalog";
+import { ASSETS_CATALOG, DEFAULT_PAYOUT, type AssetCategory } from "@/lib/assets-catalog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Sparkles, Heart, Users, MessageCircle, Forward, ChevronDown, ChevronUp } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
@@ -832,7 +832,10 @@ function WindowAssets({
                         {meta?.is_open === false ? "Fechado" : "Aberto"}
                       </Badge>
                       <span className="text-[10px] text-muted-foreground tabular-nums w-10 text-right">
-                        {meta ? `${((meta.payout > 1 ? meta.payout - 1 : meta.payout) * 100).toFixed(0)}%` : "—"}
+                        {(() => {
+                          const p = meta?.payout ?? DEFAULT_PAYOUT;
+                          return `${((p > 1 ? p - 1 : p) * 100).toFixed(0)}%`;
+                        })()}
                       </span>
                     </div>
                   );
