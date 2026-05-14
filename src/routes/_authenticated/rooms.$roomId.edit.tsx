@@ -999,6 +999,12 @@ function SessionMessageEditor({
   const [enabled, setEnabled] = useState<boolean>(existing?.enabled ?? true);
   const [lead, setLead] = useState<string>(String(existing?.lead_minutes ?? 5));
 
+  useEffect(() => {
+    setContent(existing?.content ?? "");
+    setEnabled(existing?.enabled ?? true);
+    setLead(String(existing?.lead_minutes ?? 5));
+  }, [existing?.id, existing?.content, existing?.enabled, existing?.lead_minutes]);
+
   const save = useMutation({
     mutationFn: async () => {
       const { data: u } = await supabase.auth.getUser();
@@ -1041,7 +1047,9 @@ function SessionMessageEditor({
             ? "🚀 SESSÃO COMEÇA EM {MINUTOS} MIN!\nPrepare-se para os sinais!"
             : "🏁 SESSÃO ENCERRADA\nObrigado por operar conosco!"} />
       </div>
-      <div className="flex justify-end pt-2 border-t border-border">
+      <ImageAttachmentMock tone={kind === "open" ? "INÍCIO" : "TÉRMINO"} />
+      <div className="flex items-center justify-between gap-3 pt-2 border-t border-border">
+        <Button variant="secondary" size="sm" disabled><Send className="size-4 mr-1" />Enviar teste</Button>
         <Button size="sm" onClick={() => save.mutate()} disabled={save.isPending}>
           {save.isPending ? "Salvando..." : "Salvar"}
         </Button>
