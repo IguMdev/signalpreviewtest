@@ -1469,6 +1469,8 @@ function ReportsCard({ roomId }: { roomId: string }) {
   const [tpl, setTpl] = useState<string>("");
   const [includeStats, setIncludeStats] = useState<boolean>(true);
   const [imagePath, setImagePath] = useState<string | null>(null);
+  const [imageMime, setImageMime] = useState<string | null>(null);
+  const [imageExt, setImageExt] = useState<string | null>(null);
 
   useEffect(() => {
     if (!report.data) return;
@@ -1477,7 +1479,9 @@ function ReportsCard({ roomId }: { roomId: string }) {
     setTpl(report.data.template ?? "");
     setIncludeStats(report.data.include_stats ?? true);
     setImagePath(report.data.image_path ?? null);
-  }, [report.data?.id, report.data?.enabled, report.data?.delay_minutes, report.data?.template, report.data?.include_stats, report.data?.image_path]);
+    setImageMime((report.data as any).image_mime ?? null);
+    setImageExt((report.data as any).image_ext ?? null);
+  }, [report.data?.id, report.data?.enabled, report.data?.delay_minutes, report.data?.template, report.data?.include_stats, report.data?.image_path, (report.data as any)?.image_mime, (report.data as any)?.image_ext]);
 
   const save = useMutation({
     mutationFn: async () => {
@@ -1488,6 +1492,8 @@ function ReportsCard({ roomId }: { roomId: string }) {
         template: tpl,
         include_stats: includeStats,
         image_path: imagePath,
+        image_mime: imageMime,
+        image_ext: imageExt,
       };
       if (report.data) {
         const { error } = await supabase.from("room_reports").update(payload).eq("id", report.data.id);
@@ -1534,8 +1540,8 @@ function ReportsCard({ roomId }: { roomId: string }) {
       <ImageAttachment
         tone="RELATÓRIO"
         roomId={roomId}
-        value={imagePath}
-        onChange={setImagePath}
+        value={{ path: imagePath, mime: imageMime, ext: imageExt }}
+        onChange={(v) => { setImagePath(v.path); setImageMime(v.mime); setImageExt(v.ext); }}
       />
       <div className="flex items-center justify-between pt-2 border-t border-border">
         <Button variant="secondary" size="sm" onClick={onTest} disabled={testing}>
