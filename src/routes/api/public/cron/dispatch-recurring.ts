@@ -58,7 +58,7 @@ type PendingFollowup = {
 };
 
 async function sendOne(
-  botToken: string,
+  botToken: string | null | undefined,
   chatId: number | string,
   msg: { content: string | null; image_path: string | null; parse_mode: string },
 ) {
