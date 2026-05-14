@@ -70,7 +70,7 @@ function EditRoomPage() {
   const accessUrl = r.access_url || (chatId ? `https://t.me/c/${String(chatId).replace(/^-?100/, "")}` : null);
 
   return (
-    <div className="space-y-5 pb-24">
+    <div className="space-y-5 pb-24 xl:-mx-14 2xl:-mx-24">
       {/* Breadcrumb */}
       <nav className="flex items-center gap-1.5 text-sm text-muted-foreground">
         <Link to="/" className="flex items-center gap-1 hover:text-foreground"><Home className="size-3.5" /> Home</Link>
@@ -456,7 +456,7 @@ function WindowItem({ window: w, roomId }: { window: any; roomId: string }) {
         Usar Todos os Ativos
       </label>
 
-      {!useAll && <WindowAssets selected={filter} setSelected={setFilter} roomId={roomId} windowId={w.id} />}
+      <WindowAssets selected={filter} setSelected={setFilter} roomId={roomId} windowId={w.id} useAll={useAll} />
 
       <div className="flex justify-end pt-2 border-t border-border">
         <Button size="sm" onClick={() => save.mutate()} disabled={save.isPending}>
