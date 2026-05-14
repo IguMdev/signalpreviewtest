@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import { ASSETS_CATALOG, type AssetCategory } from "@/lib/assets-catalog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Sparkles, Heart, Users, MessageCircle, Forward } from "lucide-react";
+import { Sparkles, Heart, Users, MessageCircle, Forward, ChevronDown, ChevronUp } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import {
   getRoomEngagementSettings,
@@ -656,7 +656,14 @@ function WindowItem({ window: w, roomId }: { window: any; roomId: string }) {
         </div>
         <div className="space-y-1">
           <Label className="text-xs">Martingale</Label>
-          <Input value={martingale} onChange={(e) => setMartingale(e.target.value)} className="h-9" inputMode="numeric" />
+          <Select value={martingale} onValueChange={setMartingale}>
+            <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {Array.from({ length: 9 }, (_, i) => String(i + 1)).map((n) => (
+                <SelectItem key={n} value={n}>{n}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <div className="space-y-1">
           <div className="flex items-center justify-between">
