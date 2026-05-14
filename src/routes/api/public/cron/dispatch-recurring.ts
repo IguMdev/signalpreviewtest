@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { callTelegram } from "@/lib/telegram.server";
 import { dispatchVideoNote } from "@/lib/videos.functions";
+import { triggerSignalReactions } from "@/lib/engagement.functions";
 
 function nowParts(tz: string) {
   const fmt = new Intl.DateTimeFormat("en-GB", {
