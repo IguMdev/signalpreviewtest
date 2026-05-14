@@ -114,6 +114,8 @@ export type Database = {
           name: string
           price_brl: number
           slug: string
+          smm_default_quantity: number | null
+          smm_service_id: number | null
           sort_order: number
           updated_at: string
         }
@@ -130,6 +132,8 @@ export type Database = {
           name: string
           price_brl: number
           slug: string
+          smm_default_quantity?: number | null
+          smm_service_id?: number | null
           sort_order?: number
           updated_at?: string
         }
@@ -146,6 +150,8 @@ export type Database = {
           name?: string
           price_brl?: number
           slug?: string
+          smm_default_quantity?: number | null
+          smm_service_id?: number | null
           sort_order?: number
           updated_at?: string
         }
@@ -1068,6 +1074,7 @@ export type Database = {
           plan_id: string
           reactions_used: number
           status: Database["public"]["Enums"]["engagement_sub_status"]
+          target_link: string | null
           units_used: number
           updated_at: string
           user_id: string
@@ -1085,6 +1092,7 @@ export type Database = {
           plan_id: string
           reactions_used?: number
           status?: Database["public"]["Enums"]["engagement_sub_status"]
+          target_link?: string | null
           units_used?: number
           updated_at?: string
           user_id: string
@@ -1102,6 +1110,7 @@ export type Database = {
           plan_id?: string
           reactions_used?: number
           status?: Database["public"]["Enums"]["engagement_sub_status"]
+          target_link?: string | null
           units_used?: number
           updated_at?: string
           user_id?: string
