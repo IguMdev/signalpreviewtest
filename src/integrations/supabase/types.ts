@@ -1155,6 +1155,7 @@ export type Database = {
           duration_seconds: number | null
           file_size: number | null
           id: string
+          kind: string
           mime_type: string | null
           storage_path: string
           title: string
@@ -1166,6 +1167,7 @@ export type Database = {
           duration_seconds?: number | null
           file_size?: number | null
           id?: string
+          kind?: string
           mime_type?: string | null
           storage_path: string
           title: string
@@ -1177,6 +1179,7 @@ export type Database = {
           duration_seconds?: number | null
           file_size?: number | null
           id?: string
+          kind?: string
           mime_type?: string | null
           storage_path?: string
           title?: string
