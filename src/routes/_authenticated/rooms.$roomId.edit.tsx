@@ -106,7 +106,6 @@ function EditRoomPage() {
       <TemplatesCard roomId={roomId} />
       <SessionMessagesCard roomId={roomId} />
       <ReportsCard roomId={roomId} />
-      <EngagementCard roomId={roomId} />
       <TimezoneCard room={r} />
       <StopLossCard room={r} />
       <MarketTipsCard room={r} />
