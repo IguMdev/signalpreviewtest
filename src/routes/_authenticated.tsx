@@ -18,6 +18,7 @@ import {
   Video,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated")({
@@ -105,6 +106,14 @@ function AuthenticatedLayout() {
           <Button variant="ghost" size="icon" onClick={toggleTheme}>
             {dark ? <Sun className="size-4" /> : <Moon className="size-4" />}
           </Button>
+          <Link to="/perfil" aria-label="Minha conta" className="shrink-0">
+            <Avatar className="size-8 ring-1 ring-border hover:ring-primary transition">
+              <AvatarImage src={profileQuery.data?.avatar_url ?? undefined} alt={profileQuery.data?.display_name ?? "Perfil"} />
+              <AvatarFallback className="text-xs">
+                {(profileQuery.data?.display_name?.[0] ?? user.email?.[0] ?? "U").toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+          </Link>
           <Button variant="ghost" size="icon" onClick={() => signOut().then(() => navigate({ to: "/login" }))}>
             <LogOut className="size-4" />
           </Button>
