@@ -24,7 +24,8 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Plus, Trash2, Users, Settings2 } from "lucide-react";
+import { Plus, Trash2, Users, Settings2, CandlestickChart } from "lucide-react";
+import { AssetSelectorDialog } from "@/components/AssetSelectorDialog";
 
 export const Route = createFileRoute("/_authenticated/rooms")({
   component: RoomsPage,
@@ -40,6 +41,7 @@ function RoomsPage() {
   const [editing, setEditing] = useState<string | null>(null);
   const [chatId, setChatId] = useState("");
   const [chatTitle, setChatTitle] = useState("");
+  const [assetsRoom, setAssetsRoom] = useState<{ id: string; name: string } | null>(null);
 
   const accounts = useQuery({
     queryKey: ["telegram-accounts"],
@@ -183,6 +185,9 @@ function RoomsPage() {
               <Button size="sm" variant="ghost" onClick={() => setEditing(editing === r.id ? null : r.id)}>
                 <Settings2 className="size-4" />
               </Button>
+              <Button size="sm" variant="ghost" onClick={() => setAssetsRoom({ id: r.id, name: r.name })}>
+                <CandlestickChart className="size-4" />
+              </Button>
               <Button size="sm" variant="ghost" onClick={() => delMut.mutate(r.id)}>
                 <Trash2 className="size-4 text-destructive" />
               </Button>
@@ -220,6 +225,12 @@ function RoomsPage() {
           </Card>
         ))}
       </div>
+
+      <AssetSelectorDialog
+        roomId={assetsRoom?.id ?? null}
+        roomName={assetsRoom?.name}
+        onClose={() => setAssetsRoom(null)}
+      />
     </div>
   );
 }
