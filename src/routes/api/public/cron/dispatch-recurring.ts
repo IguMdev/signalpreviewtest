@@ -30,6 +30,8 @@ type Schedule = {
   account_id: string | null;
   content: string | null;
   video_id: string | null;
+  image_path: string | null;
+  image_mime: string | null;
   parse_mode: string;
   times: string[];
   weekdays: number[];
@@ -44,7 +46,7 @@ export const Route = createFileRoute("/api/public/cron/dispatch-recurring")({
         const { data: schedules, error } = await supabaseAdmin
           .from("recurring_schedules")
           .select(
-            "id, user_id, room_id, account_id, content, video_id, parse_mode, times, weekdays, timezone, last_fire_key",
+            "id, user_id, room_id, account_id, content, video_id, image_path, image_mime, parse_mode, times, weekdays, timezone, last_fire_key",
           )
           .eq("is_active", true);
         if (error) {
@@ -109,7 +111,23 @@ export const Route = createFileRoute("/api/public/cron/dispatch-recurring")({
 
           let okAny = false;
           for (const c of chats) {
-            const r = video
+            const r = s.image_path
+              ? await (async () => {
+                  const { data: pub } = supabaseAdmin.storage
+                    .from("room-images")
+                    .getPublicUrl(s.image_path!);
+                  return await callTelegram<{ message_id: number }>(
+                    acc.bot_token,
+                    "sendPhoto",
+                    {
+                      chat_id: c.chat_id,
+                      photo: pub.publicUrl,
+                      caption: s.content ?? undefined,
+                      parse_mode: s.content ? s.parse_mode : undefined,
+                    },
+                  );
+                })()
+              : video
               ? await dispatchVideoNote({
                   botToken: acc.bot_token,
                   storagePath: video.storage_path,
