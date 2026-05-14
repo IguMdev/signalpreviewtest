@@ -409,15 +409,25 @@ function ChooseChannelCard({ subscriptionId }: { subscriptionId: string }) {
   const [loading, setLoading] = useState(false);
 
   async function submit() {
-    if (!/^https?:\/\/(t\.me|telegram\.me)\//i.test(link)) {
-      toast.error("Use um link público do Telegram (https://t.me/...)");
+    const trimmed = link.trim();
+    // Validação básica no cliente — o servidor faz a normalização final
+    const looksLikeTg =
+      /^@?[a-zA-Z0-9_]{4,64}$/.test(trimmed) ||
+      /^(https?:\/\/)?(t\.me|telegram\.me)\//i.test(trimmed);
+    if (!looksLikeTg) {
+      toast.error("Cole um link público do Telegram, ex: https://t.me/seucanal ou @seucanal");
+      return;
+    }
+    if (/joinchat|t\.me\/\+/i.test(trimmed)) {
+      toast.error("Convites privados (joinchat / +hash) não funcionam — use um @username público.");
       return;
     }
     setLoading(true);
     try {
-      await setTarget({ data: { subscriptionId, targetLink: link.trim() } });
+      await setTarget({ data: { subscriptionId, targetLink: trimmed } });
       toast.success("Pedido despachado para o painel!");
       qc.invalidateQueries({ queryKey: ["engagement-subs"] });
+      qc.invalidateQueries({ queryKey: ["smm-orders"] });
     } catch (e: any) {
       toast.error(e?.message ?? "Falha ao despachar");
     } finally {
@@ -430,11 +440,12 @@ function ChooseChannelCard({ subscriptionId }: { subscriptionId: string }) {
       <CardContent className="py-3 space-y-2">
         <div className="text-xs font-medium">Escolha o canal/grupo para receber os inscritos</div>
         <p className="text-[11px] text-muted-foreground">
-          Cole o link público (ex: https://t.me/seucanal). A entrega é automática e única.
+          Cole o link público (ex: <code>https://t.me/seucanal</code>, <code>t.me/seucanal</code> ou <code>@seucanal</code>). A entrega é automática e única.
+          Convites privados (joinchat / +hash) não são aceitos.
         </p>
         <div className="flex gap-2">
           <Input
-            placeholder="https://t.me/seucanal"
+            placeholder="https://t.me/seucanal ou @seucanal"
             value={link}
             onChange={(e) => setLink(e.target.value)}
             disabled={loading}
@@ -446,6 +457,126 @@ function ChooseChannelCard({ subscriptionId }: { subscriptionId: string }) {
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+const SMM_STATUS_META: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline"; icon: any }> = {
+  pending:     { label: "Pendente",    variant: "secondary",   icon: Clock },
+  in_progress: { label: "Em andamento", variant: "default",    icon: Loader2 },
+  completed:   { label: "Concluído",    variant: "default",    icon: CheckCircle2 },
+  partial:     { label: "Parcial",      variant: "outline",    icon: AlertCircle },
+  canceled:    { label: "Cancelado",    variant: "outline",    icon: XCircle },
+  failed:      { label: "Falhou",       variant: "destructive", icon: XCircle },
+};
+
+function SmmOrdersSection({ rows, isLoading }: { rows: any[]; isLoading: boolean }) {
+  const retryFn = useServerFn(retryEngagementOrder);
+  const qc = useQueryClient();
+  const [retryingId, setRetryingId] = useState<string | null>(null);
+
+  async function retry(id: string) {
+    setRetryingId(id);
+    try {
+      await retryFn({ data: { orderId: id } });
+      toast.success("Pedido re-enviado para o painel!");
+      qc.invalidateQueries({ queryKey: ["smm-orders"] });
+    } catch (e: any) {
+      toast.error(e?.message ?? "Falha ao re-tentar");
+    } finally {
+      setRetryingId(null);
+    }
+  }
+
+  return (
+    <section className="space-y-3">
+      <div className="flex items-center gap-2">
+        <div className="size-9 rounded-md bg-primary/10 flex items-center justify-center">
+          <Activity className="size-5 text-primary" />
+        </div>
+        <div>
+          <h2 className="font-semibold">Pedidos do painel SMM</h2>
+          <p className="text-xs text-muted-foreground">
+            Status dos pedidos de inscritos e reações enviados ao painel. Atualiza automaticamente.
+          </p>
+        </div>
+      </div>
+
+      <Card>
+        <CardContent className="p-0">
+          {isLoading ? (
+            <div className="p-6 text-sm text-muted-foreground text-center">Carregando…</div>
+          ) : rows.length === 0 ? (
+            <div className="p-6 text-sm text-muted-foreground text-center">
+              Nenhum pedido enviado ainda.
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Data</TableHead>
+                  <TableHead>Tipo</TableHead>
+                  <TableHead>Alvo</TableHead>
+                  <TableHead>Qtd.</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Ação</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {rows.map((r) => {
+                  const meta = SMM_STATUS_META[r.status] ?? { label: r.status, variant: "outline" as const, icon: AlertCircle };
+                  const Icon = meta.icon;
+                  const date = r.created_at ? new Date(r.created_at).toLocaleString("pt-BR", {
+                    day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit",
+                  }) : "—";
+                  const typeLabel = r.type === "reaction" ? "Reações" : "Inscritos";
+                  const isRetrying = retryingId === r.id;
+                  return (
+                    <TableRow key={r.id}>
+                      <TableCell className="text-xs text-muted-foreground whitespace-nowrap">{date}</TableCell>
+                      <TableCell className="text-sm">{typeLabel}</TableCell>
+                      <TableCell className="text-xs max-w-[240px] truncate">
+                        <a href={r.target} target="_blank" rel="noreferrer" className="text-primary hover:underline">
+                          {r.target}
+                        </a>
+                        {r.error && (
+                          <div className="text-[10px] text-destructive truncate" title={r.error}>
+                            {r.error}
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-sm">{r.quantity}</TableCell>
+                      <TableCell>
+                        <Badge variant={meta.variant} className="gap-1">
+                          <Icon className={`size-3 ${r.status === "in_progress" ? "animate-spin" : ""}`} />
+                          {meta.label}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {r.status === "failed" && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => retry(r.id)}
+                            disabled={isRetrying}
+                          >
+                            {isRetrying ? (
+                              <Loader2 className="size-3 mr-1 animate-spin" />
+                            ) : (
+                              <RefreshCw className="size-3 mr-1" />
+                            )}
+                            Re-tentar
+                          </Button>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+    </section>
   );
 }
 
