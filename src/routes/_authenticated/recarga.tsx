@@ -90,6 +90,16 @@ function RecargaPage() {
     plansByBot.get(bt)!.push(p);
   }
 
+  // Map de URLs de checkout das salas (vindas do banco) por slug
+  const salasUrlBySlug = new Map<string, string | null>();
+  for (const p of (plansQ.data ?? []) as any[]) {
+    if (p.bot_type === "salas") salasUrlBySlug.set(p.slug, p.kirvano_checkout_url);
+  }
+  const salasPlanosResolved = salasPlanos.map((p) => ({
+    ...p,
+    checkoutUrl: salasUrlBySlug.get(p.id) ?? p.checkoutUrl,
+  }));
+
   return (
     <div className="space-y-6">
       <div>
@@ -120,7 +130,7 @@ function RecargaPage() {
         </div>
 
         <div className="grid gap-3 md:grid-cols-2">
-          {salasPlanos.map((p) => (
+          {salasPlanosResolved.map((p) => (
             <Card key={p.id} className={p.destaque ? "border-primary" : ""}>
               <CardHeader className="pb-2">
                 <CardTitle className="text-base flex items-center justify-between">
