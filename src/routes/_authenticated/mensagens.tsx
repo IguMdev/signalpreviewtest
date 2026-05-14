@@ -43,6 +43,8 @@ import {
   Sparkles,
   X,
   RefreshCw,
+  ImageIcon,
+  Loader2,
 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/mensagens")({
@@ -66,6 +68,8 @@ type Schedule = {
   title: string;
   content: string | null;
   video_id: string | null;
+  image_path: string | null;
+  image_mime: string | null;
   parse_mode: string;
   times: string[];
   weekdays: number[];
