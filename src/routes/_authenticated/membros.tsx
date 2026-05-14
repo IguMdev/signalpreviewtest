@@ -50,6 +50,19 @@ function MembrosPage() {
     const inTab = tab === "group" ? t !== "channel" : t === "channel";
     return inTab && (selectedId === "all" || chatId === selectedId);
   });
+  const perChatById = useMemo(
+    () => new Map(visiblePerChat.map((c) => [String(c.chat_id), c])),
+    [visiblePerChat],
+  );
+  const visibleChatActivity = visibleChats.map((chat) => {
+    const stats = perChatById.get(String(chat.chatId));
+    return {
+      chat_id: chat.chatId,
+      chat_title: stats?.chat_title || chat.chatTitle || chat.roomName || null,
+      joins: stats?.joins ?? 0,
+      leaves: stats?.leaves ?? 0,
+    };
+  });
   const visibleRecent = (data?.recent ?? []).filter((e) => {
     const chatId = String(e.chat_id);
     const t = typeByChatId.get(chatId) ?? "unknown";
@@ -182,11 +195,11 @@ function MembrosPage() {
 
       <Card className="p-6">
         <h2 className="font-semibold mb-4">Entradas e saídas {tab === "group" ? "por grupo" : "por canal"}</h2>
-        {!visiblePerChat.length ? (
-          <p className="text-sm text-muted-foreground py-8 text-center">Nenhum evento registrado.</p>
+        {!visibleChatActivity.length ? (
+          <p className="text-sm text-muted-foreground py-8 text-center">Nenhum {tab === "group" ? "grupo" : "canal"} vinculado às salas.</p>
         ) : (
           <div className="space-y-2">
-            {visiblePerChat.map((c) => (
+            {visibleChatActivity.map((c) => (
               <div key={c.chat_id} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
                 <div className="min-w-0">
                   <p className="text-sm font-medium truncate">{c.chat_title || `Chat ${c.chat_id}`}</p>
