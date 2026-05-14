@@ -122,8 +122,11 @@ function EditRoomPage() {
 
       {/* Sticky footer */}
       <div className="fixed bottom-0 left-0 right-0 lg:left-[var(--sidebar-width,16rem)] bg-background/95 backdrop-blur border-t border-border p-4 flex justify-end gap-2 z-40">
-        <Button onClick={() => toast.success("Use os botões 'Salvar' de cada seção para persistir mudanças")}>
-          Salvar
+        <Button onClick={() => {
+          window.dispatchEvent(new CustomEvent(SAVE_ALL_EVENT));
+          toast.success("Salvando todas as seções...");
+        }}>
+          Salvar tudo
         </Button>
         <Button variant="outline" onClick={() => navigate({ to: "/rooms" })}>Cancelar</Button>
       </div>
