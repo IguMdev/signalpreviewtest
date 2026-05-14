@@ -7,7 +7,7 @@ import { callTelegram } from "./telegram.server";
 function publicBaseUrl() {
   const explicit = process.env.PUBLIC_BASE_URL;
   if (explicit) return explicit.replace(/\/$/, "");
-  const projectId = process.env.VITE_SUPABASE_PROJECT_ID || "8dafe7ca-cf53-49eb-9c75-fa970d91c13f";
+  const projectId = process.env.LOVABLE_PROJECT_ID || "8dafe7ca-cf53-49eb-9c75-fa970d91c13f";
   return `https://project--${projectId}-dev.lovable.app`;
 }
 
@@ -30,6 +30,7 @@ export const enableMemberTracking = createServerFn({ method: "POST" })
       url,
       secret_token: secret,
       allowed_updates: ["chat_member", "my_chat_member", "message"],
+      drop_pending_updates: false,
     });
     if (!r.ok) throw new Error(r.description ?? "Falha ao registrar webhook");
     return { ok: true, url };
