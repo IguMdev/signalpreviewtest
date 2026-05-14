@@ -204,6 +204,7 @@ export type Database = {
           room_id: string
           updated_at: string
           user_id: string
+          window_id: string | null
         }
         Insert: {
           asset_code: string
@@ -215,6 +216,7 @@ export type Database = {
           room_id: string
           updated_at?: string
           user_id: string
+          window_id?: string | null
         }
         Update: {
           asset_code?: string
@@ -226,6 +228,7 @@ export type Database = {
           room_id?: string
           updated_at?: string
           user_id?: string
+          window_id?: string | null
         }
         Relationships: [
           {
@@ -233,6 +236,13 @@ export type Database = {
             columns: ["room_id"]
             isOneToOne: false
             referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "room_assets_window_id_fkey"
+            columns: ["window_id"]
+            isOneToOne: false
+            referencedRelation: "room_windows"
             referencedColumns: ["id"]
           },
         ]
@@ -307,31 +317,40 @@ export type Database = {
       room_reports: {
         Row: {
           created_at: string
+          delay_minutes: number
           enabled: boolean
           id: string
+          image_path: string | null
           include_stats: boolean
           room_id: string
           send_time: string
+          template: string
           updated_at: string
           user_id: string
         }
         Insert: {
           created_at?: string
+          delay_minutes?: number
           enabled?: boolean
           id?: string
+          image_path?: string | null
           include_stats?: boolean
           room_id: string
           send_time?: string
+          template?: string
           updated_at?: string
           user_id: string
         }
         Update: {
           created_at?: string
+          delay_minutes?: number
           enabled?: boolean
           id?: string
+          image_path?: string | null
           include_stats?: boolean
           room_id?: string
           send_time?: string
+          template?: string
           updated_at?: string
           user_id?: string
         }
@@ -349,8 +368,11 @@ export type Database = {
         Row: {
           content: string
           created_at: string
+          enabled: boolean
           id: string
+          image_path: string | null
           kind: Database["public"]["Enums"]["session_msg_kind"]
+          lead_minutes: number
           room_id: string
           updated_at: string
           user_id: string
@@ -358,8 +380,11 @@ export type Database = {
         Insert: {
           content?: string
           created_at?: string
+          enabled?: boolean
           id?: string
+          image_path?: string | null
           kind: Database["public"]["Enums"]["session_msg_kind"]
+          lead_minutes?: number
           room_id: string
           updated_at?: string
           user_id: string
@@ -367,8 +392,11 @@ export type Database = {
         Update: {
           content?: string
           created_at?: string
+          enabled?: boolean
           id?: string
+          image_path?: string | null
           kind?: Database["public"]["Enums"]["session_msg_kind"]
+          lead_minutes?: number
           room_id?: string
           updated_at?: string
           user_id?: string
@@ -376,6 +404,50 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "room_session_messages_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      room_template_buttons: {
+        Row: {
+          created_at: string
+          id: string
+          label: string
+          room_id: string
+          sort_order: number
+          template_kind: Database["public"]["Enums"]["template_kind"]
+          updated_at: string
+          url: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          label: string
+          room_id: string
+          sort_order?: number
+          template_kind: Database["public"]["Enums"]["template_kind"]
+          updated_at?: string
+          url: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          label?: string
+          room_id?: string
+          sort_order?: number
+          template_kind?: Database["public"]["Enums"]["template_kind"]
+          updated_at?: string
+          url?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "room_template_buttons_room_id_fkey"
             columns: ["room_id"]
             isOneToOne: false
             referencedRelation: "rooms"
@@ -431,10 +503,16 @@ export type Database = {
           end_time: string
           id: string
           is_active: boolean
+          martingale: number
+          max_losses: number
           name: string
           room_id: string
+          signal_type: string
+          signals_qty: number
           start_time: string
+          timeframes: string[]
           updated_at: string
+          use_all_assets: boolean
           user_id: string
           weekdays: number[]
         }
@@ -444,10 +522,16 @@ export type Database = {
           end_time: string
           id?: string
           is_active?: boolean
+          martingale?: number
+          max_losses?: number
           name: string
           room_id: string
+          signal_type?: string
+          signals_qty?: number
           start_time: string
+          timeframes?: string[]
           updated_at?: string
+          use_all_assets?: boolean
           user_id: string
           weekdays?: number[]
         }
@@ -457,10 +541,16 @@ export type Database = {
           end_time?: string
           id?: string
           is_active?: boolean
+          martingale?: number
+          max_losses?: number
           name?: string
           room_id?: string
+          signal_type?: string
+          signals_qty?: number
           start_time?: string
+          timeframes?: string[]
           updated_at?: string
+          use_all_assets?: boolean
           user_id?: string
           weekdays?: number[]
         }
@@ -476,6 +566,7 @@ export type Database = {
       }
       rooms: {
         Row: {
+          access_url: string | null
           broker: string | null
           created_at: string
           default_account_id: string | null
@@ -483,16 +574,20 @@ export type Database = {
           expires_at: string | null
           id: string
           is_active: boolean
+          market_tips_enabled: boolean
           name: string
           photo_updated_at: string | null
           photo_url: string | null
+          premium_account_id: string | null
           stop_loss_enabled: boolean
+          stop_loss_message: string | null
           stop_loss_value: number | null
           timezone: string
           user_id: string
           welcome_message: string | null
         }
         Insert: {
+          access_url?: string | null
           broker?: string | null
           created_at?: string
           default_account_id?: string | null
@@ -500,16 +595,20 @@ export type Database = {
           expires_at?: string | null
           id?: string
           is_active?: boolean
+          market_tips_enabled?: boolean
           name: string
           photo_updated_at?: string | null
           photo_url?: string | null
+          premium_account_id?: string | null
           stop_loss_enabled?: boolean
+          stop_loss_message?: string | null
           stop_loss_value?: number | null
           timezone?: string
           user_id: string
           welcome_message?: string | null
         }
         Update: {
+          access_url?: string | null
           broker?: string | null
           created_at?: string
           default_account_id?: string | null
@@ -517,10 +616,13 @@ export type Database = {
           expires_at?: string | null
           id?: string
           is_active?: boolean
+          market_tips_enabled?: boolean
           name?: string
           photo_updated_at?: string | null
           photo_url?: string | null
+          premium_account_id?: string | null
           stop_loss_enabled?: boolean
+          stop_loss_message?: string | null
           stop_loss_value?: number | null
           timezone?: string
           user_id?: string
@@ -772,7 +874,16 @@ export type Database = {
       message_status: "pending" | "sending" | "sent" | "failed" | "cancelled"
       room_image_kind: "gain" | "loss"
       session_msg_kind: "open" | "close"
-      template_kind: "entry" | "gain" | "loss" | "event"
+      template_kind:
+        | "entry"
+        | "gain"
+        | "loss"
+        | "event"
+        | "signal"
+        | "win"
+        | "win_martingale"
+        | "buy_direction"
+        | "sell_direction"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -906,7 +1017,17 @@ export const Constants = {
       message_status: ["pending", "sending", "sent", "failed", "cancelled"],
       room_image_kind: ["gain", "loss"],
       session_msg_kind: ["open", "close"],
-      template_kind: ["entry", "gain", "loss", "event"],
+      template_kind: [
+        "entry",
+        "gain",
+        "loss",
+        "event",
+        "signal",
+        "win",
+        "win_martingale",
+        "buy_direction",
+        "sell_direction",
+      ],
     },
   },
 } as const
