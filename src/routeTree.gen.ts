@@ -19,6 +19,7 @@ import { Route as AuthenticatedRecargaRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedPremiumEmojisRouteImport } from './routes/_authenticated/premium-emojis'
 import { Route as AuthenticatedPerfilRouteImport } from './routes/_authenticated/perfil'
 import { Route as AuthenticatedMensagensRouteImport } from './routes/_authenticated/mensagens'
+import { Route as AuthenticatedMembrosRouteImport } from './routes/_authenticated/membros'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedRoomsIndexRouteImport } from './routes/_authenticated/rooms.index'
 import { Route as ApiPublicKirvanoWebhookRouteImport } from './routes/api/public/kirvano/webhook'
@@ -77,6 +78,11 @@ const AuthenticatedMensagensRoute = AuthenticatedMensagensRouteImport.update({
   path: '/mensagens',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedMembrosRoute = AuthenticatedMembrosRouteImport.update({
+  id: '/membros',
+  path: '/membros',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -116,6 +122,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/membros': typeof AuthenticatedMembrosRoute
   '/mensagens': typeof AuthenticatedMensagensRoute
   '/perfil': typeof AuthenticatedPerfilRoute
   '/premium-emojis': typeof AuthenticatedPremiumEmojisRoute
@@ -132,6 +139,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/membros': typeof AuthenticatedMembrosRoute
   '/mensagens': typeof AuthenticatedMensagensRoute
   '/perfil': typeof AuthenticatedPerfilRoute
   '/premium-emojis': typeof AuthenticatedPremiumEmojisRoute
@@ -151,6 +159,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/membros': typeof AuthenticatedMembrosRoute
   '/_authenticated/mensagens': typeof AuthenticatedMensagensRoute
   '/_authenticated/perfil': typeof AuthenticatedPerfilRoute
   '/_authenticated/premium-emojis': typeof AuthenticatedPremiumEmojisRoute
@@ -171,6 +180,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/signup'
     | '/dashboard'
+    | '/membros'
     | '/mensagens'
     | '/perfil'
     | '/premium-emojis'
@@ -187,6 +197,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/signup'
     | '/dashboard'
+    | '/membros'
     | '/mensagens'
     | '/perfil'
     | '/premium-emojis'
@@ -205,6 +216,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/signup'
     | '/_authenticated/dashboard'
+    | '/_authenticated/membros'
     | '/_authenticated/mensagens'
     | '/_authenticated/perfil'
     | '/_authenticated/premium-emojis'
@@ -300,6 +312,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedMensagensRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/membros': {
+      id: '/_authenticated/membros'
+      path: '/membros'
+      fullPath: '/membros'
+      preLoaderRoute: typeof AuthenticatedMembrosRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/dashboard': {
       id: '/_authenticated/dashboard'
       path: '/dashboard'
@@ -347,6 +366,7 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedMembrosRoute: typeof AuthenticatedMembrosRoute
   AuthenticatedMensagensRoute: typeof AuthenticatedMensagensRoute
   AuthenticatedPerfilRoute: typeof AuthenticatedPerfilRoute
   AuthenticatedPremiumEmojisRoute: typeof AuthenticatedPremiumEmojisRoute
@@ -360,6 +380,7 @@ interface AuthenticatedRouteChildren {
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedMembrosRoute: AuthenticatedMembrosRoute,
   AuthenticatedMensagensRoute: AuthenticatedMensagensRoute,
   AuthenticatedPerfilRoute: AuthenticatedPerfilRoute,
   AuthenticatedPremiumEmojisRoute: AuthenticatedPremiumEmojisRoute,
@@ -387,3 +408,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
