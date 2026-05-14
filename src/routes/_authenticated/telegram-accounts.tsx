@@ -11,6 +11,8 @@ import {
   confirmPremiumCode,
   syncPremiumEmojis,
 } from "@/lib/premium-account.functions";
+import { premiumStrings as S, translatePremiumError } from "@/lib/premium-strings";
+import { useResendCooldown } from "@/lib/use-resend-cooldown";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -86,6 +88,7 @@ function TelegramAccountsPage() {
   const [twoFa, setTwoFa] = useState("");
   const [needs2fa, setNeeds2fa] = useState(false);
   const [loadingPremium, setLoadingPremium] = useState(false);
+  const resend = useResendCooldown(60);
 
   const createMut = useMutation({
     mutationFn: async () => {
@@ -126,12 +129,12 @@ function TelegramAccountsPage() {
 
   async function handleRequestCode() {
     if (!label || !phone || !apiId || !apiHash) {
-      toast.error("Preencha todos os campos");
+      toast.error(S.toasts.fillAll);
       return;
     }
     const idNum = Number(apiId);
     if (!Number.isInteger(idNum) || idNum <= 0) {
-      toast.error("API ID inválido");
+      toast.error(S.toasts.invalidApiId);
       return;
     }
     setLoadingPremium(true);
@@ -157,10 +160,26 @@ function TelegramAccountsPage() {
       });
       setPendingAccountId(row.id);
       setPremiumStep("code");
-      toast.success("Código enviado pelo Telegram");
+      toast.success(S.toasts.codeSent);
+      resend.start();
       qc.invalidateQueries({ queryKey: ["telegram-accounts"] });
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Falha");
+      toast.error(translatePremiumError(e));
+    } finally {
+      setLoadingPremium(false);
+    }
+  }
+
+  async function handleResendCode() {
+    if (!pendingAccountId || !resend.canResend) return;
+    const idNum = Number(apiId);
+    setLoadingPremium(true);
+    try {
+      await reqCode({ data: { accountId: pendingAccountId, apiId: idNum, apiHash, phone } });
+      toast.success(S.toasts.codeResent);
+      resend.start();
+    } catch (e) {
+      toast.error(translatePremiumError(e));
     } finally {
       setLoadingPremium(false);
     }
@@ -179,19 +198,19 @@ function TelegramAccountsPage() {
       });
       if (r.needsPassword) {
         setNeeds2fa(true);
-        toast.message("Esta conta tem 2FA — informe a senha de nuvem");
+        toast.message(S.toasts.needs2fa);
         return;
       }
-      toast.success("Conta conectada!");
+      toast.success(S.toasts.connected);
       // Sincroniza emojis em background
       syncEmojis({ data: { accountId: pendingAccountId } })
-        .then((s) => toast.success(`${s.count} emojis premium sincronizados`))
+        .then((s) => toast.success(S.toasts.emojisSynced(s.count)))
         .catch(() => {});
       setOpenNew(false);
       resetDialog();
       qc.invalidateQueries({ queryKey: ["telegram-accounts"] });
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Falha");
+      toast.error(translatePremiumError(e));
     } finally {
       setLoadingPremium(false);
     }
@@ -274,18 +293,24 @@ function TelegramAccountsPage() {
             {accountType === "premium" && premiumStep === "form" && (
               <>
                 <div className="rounded-xl border border-primary/30 bg-primary/10 p-4 text-sm space-y-2">
-                  <p className="font-semibold">Como conectar sua conta Telegram:</p>
-                  <p className="font-medium">📱 Passo a passo:</p>
+                  <p className="font-semibold">{S.steps.title}</p>
+                  <p className="font-medium">📱 {S.steps.subtitle}</p>
                   <ol className="list-decimal pl-5 space-y-1 text-muted-foreground">
-                    <li>Acesse <a href="https://my.telegram.org" target="_blank" rel="noreferrer" className="underline">my.telegram.org</a> e faça login</li>
+                    <li>
+                      Acesse{" "}
+                      <a href="https://my.telegram.org" target="_blank" rel="noreferrer" className="underline">
+                        my.telegram.org
+                      </a>{" "}
+                      e faça login
+                    </li>
                     <li>Vá em "API Development Tools" e crie uma aplicação</li>
-                    <li>Copie o <b>API ID</b> e <b>API Hash</b></li>
+                    <li>Copie o <b>API ID</b> e o <b>API Hash</b></li>
                     <li>Preencha todos os campos abaixo</li>
-                    <li>Clique em "Solicitar Código" — ele chega no <b>app do Telegram</b> (não por SMS)</li>
-                    <li>Digite o código recebido no app e clique em "Conectar"</li>
+                    <li>Clique em "{S.buttons.requestCode}" — ele chega no <b>app do Telegram</b> (não por SMS)</li>
+                    <li>Digite o código recebido no app e clique em "{S.buttons.connect}"</li>
                   </ol>
                   <div className="rounded-md bg-primary/20 px-3 py-2 text-xs">
-                    💡 <b>Dica:</b> As credenciais API são necessárias para conectar sua conta pessoal.
+                    💡 <b>Dica:</b> {S.steps.tip}
                   </div>
                 </div>
                 <div className="grid sm:grid-cols-2 gap-4">
@@ -318,14 +343,12 @@ function TelegramAccountsPage() {
                 <div className="rounded-xl border border-primary/30 bg-primary/10 p-4 text-sm flex items-start gap-3">
                   <KeyRound className="size-5 mt-0.5" />
                   <div>
-                    <p className="font-semibold">Digite o código recebido no app do Telegram</p>
-                    <p className="text-muted-foreground text-xs mt-1">
-                      Abra o app do Telegram e veja a conversa oficial "Telegram". O código não é enviado por SMS e expira em ~5 minutos.
-                    </p>
+                    <p className="font-semibold">{S.codeStep.heading}</p>
+                    <p className="text-muted-foreground text-xs mt-1">{S.codeStep.subheading}</p>
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label>Código</Label>
+                  <Label>{S.fields.code}</Label>
                   <Input
                     value={telegramCode}
                     onChange={(e) => setTelegramCode(e.target.value.replace(/\D/g, ""))}
@@ -333,11 +356,25 @@ function TelegramAccountsPage() {
                     inputMode="numeric"
                     maxLength={6}
                     autoFocus
+                    aria-label={S.fields.code}
                   />
+                </div>
+                <div className="flex justify-end">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleResendCode}
+                    disabled={!resend.canResend || loadingPremium}
+                  >
+                    {!resend.canResend
+                      ? S.buttons.resendIn(resend.remaining)
+                      : S.buttons.resend}
+                  </Button>
                 </div>
                 {needs2fa && (
                   <div className="space-y-2">
-                    <Label>Senha 2FA (verificação em duas etapas)</Label>
+                    <Label>{S.fields.twoFa}</Label>
                     <Input type="password" value={twoFa} onChange={(e) => setTwoFa(e.target.value)} />
                   </div>
                 )}
@@ -346,7 +383,7 @@ function TelegramAccountsPage() {
             </div>
             <DialogFooter>
             <Button variant="ghost" onClick={() => { setOpenNew(false); resetDialog(); }}>
-              Cancelar
+              {S.buttons.cancel}
             </Button>
             {accountType === "bot" && (
               <Button
@@ -358,12 +395,12 @@ function TelegramAccountsPage() {
             )}
             {accountType === "premium" && premiumStep === "form" && (
               <Button onClick={handleRequestCode} disabled={loadingPremium}>
-                {loadingPremium ? "Enviando..." : "Solicitar Código"}
+                {loadingPremium ? S.buttons.sendingCode : S.buttons.requestCode}
               </Button>
             )}
             {accountType === "premium" && premiumStep === "code" && (
               <Button onClick={handleConfirmCode} disabled={loadingPremium || !telegramCode}>
-                {loadingPremium ? "Conectando..." : "Conectar"}
+                {loadingPremium ? S.buttons.connecting : S.buttons.connect}
               </Button>
             )}
             </DialogFooter>
