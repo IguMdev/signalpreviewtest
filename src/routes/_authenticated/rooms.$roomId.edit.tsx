@@ -1086,6 +1086,8 @@ function TemplateEditor({
 }) {
   const [content, setContent] = useState<string>(existing?.content ?? "");
   const [imagePath, setImagePath] = useState<string | null>(existing?.image_path ?? null);
+  const [imageMime, setImageMime] = useState<string | null>(existing?.image_mime ?? null);
+  const [imageExt, setImageExt] = useState<string | null>(existing?.image_ext ?? null);
   const [newLabel, setNewLabel] = useState("");
   const [newUrl, setNewUrl] = useState("");
   const sendTest = useServerFn(sendRoomTest);
@@ -1094,18 +1096,20 @@ function TemplateEditor({
   useEffect(() => {
     setContent(existing?.content ?? "");
     setImagePath(existing?.image_path ?? null);
-  }, [existing?.id, existing?.content, existing?.image_path]);
+    setImageMime(existing?.image_mime ?? null);
+    setImageExt(existing?.image_ext ?? null);
+  }, [existing?.id, existing?.content, existing?.image_path, existing?.image_mime, existing?.image_ext]);
 
   const saveTpl = useMutation({
     mutationFn: async () => {
       const { data: u } = await supabase.auth.getUser();
       if (existing) {
         const { error } = await supabase.from("room_templates")
-          .update({ content, image_path: imagePath }).eq("id", existing.id);
+          .update({ content, image_path: imagePath, image_mime: imageMime, image_ext: imageExt }).eq("id", existing.id);
         if (error) throw error;
       } else {
         const { error } = await supabase.from("room_templates").insert({
-          room_id: roomId, user_id: u.user!.id, kind, content, parse_mode: "HTML", image_path: imagePath,
+          room_id: roomId, user_id: u.user!.id, kind, content, parse_mode: "HTML", image_path: imagePath, image_mime: imageMime, image_ext: imageExt,
         });
         if (error) throw error;
       }
@@ -1140,7 +1144,7 @@ function TemplateEditor({
   const onTest = async () => {
     try {
       setTesting(true);
-      await sendTest({ data: { roomId, text: content, imagePath: imagePath ?? undefined } });
+      await sendTest({ data: { roomId, text: content, imagePath: imagePath ?? undefined, imageMime: imageMime ?? undefined, imageExt: imageExt ?? undefined } });
       toast.success("Teste enviado");
     } catch (e: any) { toast.error(e.message); }
     finally { setTesting(false); }
@@ -1169,8 +1173,8 @@ function TemplateEditor({
         <ImageAttachment
           tone={imageTone}
           roomId={roomId}
-          value={imagePath}
-          onChange={setImagePath}
+          value={{ path: imagePath, mime: imageMime, ext: imageExt }}
+          onChange={(v) => { setImagePath(v.path); setImageMime(v.mime); setImageExt(v.ext); }}
         />
       )}
 
