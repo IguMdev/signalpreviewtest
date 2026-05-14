@@ -35,6 +35,7 @@ type Schedule = {
   parse_mode: string;
   times: string[];
   weekdays: number[];
+  weekday_overrides: Record<string, string[]> | null;
   timezone: string;
   last_fire_key: string | null;
 };
@@ -46,7 +47,7 @@ export const Route = createFileRoute("/api/public/cron/dispatch-recurring")({
         const { data: schedules, error } = await supabaseAdmin
           .from("recurring_schedules")
           .select(
-            "id, user_id, room_id, account_id, content, video_id, image_path, image_mime, parse_mode, times, weekdays, timezone, last_fire_key",
+            "id, user_id, room_id, account_id, content, video_id, image_path, image_mime, parse_mode, times, weekdays, weekday_overrides, timezone, last_fire_key",
           )
           .eq("is_active", true);
         if (error) {
@@ -61,7 +62,9 @@ export const Route = createFileRoute("/api/public/cron/dispatch-recurring")({
         for (const s of (schedules ?? []) as Schedule[]) {
           const { weekday, hhmm } = nowParts(s.timezone);
           if (!s.weekdays.includes(weekday)) continue;
-          if (!s.times.includes(hhmm)) continue;
+          const override = s.weekday_overrides?.[String(weekday)];
+          const effectiveTimes = override && override.length > 0 ? override : s.times;
+          if (!effectiveTimes.includes(hhmm)) continue;
           if (s.last_fire_key === dateKey) continue;
 
           // claim this minute atomically
