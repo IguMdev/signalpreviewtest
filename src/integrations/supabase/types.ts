@@ -38,6 +38,113 @@ export type Database = {
         }
         Relationships: []
       }
+      engagement_orders: {
+        Row: {
+          cost_usd: number | null
+          created_at: string
+          error: string | null
+          id: string
+          quantity: number
+          raw_response: Json | null
+          room_id: string | null
+          smm_order_id: string | null
+          smm_service_id: number | null
+          status: Database["public"]["Enums"]["engagement_order_status"]
+          subscription_id: string | null
+          target: string
+          type: Database["public"]["Enums"]["engagement_order_type"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          cost_usd?: number | null
+          created_at?: string
+          error?: string | null
+          id?: string
+          quantity: number
+          raw_response?: Json | null
+          room_id?: string | null
+          smm_order_id?: string | null
+          smm_service_id?: number | null
+          status?: Database["public"]["Enums"]["engagement_order_status"]
+          subscription_id?: string | null
+          target: string
+          type: Database["public"]["Enums"]["engagement_order_type"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          cost_usd?: number | null
+          created_at?: string
+          error?: string | null
+          id?: string
+          quantity?: number
+          raw_response?: Json | null
+          room_id?: string | null
+          smm_order_id?: string | null
+          smm_service_id?: number | null
+          status?: Database["public"]["Enums"]["engagement_order_status"]
+          subscription_id?: string | null
+          target?: string
+          type?: Database["public"]["Enums"]["engagement_order_type"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "engagement_orders_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "user_engagement_subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      engagement_plans: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          kirvano_checkout_url: string | null
+          monthly_members_quota: number
+          monthly_reactions_quota: number
+          name: string
+          price_brl: number
+          slug: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          kirvano_checkout_url?: string | null
+          monthly_members_quota?: number
+          monthly_reactions_quota?: number
+          name: string
+          price_brl: number
+          slug: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          kirvano_checkout_url?: string | null
+          monthly_members_quota?: number
+          monthly_reactions_quota?: number
+          name?: string
+          price_brl?: number
+          slug?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       message_logs: {
         Row: {
           chat_id: number
@@ -278,6 +385,51 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      room_engagement_settings: {
+        Row: {
+          auto_members_enabled: boolean
+          auto_react_enabled: boolean
+          created_at: string
+          delay_seconds_max: number
+          delay_seconds_min: number
+          id: string
+          members_per_day: number
+          react_emojis: string[]
+          reactions_per_signal: number
+          room_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          auto_members_enabled?: boolean
+          auto_react_enabled?: boolean
+          created_at?: string
+          delay_seconds_max?: number
+          delay_seconds_min?: number
+          id?: string
+          members_per_day?: number
+          react_emojis?: string[]
+          reactions_per_signal?: number
+          room_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          auto_members_enabled?: boolean
+          auto_react_enabled?: boolean
+          created_at?: string
+          delay_seconds_max?: number
+          delay_seconds_min?: number
+          id?: string
+          members_per_day?: number
+          react_emojis?: string[]
+          reactions_per_signal?: number
+          room_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       room_images: {
         Row: {
@@ -800,6 +952,62 @@ export type Database = {
           },
         ]
       }
+      user_engagement_subscriptions: {
+        Row: {
+          created_at: string
+          current_period_end: string | null
+          current_period_start: string | null
+          id: string
+          kirvano_customer_email: string | null
+          kirvano_sale_id: string | null
+          last_event: Json | null
+          members_used: number
+          plan_id: string
+          reactions_used: number
+          status: Database["public"]["Enums"]["engagement_sub_status"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          current_period_end?: string | null
+          current_period_start?: string | null
+          id?: string
+          kirvano_customer_email?: string | null
+          kirvano_sale_id?: string | null
+          last_event?: Json | null
+          members_used?: number
+          plan_id: string
+          reactions_used?: number
+          status?: Database["public"]["Enums"]["engagement_sub_status"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          current_period_end?: string | null
+          current_period_start?: string | null
+          id?: string
+          kirvano_customer_email?: string | null
+          kirvano_sale_id?: string | null
+          last_event?: Json | null
+          members_used?: number
+          plan_id?: string
+          reactions_used?: number
+          status?: Database["public"]["Enums"]["engagement_sub_status"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_engagement_subscriptions_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "engagement_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           id: string
@@ -871,6 +1079,15 @@ export type Database = {
       account_status: "unknown" | "ok" | "error"
       account_type: "bot" | "premium"
       app_role: "admin" | "user"
+      engagement_order_status:
+        | "pending"
+        | "in_progress"
+        | "completed"
+        | "partial"
+        | "canceled"
+        | "failed"
+      engagement_order_type: "reaction" | "members"
+      engagement_sub_status: "pending" | "active" | "canceled" | "expired"
       message_status: "pending" | "sending" | "sent" | "failed" | "cancelled"
       room_image_kind: "gain" | "loss"
       session_msg_kind: "open" | "close"
@@ -1014,6 +1231,16 @@ export const Constants = {
       account_status: ["unknown", "ok", "error"],
       account_type: ["bot", "premium"],
       app_role: ["admin", "user"],
+      engagement_order_status: [
+        "pending",
+        "in_progress",
+        "completed",
+        "partial",
+        "canceled",
+        "failed",
+      ],
+      engagement_order_type: ["reaction", "members"],
+      engagement_sub_status: ["pending", "active", "canceled", "expired"],
       message_status: ["pending", "sending", "sent", "failed", "cancelled"],
       room_image_kind: ["gain", "loss"],
       session_msg_kind: ["open", "close"],
