@@ -1345,6 +1345,8 @@ function SessionMessageEditor({
   const [enabled, setEnabled] = useState<boolean>(existing?.enabled ?? true);
   const [lead, setLead] = useState<string>(String(existing?.lead_minutes ?? 5));
   const [imagePath, setImagePath] = useState<string | null>(existing?.image_path ?? null);
+  const [imageMime, setImageMime] = useState<string | null>(existing?.image_mime ?? null);
+  const [imageExt, setImageExt] = useState<string | null>(existing?.image_ext ?? null);
   const sendTest = useServerFn(sendRoomTest);
   const [testing, setTesting] = useState(false);
 
@@ -1353,7 +1355,9 @@ function SessionMessageEditor({
     setEnabled(existing?.enabled ?? true);
     setLead(String(existing?.lead_minutes ?? 5));
     setImagePath(existing?.image_path ?? null);
-  }, [existing?.id, existing?.content, existing?.enabled, existing?.lead_minutes, existing?.image_path]);
+    setImageMime(existing?.image_mime ?? null);
+    setImageExt(existing?.image_ext ?? null);
+  }, [existing?.id, existing?.content, existing?.enabled, existing?.lead_minutes, existing?.image_path, existing?.image_mime, existing?.image_ext]);
 
   const save = useMutation({
     mutationFn: async () => {
@@ -1363,6 +1367,8 @@ function SessionMessageEditor({
         enabled,
         lead_minutes: parseInt(lead, 10) || 0,
         image_path: imagePath,
+        image_mime: imageMime,
+        image_ext: imageExt,
       };
       if (existing) {
         const { error } = await supabase.from("room_session_messages").update(payload).eq("id", existing.id);
@@ -1381,7 +1387,7 @@ function SessionMessageEditor({
   const onTest = async () => {
     try {
       setTesting(true);
-      await sendTest({ data: { roomId, text: content, imagePath: imagePath ?? undefined } });
+      await sendTest({ data: { roomId, text: content, imagePath: imagePath ?? undefined, imageMime: imageMime ?? undefined, imageExt: imageExt ?? undefined } });
       toast.success("Teste enviado");
     } catch (e: any) { toast.error(e.message); }
     finally { setTesting(false); }
@@ -1410,8 +1416,8 @@ function SessionMessageEditor({
       <ImageAttachment
         tone={kind === "open" ? "INÍCIO" : "TÉRMINO"}
         roomId={roomId}
-        value={imagePath}
-        onChange={setImagePath}
+        value={{ path: imagePath, mime: imageMime, ext: imageExt }}
+        onChange={(v) => { setImagePath(v.path); setImageMime(v.mime); setImageExt(v.ext); }}
       />
       <div className="flex items-center justify-between gap-3 pt-2 border-t border-border">
         <Button variant="secondary" size="sm" onClick={onTest} disabled={testing}>
