@@ -15,6 +15,7 @@ import {
   Menu,
   Moon,
   Sun,
+  Video,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -29,6 +30,7 @@ const navItems = [
   { to: "/premium-emojis", label: "Emojis Premium", icon: Sparkles },
   { to: "/rooms", label: "Grupos", icon: Users },
   { to: "/mensagens", label: "Agendamentos", icon: CalendarClock },
+  { to: "/videos", label: "Vídeos redondos", icon: Video },
   { to: "/recarga", label: "Recarga", icon: Wallet },
   { to: "/perfil", label: "Minha conta", icon: UserCircle },
 ] as const;
