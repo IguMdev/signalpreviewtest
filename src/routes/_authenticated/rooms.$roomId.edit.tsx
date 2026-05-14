@@ -312,7 +312,7 @@ function EngagementCard({ roomId }: { roomId: string }) {
         </div>
         {!hasSub && (
           <Button asChild size="sm" variant="outline">
-            <RouterLink to="/engagement">Assinar plano</RouterLink>
+            <Link to="/engagement">Assinar plano</Link>
           </Button>
         )}
       </div>
