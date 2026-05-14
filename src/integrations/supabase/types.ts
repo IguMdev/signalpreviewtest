@@ -1192,6 +1192,7 @@ export type Database = {
         | "interacoes"
         | "boasvindas"
         | "encaminhador"
+        | "salas"
       engagement_order_status:
         | "pending"
         | "in_progress"
@@ -1349,6 +1350,7 @@ export const Constants = {
         "interacoes",
         "boasvindas",
         "encaminhador",
+        "salas",
       ],
       engagement_order_status: [
         "pending",
