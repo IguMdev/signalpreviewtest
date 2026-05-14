@@ -830,6 +830,8 @@ function TimezoneCard({ room }: { room: RoomData }) {
 function StopLossCard({ room }: { room: RoomData }) {
   const qc = useQueryClient();
   const [msg, setMsg] = useState(room.stop_loss_message ?? "🔴 *STOP LOSS ATINGIDO* 🔴");
+  const sendTest = useServerFn(sendRoomTest);
+  const [testing, setTesting] = useState(false);
   const save = useMutation({
     mutationFn: async () => {
       const { error } = await supabase.from("rooms").update({ stop_loss_message: msg }).eq("id", room.id);
@@ -838,6 +840,14 @@ function StopLossCard({ room }: { room: RoomData }) {
     onSuccess: () => { toast.success("Mensagem de Stop Loss salva"); qc.invalidateQueries({ queryKey: ["room", room.id] }); },
     onError: (e: Error) => toast.error(e.message),
   });
+  const onTest = async () => {
+    try {
+      setTesting(true);
+      await sendTest({ data: { roomId: room.id, text: msg } });
+      toast.success("Teste enviado");
+    } catch (e: any) { toast.error(e.message); }
+    finally { setTesting(false); }
+  };
   return (
     <Card className="p-6 space-y-3">
       <h2 className="text-lg font-semibold">Mensagem de Stop Loss</h2>
@@ -849,7 +859,7 @@ function StopLossCard({ room }: { room: RoomData }) {
         </p>
       </div>
       <div className="flex items-center justify-between pt-2 border-t border-border">
-        <Button variant="secondary" size="sm" disabled>📩 Enviar teste</Button>
+        <Button variant="secondary" size="sm" onClick={onTest} disabled={testing}>📩 {testing ? "Enviando..." : "Enviar teste"}</Button>
         <Button size="sm" onClick={() => save.mutate()} disabled={save.isPending}>Salvar seção</Button>
       </div>
     </Card>
