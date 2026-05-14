@@ -26,7 +26,7 @@ import {
 import { toast } from "sonner";
 import { Upload, Trash2, Send, Video as VideoIcon, Loader2, HelpCircle } from "lucide-react";
 
-function VideoPreview({ path }: { path: string }) {
+function VideoPreview({ path, kind }: { path: string; kind: "round" | "normal" }) {
   const { data: url } = useQuery({
     queryKey: ["video-signed", path],
     queryFn: async () => {
@@ -35,8 +35,12 @@ function VideoPreview({ path }: { path: string }) {
     },
     staleTime: 50 * 60 * 1000,
   });
+  const wrapperClass =
+    kind === "round"
+      ? "relative aspect-square w-full overflow-hidden rounded-full bg-muted ring-2 ring-border"
+      : "relative aspect-video w-full overflow-hidden rounded-lg bg-muted ring-1 ring-border";
   return (
-    <div className="relative aspect-square w-full overflow-hidden rounded-full bg-muted ring-2 ring-border">
+    <div className={wrapperClass}>
       {url ? (
         <video
           src={url}
@@ -58,12 +62,19 @@ export const Route = createFileRoute("/_authenticated/videos")({
   component: VideosPage,
 });
 
-const MAX_BYTES = 12 * 1024 * 1024;
-const MAX_DURATION = 60;
+const MAX_BYTES_ROUND = 12 * 1024 * 1024;
+const MAX_DURATION_ROUND = 60;
+const MAX_BYTES_NORMAL = 50 * 1024 * 1024;
 
-async function validateVideoFile(file: File): Promise<{ duration: number }> {
-  if (file.size > MAX_BYTES) {
+async function validateVideoFile(
+  file: File,
+  kind: "round" | "normal",
+): Promise<{ duration: number }> {
+  if (kind === "round" && file.size > MAX_BYTES_ROUND) {
     throw new Error("O vídeo redondo deve ter no máximo 12 MB (limite do Telegram para video note).");
+  }
+  if (kind === "normal" && file.size > MAX_BYTES_NORMAL) {
+    throw new Error("O vídeo deve ter no máximo 50 MB (limite do Telegram para bots).");
   }
   return new Promise((resolve, reject) => {
     const url = URL.createObjectURL(file);
@@ -76,17 +87,19 @@ async function validateVideoFile(file: File): Promise<{ duration: number }> {
       const w = v.videoWidth;
       const h = v.videoHeight;
       URL.revokeObjectURL(url);
-      if (!w || !h || w !== h) {
-        reject(
-          new Error(
-            `Para virar redondo no Telegram o vídeo precisa ser quadrado (atual: ${w}x${h}). Recorte para 1:1 antes de enviar.`,
-          ),
-        );
-        return;
-      }
-      if (dur > MAX_DURATION + 0.5) {
-        reject(new Error(`Duração máxima de 60s (atual: ${Math.round(dur)}s).`));
-        return;
+      if (kind === "round") {
+        if (!w || !h || w !== h) {
+          reject(
+            new Error(
+              `Para virar redondo no Telegram o vídeo precisa ser quadrado (atual: ${w}x${h}). Recorte para 1:1 antes de enviar.`,
+            ),
+          );
+          return;
+        }
+        if (dur > MAX_DURATION_ROUND + 0.5) {
+          reject(new Error(`Duração máxima de 60s (atual: ${Math.round(dur)}s).`));
+          return;
+        }
       }
       resolve({ duration: Math.round(dur) });
     };
@@ -105,6 +118,7 @@ function VideosPage() {
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [title, setTitle] = useState("");
+  const [kind, setKind] = useState<"round" | "normal">("round");
   const [pendingFile, setPendingFile] = useState<{ file: File; duration: number } | null>(null);
 
   const [sendDialog, setSendDialog] = useState<{ videoId: string; title: string } | null>(null);
@@ -119,7 +133,7 @@ function VideosPage() {
       (
         await supabase
           .from("videos")
-          .select("id, title, storage_path, file_size, duration_seconds, created_at")
+          .select("id, title, storage_path, file_size, duration_seconds, created_at, kind")
           .order("created_at", { ascending: false })
       ).data ?? [],
   });
@@ -138,7 +152,7 @@ function VideosPage() {
     const f = e.target.files?.[0];
     if (!f) return;
     try {
-      const { duration } = await validateVideoFile(f);
+      const { duration } = await validateVideoFile(f, kind);
       setPendingFile({ file: f, duration });
       setTitle(f.name.replace(/\.mp4$/i, ""));
     } catch (err) {
@@ -163,6 +177,7 @@ function VideosPage() {
         file_size: pendingFile.file.size,
         duration_seconds: pendingFile.duration,
         mime_type: "video/mp4",
+        kind,
       });
       if (insErr) throw insErr;
       toast.success("Vídeo enviado");
@@ -222,23 +237,45 @@ function VideosPage() {
     <div className="space-y-6">
       <div>
         <div className="flex items-center justify-between gap-3">
-          <h1 className="text-2xl font-bold tracking-tight">Vídeos redondos</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Vídeos</h1>
           <Button variant="outline" size="sm" onClick={() => setHelpOpen(true)}>
             <HelpCircle className="size-4" />
             Como deixar 1:1
           </Button>
         </div>
         <p className="text-sm text-muted-foreground">
-          Envie vídeos no formato "video note" (redondo) do Telegram. Exigências: vídeo quadrado
-          (1:1), MP4/H.264, até 60s e <b>12 MB</b>. Fora desse formato o Telegram rejeita ou envia
-          como vídeo normal.
+          Envie vídeos para o Telegram em dois formatos: <b>redondo</b> (video note: quadrado 1:1,
+          MP4/H.264, até 60s e 12 MB) ou <b>normal</b> (vídeo comum, até 50 MB).
         </p>
       </div>
 
       <Card className="p-5 space-y-4">
         <div className="flex flex-col sm:flex-row gap-3 sm:items-end">
+          <div className="space-y-2 sm:w-44">
+            <Label>Tipo</Label>
+            <Select
+              value={kind}
+              onValueChange={(v) => {
+                setKind(v as "round" | "normal");
+                setPendingFile(null);
+                if (fileRef.current) fileRef.current.value = "";
+              }}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="round">Redondo (video note)</SelectItem>
+                <SelectItem value="normal">Normal</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
           <div className="flex-1 space-y-2">
-            <Label>Vídeo quadrado MP4/H.264 (≤ 60s, ≤ 12 MB)</Label>
+            <Label>
+              {kind === "round"
+                ? "Vídeo quadrado MP4/H.264 (≤ 60s, ≤ 12 MB)"
+                : "Vídeo MP4 (≤ 50 MB)"}
+            </Label>
             <Input ref={fileRef} type="file" accept="video/*" onChange={onPickFile} />
           </div>
           <div className="flex-1 space-y-2">
@@ -267,12 +304,13 @@ function VideosPage() {
         )}
         {videos.data?.map((v) => (
           <Card key={v.id} className="p-4 space-y-3">
-            <div className="mx-auto w-40">
-              <VideoPreview path={v.storage_path} />
+            <div className={(v as any).kind === "normal" ? "w-full" : "mx-auto w-40"}>
+              <VideoPreview path={v.storage_path} kind={((v as any).kind ?? "round") as "round" | "normal"} />
             </div>
             <div className="min-w-0">
                 <p className="font-medium truncate">{v.title}</p>
                 <p className="text-xs text-muted-foreground">
+                  {((v as any).kind ?? "round") === "round" ? "Redondo" : "Normal"} ·{" "}
                   {v.duration_seconds ?? "?"}s ·{" "}
                   {v.file_size ? (v.file_size / 1024 / 1024).toFixed(2) + " MB" : "—"}
                 </p>
