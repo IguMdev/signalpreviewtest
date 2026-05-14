@@ -1409,6 +1409,7 @@ function ReportsCard({ roomId }: { roomId: string }) {
   const [delay, setDelay] = useState<string>("1");
   const [tpl, setTpl] = useState<string>("");
   const [includeStats, setIncludeStats] = useState<boolean>(true);
+  const [imagePath, setImagePath] = useState<string | null>(null);
 
   useEffect(() => {
     if (!report.data) return;
@@ -1416,7 +1417,8 @@ function ReportsCard({ roomId }: { roomId: string }) {
     setDelay(String(report.data.delay_minutes ?? 1));
     setTpl(report.data.template ?? "");
     setIncludeStats(report.data.include_stats ?? true);
-  }, [report.data?.id, report.data?.enabled, report.data?.delay_minutes, report.data?.template, report.data?.include_stats]);
+    setImagePath(report.data.image_path ?? null);
+  }, [report.data?.id, report.data?.enabled, report.data?.delay_minutes, report.data?.template, report.data?.include_stats, report.data?.image_path]);
 
   const save = useMutation({
     mutationFn: async () => {
@@ -1426,6 +1428,7 @@ function ReportsCard({ roomId }: { roomId: string }) {
         delay_minutes: parseInt(delay, 10) || 0,
         template: tpl,
         include_stats: includeStats,
+        image_path: imagePath,
       };
       if (report.data) {
         const { error } = await supabase.from("room_reports").update(payload).eq("id", report.data.id);
@@ -1469,7 +1472,12 @@ function ReportsCard({ roomId }: { roomId: string }) {
         <Textarea value={tpl} onChange={(e) => setTpl(e.target.value)} rows={6} className="font-mono text-sm"
           placeholder={"📊 RELATÓRIO {SESSAO_NOME}\n✅ Wins: {TOTAL_WINS}\n🔴 Losses: {TOTAL_LOSSES}\n📈 Operações: {TOTAL_OPERACOES}\n🎯 Win rate: {WIN_RATE}%"} />
       </div>
-      <ImageAttachmentMock tone="RELATÓRIO" />
+      <ImageAttachment
+        tone="RELATÓRIO"
+        roomId={roomId}
+        value={imagePath}
+        onChange={setImagePath}
+      />
       <div className="flex justify-end pt-2 border-t border-border">
         <Button size="sm" onClick={() => save.mutate()} disabled={save.isPending}>
           {save.isPending ? "Salvando..." : "Salvar seção"}
