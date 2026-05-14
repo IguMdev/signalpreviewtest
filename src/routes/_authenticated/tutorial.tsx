@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { useTour, type TourStep } from "@/components/tour/TourProvider";
 import {
   PlayCircle,
-  RotateCcw,
   LayoutDashboard,
   Send,
   Sparkles,
@@ -247,16 +246,10 @@ function TutorialPage() {
             criar agendamento, enviar vídeo e fazer a recarga.
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Button onClick={() => start(steps)} size="lg">
-            <PlayCircle className="size-5" />
-            Iniciar tour
-          </Button>
-          <Button onClick={() => start(steps)} size="lg" variant="outline">
-            <RotateCcw className="size-4" />
-            Reiniciar tutorial
-          </Button>
-        </div>
+        <Button onClick={() => start(steps)} size="lg">
+          <PlayCircle className="size-5" />
+          Iniciar tour
+        </Button>
       </Card>
 
       <div>
