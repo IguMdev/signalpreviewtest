@@ -26,6 +26,7 @@ import {
   upsertRoomEngagementSettings,
   getMySubscriptions,
 } from "@/lib/engagement.functions";
+import { sendRoomTest } from "@/lib/accounts.functions";
 
 export const Route = createFileRoute("/_authenticated/rooms/$roomId/edit")({
   component: EditRoomPage,
