@@ -7,7 +7,7 @@ import { callTelegram } from "./telegram.server";
 function publicBaseUrl() {
   const explicit = process.env.PUBLIC_BASE_URL;
   if (explicit) return explicit.replace(/\/$/, "");
-  const projectId = process.env.VITE_SUPABASE_PROJECT_ID || "8dafe7ca-cf53-49eb-9c75-fa970d91c13f";
+  const projectId = process.env.LOVABLE_PROJECT_ID || "8dafe7ca-cf53-49eb-9c75-fa970d91c13f";
   return `https://project--${projectId}-dev.lovable.app`;
 }
 
@@ -30,6 +30,7 @@ export const enableMemberTracking = createServerFn({ method: "POST" })
       url,
       secret_token: secret,
       allowed_updates: ["chat_member", "my_chat_member", "message"],
+      drop_pending_updates: false,
     });
     if (!r.ok) throw new Error(r.description ?? "Falha ao registrar webhook");
     return { ok: true, url };
@@ -115,5 +116,91 @@ export const getMemberStats = createServerFn({ method: "GET" })
       daily: Array.from(byDay.values()).sort((a, b) => a.day.localeCompare(b.day)),
       perChat: Array.from(byChat.values()).sort((a, b) => b.joins - a.joins),
       recent: recent ?? [],
+    };
+  });
+
+export const getCurrentMemberCounts = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabase } = context;
+    const { data: rooms, error } = await supabase
+      .from("rooms")
+      .select("id, name, default_account_id, premium_account_id")
+      .eq("is_active", true)
+      .order("created_at", { ascending: false });
+    if (error) throw new Error(error.message);
+
+    const roomIds = (rooms ?? []).map((room) => room.id);
+    const { data: chats, error: chatsError } = await supabase
+      .from("room_chats")
+      .select("room_id, chat_id, chat_title")
+      .in("room_id", roomIds.length ? roomIds : ["00000000-0000-0000-0000-000000000000"]);
+    if (chatsError) throw new Error(chatsError.message);
+    const chatsByRoom = new Map<string, typeof chats>();
+    for (const chat of chats ?? []) {
+      const roomChats = chatsByRoom.get(chat.room_id) ?? [];
+      roomChats.push(chat);
+      chatsByRoom.set(chat.room_id, roomChats);
+    }
+
+    const accountIds = Array.from(
+      new Set(
+        (rooms ?? [])
+          .map((room) => room.default_account_id ?? room.premium_account_id)
+          .filter(Boolean) as string[],
+      ),
+    );
+
+    const { data: accounts, error: accountsError } = await supabase
+      .from("telegram_accounts")
+      .select("id, bot_token, label, bot_username")
+      .in("id", accountIds.length ? accountIds : ["00000000-0000-0000-0000-000000000000"]);
+    if (accountsError) throw new Error(accountsError.message);
+    const accountById = new Map((accounts ?? []).map((account) => [account.id, account]));
+
+    const results: Array<{
+      roomId: string;
+      roomName: string;
+      chatId: number;
+      chatTitle: string | null;
+      accountLabel: string | null;
+      count: number | null;
+      error: string | null;
+    }> = [];
+
+    for (const room of rooms ?? []) {
+      const accountId = room.default_account_id ?? room.premium_account_id;
+      const account = accountId ? accountById.get(accountId) : null;
+      for (const chat of chatsByRoom.get(room.id) ?? []) {
+        if (!account?.bot_token) {
+          results.push({
+            roomId: room.id,
+            roomName: room.name,
+            chatId: chat.chat_id,
+            chatTitle: chat.chat_title,
+            accountLabel: account?.label ?? null,
+            count: null,
+            error: "Sala sem bot padrão com token.",
+          });
+          continue;
+        }
+        const response = await callTelegram<number>(account.bot_token, "getChatMemberCount", {
+          chat_id: chat.chat_id,
+        });
+        results.push({
+          roomId: room.id,
+          roomName: room.name,
+          chatId: chat.chat_id,
+          chatTitle: chat.chat_title,
+          accountLabel: account.label ?? account.bot_username ?? null,
+          count: response.ok ? response.result ?? 0 : null,
+          error: response.ok ? null : response.description ?? "Falha ao consultar membros.",
+        });
+      }
+    }
+
+    return {
+      total: results.reduce((sum, row) => sum + (row.count ?? 0), 0),
+      chats: results,
     };
   });
