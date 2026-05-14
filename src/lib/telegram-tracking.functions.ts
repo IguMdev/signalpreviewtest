@@ -125,10 +125,23 @@ export const getCurrentMemberCounts = createServerFn({ method: "GET" })
     const { supabase } = context;
     const { data: rooms, error } = await supabase
       .from("rooms")
-      .select("id, name, default_account_id, premium_account_id, room_chats(chat_id, chat_title)")
+      .select("id, name, default_account_id, premium_account_id")
       .eq("is_active", true)
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
+
+    const roomIds = (rooms ?? []).map((room) => room.id);
+    const { data: chats, error: chatsError } = await supabase
+      .from("room_chats")
+      .select("room_id, chat_id, chat_title")
+      .in("room_id", roomIds.length ? roomIds : ["00000000-0000-0000-0000-000000000000"]);
+    if (chatsError) throw new Error(chatsError.message);
+    const chatsByRoom = new Map<string, typeof chats>();
+    for (const chat of chats ?? []) {
+      const roomChats = chatsByRoom.get(chat.room_id) ?? [];
+      roomChats.push(chat);
+      chatsByRoom.set(chat.room_id, roomChats);
+    }
 
     const accountIds = Array.from(
       new Set(
@@ -158,7 +171,7 @@ export const getCurrentMemberCounts = createServerFn({ method: "GET" })
     for (const room of rooms ?? []) {
       const accountId = room.default_account_id ?? room.premium_account_id;
       const account = accountId ? accountById.get(accountId) : null;
-      for (const chat of room.room_chats ?? []) {
+      for (const chat of chatsByRoom.get(room.id) ?? []) {
         if (!account?.bot_token) {
           results.push({
             roomId: room.id,
