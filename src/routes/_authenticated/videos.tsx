@@ -30,15 +30,12 @@ export const Route = createFileRoute("/_authenticated/videos")({
   component: VideosPage,
 });
 
-const MAX_BYTES = 8 * 1024 * 1024;
+const MAX_BYTES = 20 * 1024 * 1024;
 const MAX_DURATION = 60;
 
 async function validateVideoFile(file: File): Promise<{ duration: number }> {
-  if (file.type !== "video/mp4" && !file.name.toLowerCase().endsWith(".mp4")) {
-    throw new Error("O vídeo deve ser MP4.");
-  }
   if (file.size > MAX_BYTES) {
-    throw new Error("O vídeo deve ter no máximo 8 MB.");
+    throw new Error("O vídeo deve ter no máximo 20 MB.");
   }
   return new Promise((resolve, reject) => {
     const url = URL.createObjectURL(file);
@@ -48,13 +45,7 @@ async function validateVideoFile(file: File): Promise<{ duration: number }> {
     v.src = url;
     v.onloadedmetadata = () => {
       const dur = v.duration;
-      const w = v.videoWidth;
-      const h = v.videoHeight;
       URL.revokeObjectURL(url);
-      if (!w || !h || w !== h) {
-        reject(new Error(`O vídeo deve ser quadrado (atual: ${w}x${h}).`));
-        return;
-      }
       if (dur > MAX_DURATION + 0.5) {
         reject(new Error(`Duração máxima de 60s (atual: ${Math.round(dur)}s).`));
         return;
@@ -193,15 +184,15 @@ function VideosPage() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Vídeos redondos</h1>
         <p className="text-sm text-muted-foreground">
-          Envie vídeos no formato "video note" do Telegram (MP4 quadrado, até 60s e 8 MB).
+          Envie vídeos no formato "video note" do Telegram (até 60s e 20 MB).
         </p>
       </div>
 
       <Card className="p-5 space-y-4">
         <div className="flex flex-col sm:flex-row gap-3 sm:items-end">
           <div className="flex-1 space-y-2">
-            <Label>Arquivo MP4 (quadrado, ≤ 60s, ≤ 8 MB)</Label>
-            <Input ref={fileRef} type="file" accept="video/mp4" onChange={onPickFile} />
+            <Label>Arquivo de vídeo (≤ 60s, ≤ 20 MB)</Label>
+            <Input ref={fileRef} type="file" accept="video/*" onChange={onPickFile} />
           </div>
           <div className="flex-1 space-y-2">
             <Label>Título</Label>
