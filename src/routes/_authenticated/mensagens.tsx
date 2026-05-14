@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
@@ -180,6 +180,20 @@ function MensagensPage() {
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
+  // Auto-sync photos for rooms missing one (once per session per room)
+  const triedRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    const list = rooms.data ?? [];
+    for (const r of list) {
+      if (!r.photo_url && !triedRef.current.has(r.id)) {
+        triedRef.current.add(r.id);
+        syncPhotoFn({ data: { roomId: r.id } })
+          .then(() => qc.invalidateQueries({ queryKey: ["rooms-min"] }))
+          .catch(() => {});
+      }
+    }
+  }, [rooms.data, syncPhotoFn, qc]);
 
   const openNew = (roomId?: string) => {
     setPresetRoomId(roomId ?? null);
