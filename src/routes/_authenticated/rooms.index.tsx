@@ -287,7 +287,7 @@ function RoomsPage() {
                           </div>
                         )}
                         <div className="min-w-0">
-                          <div className="font-medium text-sm truncate">{r.name}</div>
+                          <div className="font-medium text-sm truncate">{chat?.chat_title || r.name}</div>
                           {r.broker && <div className="text-xs text-muted-foreground truncate">{r.broker}</div>}
                         </div>
                       </div>
