@@ -133,6 +133,66 @@ export type Database = {
         }
         Relationships: []
       }
+      recurring_schedules: {
+        Row: {
+          account_id: string | null
+          content: string | null
+          created_at: string
+          id: string
+          is_active: boolean
+          is_premium: boolean
+          last_fire_key: string | null
+          last_sent_at: string | null
+          parse_mode: string
+          room_id: string
+          times: string[]
+          timezone: string
+          title: string
+          updated_at: string
+          user_id: string
+          video_id: string | null
+          weekdays: number[]
+        }
+        Insert: {
+          account_id?: string | null
+          content?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_premium?: boolean
+          last_fire_key?: string | null
+          last_sent_at?: string | null
+          parse_mode?: string
+          room_id: string
+          times?: string[]
+          timezone?: string
+          title: string
+          updated_at?: string
+          user_id: string
+          video_id?: string | null
+          weekdays?: number[]
+        }
+        Update: {
+          account_id?: string | null
+          content?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_premium?: boolean
+          last_fire_key?: string | null
+          last_sent_at?: string | null
+          parse_mode?: string
+          room_id?: string
+          times?: string[]
+          timezone?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+          video_id?: string | null
+          weekdays?: number[]
+        }
+        Relationships: []
+      }
       room_chats: {
         Row: {
           chat_id: number
