@@ -171,9 +171,12 @@ export const dispatchEngagementBoost = createServerFn({ method: "POST" })
         .eq("id", order.id);
 
       // Decrement quota
+      const newUsed = ((sub as any)[usedField] ?? 0) + data.quantity;
+      const updatePayload: Record<string, number> = {};
+      updatePayload[usedField] = newUsed;
       await supabaseAdmin
         .from("user_engagement_subscriptions")
-        .update({ [usedField]: ((sub as any)[usedField] ?? 0) + data.quantity })
+        .update(updatePayload as never)
         .eq("id", (sub as any).id);
 
       return { ok: true, orderId: order.id, smmOrderId: resp.order };
