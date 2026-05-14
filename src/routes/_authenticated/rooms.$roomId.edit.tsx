@@ -832,7 +832,7 @@ function WindowAssets({
                         {meta?.is_open === false ? "Fechado" : "Aberto"}
                       </Badge>
                       <span className="text-[10px] text-muted-foreground tabular-nums w-10 text-right">
-                        {meta ? `${(meta.payout * 100).toFixed(0)}%` : "—"}
+                        {meta ? `${((meta.payout > 1 ? meta.payout - 1 : meta.payout) * 100).toFixed(0)}%` : "—"}
                       </span>
                     </div>
                   );
