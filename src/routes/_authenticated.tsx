@@ -37,8 +37,11 @@ const navItems = [
   { to: "/mensagens", label: "Agendamentos", icon: CalendarClock, tour: "nav-mensagens" },
   { to: "/videos", label: "Vídeos", icon: Video, tour: "nav-videos" },
   { to: "/recarga", label: "Recarga", icon: Wallet, tour: "nav-recarga" },
-  { to: "/tutorial", label: "Tutorial", icon: GraduationCap, tour: "nav-tutorial" },
   { to: "/perfil", label: "Minha conta", icon: UserCircle, tour: "nav-perfil" },
+] as const;
+
+const footerNavItems = [
+  { to: "/tutorial", label: "Tutorial", icon: GraduationCap, tour: "nav-tutorial" },
 ] as const;
 
 function AuthenticatedLayout() {
@@ -129,11 +132,11 @@ function AuthenticatedLayout() {
       {/* Sidebar */}
       <aside
         className={cn(
-          "fixed top-16 bottom-0 left-0 z-20 w-64 glass border-r border-border/60 transition-transform",
+          "fixed top-16 bottom-0 left-0 z-20 w-64 glass border-r border-border/60 transition-transform flex flex-col",
           sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
         )}
       >
-        <nav className="p-3 space-y-1">
+        <nav className="p-3 space-y-1 flex-1 overflow-y-auto">
           {navItems.map(({ to, label, icon: Icon, tour }) => {
             const active = location.pathname === to || location.pathname.startsWith(to + "/");
             return (
@@ -155,6 +158,28 @@ function AuthenticatedLayout() {
             );
           })}
         </nav>
+        <div className="p-3 border-t border-border/60 space-y-1">
+          {footerNavItems.map(({ to, label, icon: Icon, tour }) => {
+            const active = location.pathname === to || location.pathname.startsWith(to + "/");
+            return (
+              <Link
+                key={to}
+                to={to}
+                data-tour={tour}
+                onClick={() => setSidebarOpen(false)}
+                className={cn(
+                  "relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition",
+                  active
+                    ? "cyber-gradient-soft text-foreground cyber-border"
+                    : "text-foreground/70 hover:bg-white/5 hover:text-foreground",
+                )}
+              >
+                <Icon className={cn("size-4", active && "text-primary")} />
+                {label}
+              </Link>
+            );
+          })}
+        </div>
       </aside>
 
       {sidebarOpen && (
