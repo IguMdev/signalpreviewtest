@@ -221,6 +221,20 @@ function RecargaPage() {
                 </Card>
               )}
 
+              {sub && bot === "inscritos" && !sub.target_link && (
+                <ChooseChannelCard subscriptionId={sub.id} />
+              )}
+              {sub && bot === "inscritos" && sub.target_link && (
+                <Card className="bg-muted/30">
+                  <CardContent className="py-3 text-xs flex items-center justify-between gap-2">
+                    <span className="text-muted-foreground">Entrega para:</span>
+                    <a href={sub.target_link} target="_blank" rel="noreferrer" className="font-medium truncate text-primary">
+                      {sub.target_link}
+                    </a>
+                  </CardContent>
+                </Card>
+              )}
+
               <div className={`grid gap-3 ${plans.length >= 3 ? "md:grid-cols-2 lg:grid-cols-4" : "md:grid-cols-2"}`}>
                 {plans.map((p: any) => {
                   const isCurrent = activePlan?.id === p.id;
