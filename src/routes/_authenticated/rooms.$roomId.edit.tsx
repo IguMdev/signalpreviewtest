@@ -780,7 +780,7 @@ function WindowAssets({
       const cat = (Object.keys(ASSETS_CATALOG) as AssetCategory[])
         .find((c) => ASSETS_CATALOG[c].includes(code)) ?? "OTC";
       const current = assets.data?.[code];
-      const nextOpen = !(current?.is_open ?? true);
+      const nextOpen = !(current?.is_open ?? false);
       const { error } = await supabase.from("room_assets").upsert({
         user_id: uid,
         room_id: roomId,
@@ -810,7 +810,7 @@ function WindowAssets({
     cat,
     assets: ASSETS_CATALOG[cat].filter((code) => {
       const meta = assets.data?.[code];
-      const isOpen = meta?.is_open !== false;
+      const isOpen = meta?.is_open ?? false;
       const payout = meta?.payout ?? DEFAULT_PAYOUT;
       const normalizedPayout = (payout > 1 ? payout - 1 : payout) * 100;
       const matchesSearch = code.toLowerCase().includes(search.toLowerCase());
