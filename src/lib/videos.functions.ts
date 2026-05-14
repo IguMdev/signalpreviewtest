@@ -106,12 +106,12 @@ export async function dispatchVideoNote(opts: {
   duration?: number | null;
   mimeType?: string | null;
   filename?: string;
-}) {
+}): Promise<{ ok: boolean; result?: { message_id: number }; description?: string }> {
   const { data: file, error } = await supabaseAdmin.storage
     .from("videos")
     .download(opts.storagePath);
   if (error || !file) {
-    return { ok: false, description: "Falha ao baixar vídeo" } as const;
+    return { ok: false, description: "Falha ao baixar vídeo" };
   }
   const bytes = await file.arrayBuffer();
   return sendVideoNoteToChat({
