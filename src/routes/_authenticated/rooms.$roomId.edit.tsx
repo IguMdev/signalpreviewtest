@@ -1217,7 +1217,7 @@ function TemplateEditor({
   actionMode?: "full" | "test" | "none";
   rows?: number;
 }) {
-  const [content, setContent] = useState<string>(existing?.content ?? "");
+  const [content, setContent] = useState<string>(existing?.content ?? placeholder);
   const [imagePath, setImagePath] = useState<string | null>(existing?.image_path ?? null);
   const [imageMime, setImageMime] = useState<string | null>(existing?.image_mime ?? null);
   const [imageExt, setImageExt] = useState<string | null>(existing?.image_ext ?? null);
@@ -1227,7 +1227,7 @@ function TemplateEditor({
   const [testing, setTesting] = useState(false);
 
   useEffect(() => {
-    setContent(existing?.content ?? "");
+    setContent(existing?.content ?? placeholder);
     setImagePath(existing?.image_path ?? null);
     setImageMime(existing?.image_mime ?? null);
     setImageExt(existing?.image_ext ?? null);
