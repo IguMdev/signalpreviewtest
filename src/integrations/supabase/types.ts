@@ -193,6 +193,50 @@ export type Database = {
         }
         Relationships: []
       }
+      room_assets: {
+        Row: {
+          asset_code: string
+          category: string
+          created_at: string
+          id: string
+          is_open: boolean
+          payout: number
+          room_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          asset_code: string
+          category: string
+          created_at?: string
+          id?: string
+          is_open?: boolean
+          payout?: number
+          room_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          asset_code?: string
+          category?: string
+          created_at?: string
+          id?: string
+          is_open?: boolean
+          payout?: number
+          room_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "room_assets_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       room_chats: {
         Row: {
           chat_id: number
