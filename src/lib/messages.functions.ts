@@ -4,6 +4,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { callTelegram } from "./telegram.server";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { dispatchVideoNote } from "./videos.functions";
+import { triggerSignalReactions } from "./engagement.functions";
 
 export const scheduleMessage = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
