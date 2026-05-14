@@ -45,7 +45,17 @@ async function validateVideoFile(file: File): Promise<{ duration: number }> {
     v.src = url;
     v.onloadedmetadata = () => {
       const dur = v.duration;
+      const w = v.videoWidth;
+      const h = v.videoHeight;
       URL.revokeObjectURL(url);
+      if (!w || !h || w !== h) {
+        reject(
+          new Error(
+            `Para virar redondo no Telegram o vídeo precisa ser quadrado (atual: ${w}x${h}). Recorte para 1:1 antes de enviar.`,
+          ),
+        );
+        return;
+      }
       if (dur > MAX_DURATION + 0.5) {
         reject(new Error(`Duração máxima de 60s (atual: ${Math.round(dur)}s).`));
         return;
@@ -184,14 +194,16 @@ function VideosPage() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Vídeos redondos</h1>
         <p className="text-sm text-muted-foreground">
-          Envie vídeos no formato "video note" do Telegram (até 60s e 20 MB).
+          Envie vídeos no formato "video note" (redondo) do Telegram. Exigências do Telegram: vídeo
+          quadrado (1:1), MP4 com codec H.264, até 60s e 20 MB. Se não for quadrado, o Telegram envia
+          como vídeo normal.
         </p>
       </div>
 
       <Card className="p-5 space-y-4">
         <div className="flex flex-col sm:flex-row gap-3 sm:items-end">
           <div className="flex-1 space-y-2">
-            <Label>Arquivo de vídeo (≤ 60s, ≤ 20 MB)</Label>
+            <Label>Vídeo quadrado MP4/H.264 (≤ 60s, ≤ 20 MB)</Label>
             <Input ref={fileRef} type="file" accept="video/*" onChange={onPickFile} />
           </div>
           <div className="flex-1 space-y-2">
