@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useParams, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import {
-  Home, ChevronRight, ExternalLink, Plus, Trash2, Info, X,
+  Home, ChevronRight, ExternalLink, Plus, Trash2, Info, X, Upload, ImageIcon, Send, Smile, RotateCcw,
 } from "lucide-react";
 import { ASSETS_CATALOG, type AssetCategory } from "@/lib/assets-catalog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -70,7 +70,7 @@ function EditRoomPage() {
   const accessUrl = r.access_url || (chatId ? `https://t.me/c/${String(chatId).replace(/^-?100/, "")}` : null);
 
   return (
-    <div className="space-y-5 pb-24">
+    <div className="space-y-5 pb-24 xl:-mx-14 2xl:-mx-24">
       {/* Breadcrumb */}
       <nav className="flex items-center gap-1.5 text-sm text-muted-foreground">
         <Link to="/" className="flex items-center gap-1 hover:text-foreground"><Home className="size-3.5" /> Home</Link>
@@ -104,10 +104,10 @@ function EditRoomPage() {
 
       {/* Sticky footer */}
       <div className="fixed bottom-0 left-0 right-0 lg:left-[var(--sidebar-width,16rem)] bg-background/95 backdrop-blur border-t border-border p-4 flex justify-end gap-2 z-40">
-        <Button variant="outline" onClick={() => navigate({ to: "/rooms" })}>Cancelar</Button>
         <Button onClick={() => toast.success("Use os botões 'Salvar' de cada seção para persistir mudanças")}>
           Salvar
         </Button>
+        <Button variant="outline" onClick={() => navigate({ to: "/rooms" })}>Cancelar</Button>
       </div>
     </div>
   );
@@ -456,7 +456,7 @@ function WindowItem({ window: w, roomId }: { window: any; roomId: string }) {
         Usar Todos os Ativos
       </label>
 
-      {!useAll && <WindowAssets selected={filter} setSelected={setFilter} roomId={roomId} windowId={w.id} />}
+      <WindowAssets selected={filter} setSelected={setFilter} roomId={roomId} windowId={w.id} useAll={useAll} />
 
       <div className="flex justify-end pt-2 border-t border-border">
         <Button size="sm" onClick={() => save.mutate()} disabled={save.isPending}>
@@ -469,12 +469,13 @@ function WindowItem({ window: w, roomId }: { window: any; roomId: string }) {
 
 /* Asset grid in 4 columns: Forex / Cripto / Ações / OTC */
 function WindowAssets({
-  selected, setSelected, roomId, windowId,
+  selected, setSelected, roomId, windowId, useAll,
 }: {
   selected: string[];
   setSelected: (v: string[]) => void;
   roomId: string;
   windowId: string;
+  useAll: boolean;
 }) {
   const [search, setSearch] = useState("");
 
@@ -524,7 +525,7 @@ function WindowAssets({
                   const checked = selected.includes(code);
                   return (
                     <div key={code} className="flex items-center gap-2 text-xs">
-                      <Checkbox checked={checked} onCheckedChange={() => toggle(code)} />
+                      <Checkbox checked={useAll || checked} disabled={useAll} onCheckedChange={() => toggle(code)} />
                       <span className="flex-1 font-mono">{code}</span>
                       <Badge
                         variant={meta?.is_open === false ? "outline" : "default"}
@@ -545,7 +546,7 @@ function WindowAssets({
         ))}
       </div>
       <p className="text-xs text-muted-foreground">
-        * Para editar payout/aberto de cada ativo, use o seletor global de ativos da sala.
+        * Com "Usar Todos os Ativos" ligado, todos aparecem marcados; desligue para filtrar manualmente.
       </p>
       {/* keep windowId referenced to satisfy noUnusedParams */}
       <input type="hidden" value={windowId} readOnly />
@@ -669,14 +670,25 @@ type TemplateKind =
   | "signal" | "win" | "win_martingale" | "loss"
   | "buy_direction" | "sell_direction" | "entry" | "gain" | "event";
 
-const TEMPLATE_TABS: { kind: TemplateKind; label: string; placeholder: string }[] = [
-  { kind: "signal",         label: "Sinal",         placeholder: "🎯 SINAL: {ATIVO}\n⏱ {TIMEFRAME}\n📈 {DIRECAO}\n💰 Entrada: {ENTRADA}" },
-  { kind: "win",            label: "Vitória",       placeholder: "✅ VITÓRIA no {ATIVO} 🟢" },
-  { kind: "win_martingale", label: "Vitória MG",    placeholder: "✅ VITÓRIA no martingale {ATIVO} 🟢" },
-  { kind: "loss",           label: "Derrota",       placeholder: "🔴 DERROTA no {ATIVO}" },
-  { kind: "buy_direction",  label: "Direção COMPRA", placeholder: "📈 COMPRA" },
-  { kind: "sell_direction", label: "Direção VENDA",  placeholder: "📉 VENDA" },
+const SIGNAL_PLACEHOLDERS = {
+  message: "🎯 SINAL: {ATIVO}\n⏱ {TIMEFRAME}\n📈 {DIRECAO}\n💰 Entrada: {ENTRADA}\n🔁 Gale 1: {ENTRADAGALE1}\n🔁 Gale 2: {ENTRADAGALE2}",
+  list: "📋 LISTA DE SINAIS\n{LISTA_SINAIS}\n\nGerenciamento: {MARTINGALE} martingale(s)",
+};
+
+const RESULT_TEMPLATES: { kind: TemplateKind; title: string; placeholder: string; tone: string }[] = [
+  { kind: "win", title: "Vitória", placeholder: "✅ VITÓRIA no {ATIVO} 🟢", tone: "GAIN" },
+  { kind: "win_martingale", title: "Vitória Martingale", placeholder: "✅ VITÓRIA no martingale {ATIVO} 🟢", tone: "GAIN" },
+  { kind: "loss", title: "Derrota", placeholder: "🔴 DERROTA no {ATIVO}", tone: "LOSS" },
 ];
+
+const DIRECTION_TEMPLATES: { kind: TemplateKind; title: string; placeholder: string }[] = [
+  { kind: "buy_direction", title: "Template de Compra", placeholder: "📈 COMPRA" },
+  { kind: "sell_direction", title: "Template de Venda", placeholder: "📉 VENDA" },
+];
+
+function pickTemplate(list: any[] | undefined, kind: TemplateKind) {
+  return list?.find((x: any) => x.kind === kind);
+}
 
 function TemplatesCard({ roomId }: { roomId: string }) {
   const qc = useQueryClient();
@@ -700,55 +712,112 @@ function TemplatesCard({ roomId }: { roomId: string }) {
     },
   });
 
+  const refresh = () => {
+    qc.invalidateQueries({ queryKey: ["room_templates", roomId] });
+    qc.invalidateQueries({ queryKey: ["room_template_buttons", roomId] });
+  };
+  const templates = tpls.data ?? [];
+  const buttons = btns.data ?? [];
+  const signalButtons = buttons.filter((b: any) => b.template_kind === "signal");
+
   return (
-    <Card className="p-6 space-y-4">
-      <h2 className="text-lg font-semibold">Templates de Mensagem</h2>
-      <p className="text-xs text-muted-foreground">
-        Use macros como <code>{`{ATIVO}, {TIMEFRAME}, {DIRECAO}, {ENTRADA}, {ENTRADAGALE1}, {ENTRADAGALE2}`}</code>.
-      </p>
-      <Tabs defaultValue="signal">
-        <TabsList className="flex flex-wrap h-auto">
-          {TEMPLATE_TABS.map((t) => (
-            <TabsTrigger key={t.kind} value={t.kind}>{t.label}</TabsTrigger>
-          ))}
+    <Card className="p-6 space-y-5">
+      <div className="space-y-1">
+        <h2 className="text-lg font-semibold">Templates de Mensagem</h2>
+        <p className="text-xs text-muted-foreground">
+          Use macros como <code>{`{ATIVO}, {TIMEFRAME}, {DIRECAO}, {ENTRADA}, {ENTRADAGALE1}, {ENTRADAGALE2}`}</code>.
+        </p>
+      </div>
+
+      <Tabs defaultValue="message">
+        <TabsList className="grid w-full max-w-sm grid-cols-2">
+          <TabsTrigger value="message">Mensagem</TabsTrigger>
+          <TabsTrigger value="list">Lista</TabsTrigger>
         </TabsList>
-        {TEMPLATE_TABS.map((t) => {
-          const existing = tpls.data?.find((x: any) => x.kind === t.kind);
-          const tabBtns = (btns.data ?? []).filter((b: any) => b.template_kind === t.kind);
-          return (
-            <TabsContent key={t.kind} value={t.kind} className="pt-4">
-              <TemplateEditor
-                roomId={roomId}
-                kind={t.kind}
-                placeholder={t.placeholder}
-                existing={existing}
-                buttons={tabBtns}
-                onChanged={() => {
-                  qc.invalidateQueries({ queryKey: ["room_templates", roomId] });
-                  qc.invalidateQueries({ queryKey: ["room_template_buttons", roomId] });
-                }}
-              />
-            </TabsContent>
-          );
-        })}
+
+        {(["message", "list"] as const).map((tab) => (
+          <TabsContent key={tab} value={tab} className="pt-4 space-y-5">
+            <TemplateEditor
+              roomId={roomId}
+              kind="signal"
+              title="Template principal de Sinal"
+              helper={tab === "message" ? "Formato enviado para cada sinal individual." : "Formato usado quando os sinais são enviados em lista."}
+              placeholder={SIGNAL_PLACEHOLDERS[tab]}
+              existing={pickTemplate(templates, "signal")}
+              buttons={signalButtons}
+              showButtonManager
+              actionMode="full"
+              rows={8}
+              onChanged={refresh}
+            />
+
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+              {RESULT_TEMPLATES.map((item) => (
+                <TemplateEditor
+                  key={item.kind}
+                  roomId={roomId}
+                  kind={item.kind}
+                  title={item.title}
+                  placeholder={item.placeholder}
+                  existing={pickTemplate(templates, item.kind)}
+                  buttons={[]}
+                  actionMode="test"
+                  showImageTools
+                  imageTone={item.tone}
+                  rows={4}
+                  onChanged={refresh}
+                />
+              ))}
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {DIRECTION_TEMPLATES.map((item) => (
+                <TemplateEditor
+                  key={item.kind}
+                  roomId={roomId}
+                  kind={item.kind}
+                  title={item.title}
+                  placeholder={item.placeholder}
+                  existing={pickTemplate(templates, item.kind)}
+                  buttons={[]}
+                  actionMode="test"
+                  rows={3}
+                  onChanged={refresh}
+                />
+              ))}
+            </div>
+          </TabsContent>
+        ))}
       </Tabs>
     </Card>
   );
 }
 
 function TemplateEditor({
-  roomId, kind, placeholder, existing, buttons, onChanged,
+  roomId, kind, title, helper, placeholder, existing, buttons, onChanged,
+  showButtonManager = false, showImageTools = false, imageTone = "GAIN", actionMode = "none", rows = 5,
 }: {
   roomId: string;
   kind: TemplateKind;
+  title?: string;
+  helper?: string;
   placeholder: string;
   existing: any;
   buttons: any[];
   onChanged: () => void;
+  showButtonManager?: boolean;
+  showImageTools?: boolean;
+  imageTone?: string;
+  actionMode?: "full" | "test" | "none";
+  rows?: number;
 }) {
   const [content, setContent] = useState<string>(existing?.content ?? "");
   const [newLabel, setNewLabel] = useState("");
   const [newUrl, setNewUrl] = useState("");
+
+  useEffect(() => {
+    setContent(existing?.content ?? "");
+  }, [existing?.id, existing?.content]);
 
   const saveTpl = useMutation({
     mutationFn: async () => {
@@ -792,19 +861,27 @@ function TemplateEditor({
   });
 
   return (
-    <div className="space-y-4">
+    <div className="border rounded-md p-4 space-y-4 bg-card/40">
+      {(title || helper) && (
+        <div className="space-y-1">
+          {title && <h3 className="text-sm font-semibold">{title}</h3>}
+          {helper && <p className="text-xs text-muted-foreground">{helper}</p>}
+        </div>
+      )}
       <div className="space-y-1.5">
         <Label className="text-xs">Conteúdo da mensagem</Label>
         <Textarea
           value={content}
           onChange={(e) => setContent(e.target.value)}
           placeholder={placeholder}
-          rows={6}
+          rows={rows}
           className="font-mono text-sm"
         />
       </div>
 
-      <div className="space-y-2">
+      {showImageTools && <ImageAttachmentMock tone={imageTone} />}
+
+      {showButtonManager && <div className="space-y-2">
         <Label className="text-xs">Botões inline (opcional)</Label>
         {buttons.length === 0 && (
           <p className="text-xs text-muted-foreground">Nenhum botão configurado.</p>
@@ -826,12 +903,52 @@ function TemplateEditor({
             <Plus className="size-4 mr-1" />Adicionar
           </Button>
         </div>
-      </div>
+      </div>}
 
-      <div className="flex justify-end pt-2 border-t border-border">
+      <div className="flex items-center justify-between gap-3 pt-2 border-t border-border">
+        <div className="flex flex-wrap gap-2">
+          {actionMode === "full" && (
+            <>
+              <Button variant="secondary" size="sm" disabled><Smile className="size-4 mr-1" />Emojis</Button>
+              <Button variant="outline" size="sm" onClick={() => setContent(placeholder)}><RotateCcw className="size-4 mr-1" />Restaurar</Button>
+              <Button variant="secondary" size="sm" disabled><Send className="size-4 mr-1" />Enviar teste</Button>
+            </>
+          )}
+          {actionMode === "test" && <Button variant="secondary" size="sm" disabled><Send className="size-4 mr-1" />Enviar teste</Button>}
+        </div>
         <Button size="sm" onClick={() => saveTpl.mutate()} disabled={saveTpl.isPending}>
           {saveTpl.isPending ? "Salvando..." : "Salvar template"}
         </Button>
+      </div>
+    </div>
+  );
+}
+
+function ImageAttachmentMock({ tone }: { tone: string }) {
+  const [fileName, setFileName] = useState("");
+  return (
+    <div className="space-y-2">
+      <Label className="text-xs">Imagem</Label>
+      <div className="rounded-md border border-dashed bg-background/50 p-3 space-y-3">
+        <div className="h-24 rounded-md bg-muted/50 flex flex-col items-center justify-center text-muted-foreground">
+          <ImageIcon className="size-6 mb-1" />
+          <span className="text-xs font-semibold">Preview {tone}</span>
+          {fileName && <span className="text-[11px] mt-1 max-w-full truncate px-2">{fileName}</span>}
+        </div>
+        <div className="flex flex-wrap gap-2 justify-end">
+          <Button variant="outline" size="sm" onClick={() => setFileName("")} disabled={!fileName}>Remover arquivo</Button>
+          <Button asChild size="sm" variant="secondary">
+            <label className="cursor-pointer">
+              <Upload className="size-4 mr-1" />Escolher arquivo
+              <input
+                type="file"
+                className="sr-only"
+                accept="image/png,image/jpeg,image/gif,image/webp,.tgs,.webm"
+                onChange={(e) => setFileName(e.target.files?.[0]?.name ?? "")}
+              />
+            </label>
+          </Button>
+        </div>
       </div>
     </div>
   );
@@ -883,6 +1000,12 @@ function SessionMessageEditor({
   const [enabled, setEnabled] = useState<boolean>(existing?.enabled ?? true);
   const [lead, setLead] = useState<string>(String(existing?.lead_minutes ?? 5));
 
+  useEffect(() => {
+    setContent(existing?.content ?? "");
+    setEnabled(existing?.enabled ?? true);
+    setLead(String(existing?.lead_minutes ?? 5));
+  }, [existing?.id, existing?.content, existing?.enabled, existing?.lead_minutes]);
+
   const save = useMutation({
     mutationFn: async () => {
       const { data: u } = await supabase.auth.getUser();
@@ -925,7 +1048,9 @@ function SessionMessageEditor({
             ? "🚀 SESSÃO COMEÇA EM {MINUTOS} MIN!\nPrepare-se para os sinais!"
             : "🏁 SESSÃO ENCERRADA\nObrigado por operar conosco!"} />
       </div>
-      <div className="flex justify-end pt-2 border-t border-border">
+      <ImageAttachmentMock tone={kind === "open" ? "INÍCIO" : "TÉRMINO"} />
+      <div className="flex items-center justify-between gap-3 pt-2 border-t border-border">
+        <Button variant="secondary" size="sm" disabled><Send className="size-4 mr-1" />Enviar teste</Button>
         <Button size="sm" onClick={() => save.mutate()} disabled={save.isPending}>
           {save.isPending ? "Salvando..." : "Salvar"}
         </Button>
@@ -954,15 +1079,14 @@ function ReportsCard({ roomId }: { roomId: string }) {
   const [delay, setDelay] = useState<string>("1");
   const [tpl, setTpl] = useState<string>("");
   const [includeStats, setIncludeStats] = useState<boolean>(true);
-  const [hydrated, setHydrated] = useState(false);
 
-  if (report.data && !hydrated) {
+  useEffect(() => {
+    if (!report.data) return;
     setEnabled(report.data.enabled);
     setDelay(String(report.data.delay_minutes ?? 1));
     setTpl(report.data.template ?? "");
     setIncludeStats(report.data.include_stats ?? true);
-    setHydrated(true);
-  }
+  }, [report.data?.id, report.data?.enabled, report.data?.delay_minutes, report.data?.template, report.data?.include_stats]);
 
   const save = useMutation({
     mutationFn: async () => {
@@ -998,7 +1122,7 @@ function ReportsCard({ roomId }: { roomId: string }) {
       </div>
       <p className="text-xs text-muted-foreground">
         Envia um resumo automático ao final de cada janela de operação.
-        Macros disponíveis: <code>{`{TOTAL}, {WINS}, {LOSSES}, {WINRATE}, {SESSAO}`}</code>.
+        Macros disponíveis: <code>{`{SESSAO_NOME}, {TOTAL_WINS}, {TOTAL_LOSSES}, {WIN_RATE}, {TOTAL_OPERACOES}`}</code>.
       </p>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-1.5">
@@ -1013,8 +1137,9 @@ function ReportsCard({ roomId }: { roomId: string }) {
       <div className="space-y-1.5">
         <Label className="text-xs">Template do relatório</Label>
         <Textarea value={tpl} onChange={(e) => setTpl(e.target.value)} rows={6} className="font-mono text-sm"
-          placeholder={"📊 RELATÓRIO {SESSAO}\n✅ Wins: {WINS}\n🔴 Losses: {LOSSES}\n🎯 Winrate: {WINRATE}%"} />
+          placeholder={"📊 RELATÓRIO {SESSAO_NOME}\n✅ Wins: {TOTAL_WINS}\n🔴 Losses: {TOTAL_LOSSES}\n📈 Operações: {TOTAL_OPERACOES}\n🎯 Win rate: {WIN_RATE}%"} />
       </div>
+      <ImageAttachmentMock tone="RELATÓRIO" />
       <div className="flex justify-end pt-2 border-t border-border">
         <Button size="sm" onClick={() => save.mutate()} disabled={save.isPending}>
           {save.isPending ? "Salvando..." : "Salvar seção"}
