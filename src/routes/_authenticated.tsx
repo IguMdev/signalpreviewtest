@@ -17,25 +17,28 @@ import {
   Sun,
   Video,
   UserPlus,
+  GraduationCap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
+import { TourProvider } from "@/components/tour/TourProvider";
 
 export const Route = createFileRoute("/_authenticated")({
   component: AuthenticatedLayout,
 });
 
 const navItems = [
-  { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/telegram-accounts", label: "Contas Telegram", icon: Send },
-  { to: "/premium-emojis", label: "Emojis Premium", icon: Sparkles },
-  { to: "/rooms", label: "Salas", icon: Users },
-  { to: "/membros", label: "Membros", icon: UserPlus },
-  { to: "/mensagens", label: "Agendamentos", icon: CalendarClock },
-  { to: "/videos", label: "Vídeos redondos", icon: Video },
-  { to: "/recarga", label: "Recarga", icon: Wallet },
-  { to: "/perfil", label: "Minha conta", icon: UserCircle },
+  { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, tour: "nav-dashboard" },
+  { to: "/telegram-accounts", label: "Contas Telegram", icon: Send, tour: "nav-telegram-accounts" },
+  { to: "/premium-emojis", label: "Emojis Premium", icon: Sparkles, tour: "nav-premium-emojis" },
+  { to: "/rooms", label: "Salas", icon: Users, tour: "nav-rooms" },
+  { to: "/membros", label: "Membros", icon: UserPlus, tour: "nav-membros" },
+  { to: "/mensagens", label: "Agendamentos", icon: CalendarClock, tour: "nav-mensagens" },
+  { to: "/videos", label: "Vídeos", icon: Video, tour: "nav-videos" },
+  { to: "/recarga", label: "Recarga", icon: Wallet, tour: "nav-recarga" },
+  { to: "/tutorial", label: "Tutorial", icon: GraduationCap, tour: "nav-tutorial" },
+  { to: "/perfil", label: "Minha conta", icon: UserCircle, tour: "nav-perfil" },
 ] as const;
 
 function AuthenticatedLayout() {
@@ -87,6 +90,7 @@ function AuthenticatedLayout() {
   }
 
   return (
+    <TourProvider>
     <div className="min-h-screen text-foreground">
       {/* Top bar */}
       <header className="fixed top-0 inset-x-0 z-30 h-16 glass border-b border-border/60 flex items-center px-4 gap-3">
@@ -130,12 +134,13 @@ function AuthenticatedLayout() {
         )}
       >
         <nav className="p-3 space-y-1">
-          {navItems.map(({ to, label, icon: Icon }) => {
+          {navItems.map(({ to, label, icon: Icon, tour }) => {
             const active = location.pathname === to || location.pathname.startsWith(to + "/");
             return (
               <Link
                 key={to}
                 to={to}
+                data-tour={tour}
                 onClick={() => setSidebarOpen(false)}
                 className={cn(
                   "relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition",
@@ -166,5 +171,6 @@ function AuthenticatedLayout() {
         </div>
       </main>
     </div>
+    </TourProvider>
   );
 }
