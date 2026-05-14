@@ -51,7 +51,13 @@ export const syncRoomPhoto = createServerFn({ method: "POST" })
       chat_id: chat.chat_id,
     });
     if (!info.ok || !info.result) {
-      throw new Error(info.description ?? "Falha ao consultar grupo");
+      const desc = info.description ?? "Falha ao consultar grupo";
+      if (/chat not found/i.test(desc)) {
+        throw new Error(
+          "Grupo não encontrado pelo bot. Verifique se o bot foi adicionado ao grupo e se o ID está correto.",
+        );
+      }
+      throw new Error(desc);
     }
     if (!info.result.photo) {
       await supabase
