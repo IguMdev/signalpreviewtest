@@ -116,7 +116,7 @@ function TelegramAccountsPage() {
     setPhone("");
     setApiId("");
     setApiHash("");
-    setSmsCode("");
+    setTelegramCode("");
     setTwoFa("");
     setNeeds2fa(false);
     setPremiumStep("form");
