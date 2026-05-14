@@ -26,6 +26,34 @@ import {
 import { toast } from "sonner";
 import { Upload, Trash2, Send, Video as VideoIcon, Loader2, HelpCircle } from "lucide-react";
 
+function VideoPreview({ path }: { path: string }) {
+  const { data: url } = useQuery({
+    queryKey: ["video-signed", path],
+    queryFn: async () => {
+      const { data } = await supabase.storage.from("videos").createSignedUrl(path, 3600);
+      return data?.signedUrl ?? null;
+    },
+    staleTime: 50 * 60 * 1000,
+  });
+  return (
+    <div className="relative aspect-square w-full overflow-hidden rounded-full bg-muted ring-2 ring-border">
+      {url ? (
+        <video
+          src={url}
+          className="size-full object-cover"
+          controls
+          playsInline
+          preload="metadata"
+        />
+      ) : (
+        <div className="size-full grid place-items-center">
+          <Loader2 className="size-5 animate-spin text-muted-foreground" />
+        </div>
+      )}
+    </div>
+  );
+}
+
 export const Route = createFileRoute("/_authenticated/videos")({
   component: VideosPage,
 });
@@ -239,11 +267,10 @@ function VideosPage() {
         )}
         {videos.data?.map((v) => (
           <Card key={v.id} className="p-4 space-y-3">
-            <div className="flex items-start gap-3">
-              <div className="size-12 rounded-lg bg-primary/10 text-primary grid place-items-center shrink-0">
-                <VideoIcon className="size-5" />
-              </div>
-              <div className="min-w-0 flex-1">
+            <div className="mx-auto w-40">
+              <VideoPreview path={v.storage_path} />
+            </div>
+            <div className="min-w-0">
                 <p className="font-medium truncate">{v.title}</p>
                 <p className="text-xs text-muted-foreground">
                   {v.duration_seconds ?? "?"}s ·{" "}
@@ -252,7 +279,6 @@ function VideosPage() {
                 <p className="text-xs text-muted-foreground">
                   {new Date(v.created_at).toLocaleString("pt-BR")}
                 </p>
-              </div>
             </div>
             <div className="flex gap-2">
               <Button
