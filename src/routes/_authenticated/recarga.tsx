@@ -1,10 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Input } from "@/components/ui/input";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
@@ -12,9 +14,10 @@ import {
   DoorOpen, Sparkles, ExternalLink, Crown,
   Users, Heart, MessageCircle, Forward,
   History, CheckCircle2, Clock, XCircle, AlertCircle,
+  Send,
 } from "lucide-react";
 import { toast } from "sonner";
-import { listEngagementPlans, getMySubscriptions, listMyPaymentHistory } from "@/lib/engagement.functions";
+import { listEngagementPlans, getMySubscriptions, listMyPaymentHistory, setSubscriptionTarget } from "@/lib/engagement.functions";
 import { useAuth } from "@/lib/auth-context";
 
 export const Route = createFileRoute("/_authenticated/recarga")({
