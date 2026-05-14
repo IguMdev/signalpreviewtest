@@ -481,6 +481,7 @@ function ScheduleDialog({
     parseMode: "HTML" | "Markdown" | "MarkdownV2";
     times: string[];
     weekdays: number[];
+    weekdayOverrides: Record<string, string[]>;
     isPremium: boolean;
     isActive: boolean;
     timezone: string;
@@ -496,6 +497,8 @@ function ScheduleDialog({
   const [uploading, setUploading] = useState(false);
   const [times, setTimes] = useState<string[]>([]);
   const [weekdays, setWeekdays] = useState<number[]>([]);
+  const [weekdayOverrides, setWeekdayOverrides] = useState<Record<string, string[]>>({});
+  const [overrideInputs, setOverrideInputs] = useState<Record<string, string>>({});
   const [isPremium, setIsPremium] = useState(false);
   const [isActive, setIsActive] = useState(true);
   const [newTime, setNewTime] = useState("");
@@ -513,6 +516,8 @@ function ScheduleDialog({
       setImageMime(editing.image_mime ?? "");
       setTimes(editing.times);
       setWeekdays(editing.weekdays);
+      setWeekdayOverrides(editing.weekday_overrides ?? {});
+      setOverrideInputs({});
       setIsPremium(editing.is_premium);
       setIsActive(editing.is_active);
       setNewTime("");
