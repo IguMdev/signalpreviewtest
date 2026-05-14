@@ -813,7 +813,7 @@ function WindowAssets({
         {(Object.keys(ASSETS_CATALOG) as AssetCategory[]).map((cat) => (
           <div key={cat} className="space-y-1.5">
             <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{cat}</h4>
-            <div className="space-y-1 max-h-72 overflow-y-auto pr-1">
+            <div className="space-y-1">
               {ASSETS_CATALOG[cat]
                 .filter((a) => a.toLowerCase().includes(search.toLowerCase()))
                 .map((code) => {
