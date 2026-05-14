@@ -1,12 +1,16 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Send, Users, CalendarClock, Wallet, Sparkles, CreditCard, UserPlus, UserMinus, Bot } from "lucide-react";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Send, Users, CalendarClock, Wallet, Sparkles, CreditCard, UserPlus, UserMinus, Bot, RefreshCw } from "lucide-react";
 import { getMySubscriptions } from "@/lib/engagement.functions";
+import { getCurrentMemberCounts, getMemberStats } from "@/lib/telegram-tracking.functions";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   component: DashboardPage,
@@ -15,6 +19,8 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
 function DashboardPage() {
   const { user } = useAuth();
   const fetchSubs = useServerFn(getMySubscriptions);
+  const fetchCurrentCounts = useServerFn(getCurrentMemberCounts);
+  const fetchStats = useServerFn(getMemberStats);
 
   const stats = useQuery({
     queryKey: ["dashboard-stats", user?.id],
@@ -87,6 +93,54 @@ function DashboardPage() {
     enabled: !!user,
     queryFn: () => fetchSubs(),
   });
+
+  const countsQ = useQuery({
+    queryKey: ["dashboard-current-counts", user?.id],
+    enabled: !!user,
+    queryFn: () => fetchCurrentCounts(),
+  });
+  const statsQ = useQuery({
+    queryKey: ["dashboard-member-stats", user?.id],
+    enabled: !!user,
+    queryFn: () => fetchStats(),
+  });
+
+  const [tab, setTab] = useState<"group" | "channel">("group");
+  const [selectedGroup, setSelectedGroup] = useState<string>("all");
+  const [selectedChannel, setSelectedChannel] = useState<string>("all");
+
+  const allChats = countsQ.data?.chats ?? [];
+  const groups = allChats.filter((c) => c.chatType === "group" || c.chatType === "unknown");
+  const channels = allChats.filter((c) => c.chatType === "channel");
+  useEffect(() => {
+    if (!countsQ.data) return;
+    if (groups.length === 0 && channels.length > 0 && tab === "group") setTab("channel");
+    else if (channels.length === 0 && groups.length > 0 && tab === "channel") setTab("group");
+  }, [countsQ.data, groups.length, channels.length, tab]);
+
+  const typeByChatId = useMemo(() => {
+    const m = new Map<number, "group" | "channel" | "unknown">();
+    for (const c of allChats) m.set(c.chatId, c.chatType);
+    return m;
+  }, [allChats]);
+
+  const selectedId = tab === "group" ? selectedGroup : selectedChannel;
+  const visibleChats = (tab === "group" ? groups : channels).filter(
+    (c) => selectedId === "all" || String(c.chatId) === selectedId,
+  );
+  const visiblePerChat = (statsQ.data?.perChat ?? []).filter((c) => {
+    const t = typeByChatId.get(c.chat_id) ?? "unknown";
+    const inTab = tab === "group" ? t !== "channel" : t === "channel";
+    return inTab && (selectedId === "all" || String(c.chat_id) === selectedId);
+  });
+  const visibleRecent = (statsQ.data?.recent ?? []).filter((e) => {
+    const t = typeByChatId.get(e.chat_id) ?? "unknown";
+    const inTab = tab === "group" ? t !== "channel" : t === "channel";
+    return inTab && (selectedId === "all" || String(e.chat_id) === selectedId);
+  });
+  const totalMembers = visibleChats.reduce((s, c) => s + (c.count ?? 0), 0);
+  const totalJoins = visiblePerChat.reduce((s, c) => s + c.joins, 0);
+  const totalLeaves = visiblePerChat.reduce((s, c) => s + c.leaves, 0);
 
   const activeSubs = ((subsQ.data ?? []) as any[]).filter((s) => s.status === "active");
   const monthlyTotal = activeSubs.reduce(
@@ -161,6 +215,128 @@ function DashboardPage() {
             ))}
           </div>
         )}
+      </Card>
+
+      <Card className="p-6">
+        <div className="flex items-center justify-between mb-4 gap-3">
+          <div>
+            <h2 className="font-semibold">Membros por grupo / canal</h2>
+            <p className="text-xs text-muted-foreground">Selecione um chat para ver entradas, saídas e total atual.</p>
+          </div>
+          <Link to="/membros" className="text-sm text-primary hover:underline shrink-0">Ver detalhes</Link>
+        </div>
+
+        <Tabs value={tab} onValueChange={(v) => setTab(v as "group" | "channel")}>
+          <div className="flex flex-wrap items-center gap-3 justify-between mb-4">
+            <TabsList>
+              <TabsTrigger value="group">Grupos ({groups.length})</TabsTrigger>
+              <TabsTrigger value="channel">Canais ({channels.length})</TabsTrigger>
+            </TabsList>
+            {tab === "group" ? (
+              <Select value={selectedGroup} onValueChange={setSelectedGroup}>
+                <SelectTrigger className="w-[260px]"><SelectValue placeholder="Selecione um grupo" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os grupos</SelectItem>
+                  {groups.map((c) => (
+                    <SelectItem key={c.chatId} value={String(c.chatId)}>
+                      {c.chatTitle || c.roomName || `Chat ${c.chatId}`}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : (
+              <Select value={selectedChannel} onValueChange={setSelectedChannel}>
+                <SelectTrigger className="w-[260px]"><SelectValue placeholder="Selecione um canal" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os canais</SelectItem>
+                  {channels.map((c) => (
+                    <SelectItem key={c.chatId} value={String(c.chatId)}>
+                      {c.chatTitle || c.roomName || `Chat ${c.chatId}`}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
+
+          <TabsContent value={tab} className="space-y-4">
+            <div className="grid grid-cols-3 gap-3">
+              <div className="p-3 rounded-lg bg-muted/50">
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span>Membros atuais</span>
+                  <Users className="size-3.5" />
+                </div>
+                <div className="text-2xl font-bold mt-1">{totalMembers.toLocaleString("pt-BR")}</div>
+              </div>
+              <div className="p-3 rounded-lg bg-muted/50">
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span>Entradas (30d)</span>
+                  <UserPlus className="size-3.5 text-emerald-500" />
+                </div>
+                <div className="text-2xl font-bold mt-1 text-emerald-600">+{totalJoins}</div>
+              </div>
+              <div className="p-3 rounded-lg bg-muted/50">
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span>Saídas (30d)</span>
+                  <UserMinus className="size-3.5 text-rose-500" />
+                </div>
+                <div className="text-2xl font-bold mt-1 text-rose-600">-{totalLeaves}</div>
+              </div>
+            </div>
+
+            {countsQ.isLoading ? (
+              <div className="flex items-center justify-center py-6 text-muted-foreground text-sm gap-2">
+                <RefreshCw className="size-4 animate-spin" /> Carregando…
+              </div>
+            ) : visibleChats.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-6 text-center">
+                Nenhum {tab === "group" ? "grupo" : "canal"} encontrado.
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {visibleChats.map((c) => (
+                  <div key={`${c.roomId}-${c.chatId}`} className="flex items-center justify-between p-3 rounded-lg bg-muted/50 gap-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium truncate">{c.chatTitle || c.roomName || `Chat ${c.chatId}`}</p>
+                      <p className="text-xs text-muted-foreground truncate">ID: {c.chatId}{c.accountLabel ? ` • ${c.accountLabel}` : ""}</p>
+                      {c.error && <p className="text-xs text-destructive mt-1">{c.error}</p>}
+                    </div>
+                    <span className="text-lg font-semibold tabular-nums shrink-0">{c.count?.toLocaleString("pt-BR") ?? "—"}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {visibleRecent.length > 0 && (
+              <div>
+                <h3 className="text-sm font-medium mb-2">Últimos eventos</h3>
+                <div className="space-y-1">
+                  {visibleRecent.slice(0, 8).map((e) => (
+                    <div key={e.id} className="flex items-center justify-between py-1.5 text-xs border-b border-border last:border-0">
+                      <div className="flex items-center gap-2 min-w-0">
+                        {e.event_type === "join" ? (
+                          <UserPlus className="size-3 text-emerald-500 shrink-0" />
+                        ) : (
+                          <UserMinus className="size-3 text-rose-500 shrink-0" />
+                        )}
+                        <span className="truncate">
+                          {e.tg_first_name || e.tg_username || "Usuário"}{" "}
+                          <span className="text-muted-foreground">
+                            {e.event_type === "join" ? "entrou em" : e.event_type === "kicked" ? "foi removido de" : "saiu de"}
+                          </span>{" "}
+                          {e.chat_title || e.chat_id}
+                        </span>
+                      </div>
+                      <span className="text-muted-foreground tabular-nums shrink-0 ml-2">
+                        {new Date(e.occurred_at).toLocaleString("pt-BR")}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
       </Card>
 
       <Card className="p-6">
