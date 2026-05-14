@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Send, Users, CalendarClock, Wallet, Sparkles, CreditCard, UserPlus, UserMinus } from "lucide-react";
+import { Send, Users, CalendarClock, Wallet, Sparkles, CreditCard, UserPlus, UserMinus, Bot } from "lucide-react";
 import { getMySubscriptions } from "@/lib/engagement.functions";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
@@ -22,8 +22,13 @@ function DashboardPage() {
     queryFn: async () => {
       const todayStart = new Date();
       todayStart.setHours(0, 0, 0, 0);
-      const [accounts, rooms, scheduled, profile, joinsToday, leavesToday, totalJoins, totalLeaves] = await Promise.all([
+      const [accounts, activeBots, rooms, scheduled, profile, joinsToday, leavesToday, totalJoins, totalLeaves] = await Promise.all([
         supabase.from("telegram_accounts").select("id", { count: "exact", head: true }),
+        supabase
+          .from("telegram_accounts")
+          .select("id", { count: "exact", head: true })
+          .eq("is_active", true)
+          .eq("status", "ok"),
         supabase.from("rooms").select("id", { count: "exact", head: true }),
         supabase
           .from("scheduled_messages")
@@ -51,6 +56,7 @@ function DashboardPage() {
       ]);
       return {
         accounts: accounts.count ?? 0,
+        activeBots: activeBots.count ?? 0,
         rooms: rooms.count ?? 0,
         pending: scheduled.count ?? 0,
         credits: profile.data?.credits ?? 0,
@@ -94,6 +100,7 @@ function DashboardPage() {
     { label: "Mensalidade atual", value: fmtBRL(monthlyTotal), icon: CreditCard },
     { label: "Créditos", value: stats.data?.credits ?? 0, icon: Wallet },
     { label: "Contas Telegram", value: stats.data?.accounts ?? 0, icon: Send },
+    { label: "Bots ativos", value: stats.data?.activeBots ?? 0, icon: Bot },
     { label: "Grupos", value: stats.data?.rooms ?? 0, icon: Users },
     { label: "Entradas hoje", value: stats.data?.joinsToday ?? 0, icon: UserPlus },
     { label: "Saídas hoje", value: stats.data?.leavesToday ?? 0, icon: UserMinus },
