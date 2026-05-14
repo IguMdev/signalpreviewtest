@@ -1,8 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
+import { useMemo, useState } from "react";
 import { getCurrentMemberCounts, getMemberStats } from "@/lib/telegram-tracking.functions";
 import { Card } from "@/components/ui/card";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { UserPlus, UserMinus, TrendingUp, Users, RefreshCw } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/membros")({
@@ -17,11 +20,38 @@ function MembrosPage() {
   const data = q.data;
   const currentCounts = countsQ.data;
 
+  const [tab, setTab] = useState<"group" | "channel">("group");
+  const [selectedGroup, setSelectedGroup] = useState<string>("all");
+  const [selectedChannel, setSelectedChannel] = useState<string>("all");
+
+  const typeByChatId = useMemo(() => {
+    const m = new Map<number, "group" | "channel" | "unknown">();
+    for (const c of currentCounts?.chats ?? []) m.set(c.chatId, c.chatType);
+    return m;
+  }, [currentCounts]);
+
+  const groups = (currentCounts?.chats ?? []).filter((c) => c.chatType === "group" || c.chatType === "unknown");
+  const channels = (currentCounts?.chats ?? []).filter((c) => c.chatType === "channel");
+
+  const selectedId = tab === "group" ? selectedGroup : selectedChannel;
+  const visibleChats = (tab === "group" ? groups : channels).filter(
+    (c) => selectedId === "all" || String(c.chatId) === selectedId,
+  );
+  const visiblePerChat = (data?.perChat ?? []).filter((c) => {
+    const t = typeByChatId.get(c.chat_id) ?? "unknown";
+    const inTab = tab === "group" ? t !== "channel" : t === "channel";
+    return inTab && (selectedId === "all" || String(c.chat_id) === selectedId);
+  });
+
+  const totalMembers = visibleChats.reduce((s, c) => s + (c.count ?? 0), 0);
+  const totalJoins = visiblePerChat.reduce((s, c) => s + c.joins, 0);
+  const totalLeaves = visiblePerChat.reduce((s, c) => s + c.leaves, 0);
+
   const cards = [
-    { label: "Entradas hoje", value: data?.joinsToday ?? 0, icon: UserPlus, color: "text-emerald-500" },
-    { label: "Saídas hoje", value: data?.leavesToday ?? 0, icon: UserMinus, color: "text-rose-500" },
-    { label: "Saldo (30d)", value: data?.net30 ?? 0, icon: TrendingUp, color: "text-primary" },
-    { label: "Membros atuais", value: currentCounts?.total ?? 0, icon: Users, color: "text-foreground" },
+    { label: "Entradas (30d)", value: totalJoins, icon: UserPlus, color: "text-emerald-500" },
+    { label: "Saídas (30d)", value: totalLeaves, icon: UserMinus, color: "text-rose-500" },
+    { label: "Saldo (30d)", value: totalJoins - totalLeaves, icon: TrendingUp, color: "text-primary" },
+    { label: "Membros atuais", value: totalMembers, icon: Users, color: "text-foreground" },
   ];
 
   const maxBar = Math.max(1, ...(data?.daily ?? []).flatMap((d) => [d.joins, d.leaves]));
@@ -35,6 +65,41 @@ function MembrosPage() {
         </p>
       </div>
 
+      <Tabs value={tab} onValueChange={(v) => setTab(v as "group" | "channel")}>
+        <div className="flex flex-wrap items-center gap-3 justify-between">
+          <TabsList>
+            <TabsTrigger value="group">Grupos ({groups.length})</TabsTrigger>
+            <TabsTrigger value="channel">Canais ({channels.length})</TabsTrigger>
+          </TabsList>
+
+          {tab === "group" ? (
+            <Select value={selectedGroup} onValueChange={setSelectedGroup}>
+              <SelectTrigger className="w-[280px]"><SelectValue placeholder="Selecione um grupo" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os grupos</SelectItem>
+                {groups.map((c) => (
+                  <SelectItem key={c.chatId} value={String(c.chatId)}>
+                    {c.chatTitle || c.roomName || `Chat ${c.chatId}`}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <Select value={selectedChannel} onValueChange={setSelectedChannel}>
+              <SelectTrigger className="w-[280px]"><SelectValue placeholder="Selecione um canal" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os canais</SelectItem>
+                {channels.map((c) => (
+                  <SelectItem key={c.chatId} value={String(c.chatId)}>
+                    {c.chatTitle || c.roomName || `Chat ${c.chatId}`}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </div>
+
+        <TabsContent value={tab} className="mt-4 space-y-6">
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {cards.map(({ label, value, icon: Icon, color }) => (
           <Card key={label} className="p-5">
@@ -80,14 +145,14 @@ function MembrosPage() {
 
       <Card className="p-6">
         <div className="flex items-center justify-between gap-3 mb-4">
-          <h2 className="font-semibold">Contagem atual por grupo</h2>
+          <h2 className="font-semibold">Contagem atual {tab === "group" ? "por grupo" : "por canal"}</h2>
           {countsQ.isFetching && <RefreshCw className="size-4 text-muted-foreground animate-spin" />}
         </div>
-        {!currentCounts?.chats.length ? (
-          <p className="text-sm text-muted-foreground py-8 text-center">Nenhum chat vinculado às salas.</p>
+        {!visibleChats.length ? (
+          <p className="text-sm text-muted-foreground py-8 text-center">Nenhum {tab === "group" ? "grupo" : "canal"} vinculado às salas.</p>
         ) : (
           <div className="space-y-2">
-            {currentCounts.chats.map((c) => (
+            {visibleChats.map((c) => (
               <div key={`${c.roomId}-${c.chatId}`} className="flex items-center justify-between p-3 rounded-lg bg-muted/50 gap-3">
                 <div className="min-w-0">
                   <p className="text-sm font-medium truncate">{c.chatTitle || c.roomName || `Chat ${c.chatId}`}</p>
@@ -102,12 +167,12 @@ function MembrosPage() {
       </Card>
 
       <Card className="p-6">
-        <h2 className="font-semibold mb-4">Por grupo</h2>
-        {!data?.perChat.length ? (
-          <p className="text-sm text-muted-foreground py-8 text-center">Nenhum grupo com eventos.</p>
+        <h2 className="font-semibold mb-4">Entradas e saídas {tab === "group" ? "por grupo" : "por canal"}</h2>
+        {!visiblePerChat.length ? (
+          <p className="text-sm text-muted-foreground py-8 text-center">Nenhum evento registrado.</p>
         ) : (
           <div className="space-y-2">
-            {data.perChat.map((c) => (
+            {visiblePerChat.map((c) => (
               <div key={c.chat_id} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
                 <div className="min-w-0">
                   <p className="text-sm font-medium truncate">{c.chat_title || `Chat ${c.chat_id}`}</p>
@@ -154,6 +219,8 @@ function MembrosPage() {
           </div>
         )}
       </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
