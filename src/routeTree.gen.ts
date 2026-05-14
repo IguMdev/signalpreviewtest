@@ -15,7 +15,9 @@ import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
 import { Route as AuthenticatedTelegramAccountsRouteImport } from './routes/_authenticated/telegram-accounts'
 import { Route as AuthenticatedRoomsRouteImport } from './routes/_authenticated/rooms'
+import { Route as AuthenticatedRecargaRouteImport } from './routes/_authenticated/recarga'
 import { Route as AuthenticatedPremiumEmojisRouteImport } from './routes/_authenticated/premium-emojis'
+import { Route as AuthenticatedPerfilRouteImport } from './routes/_authenticated/perfil'
 import { Route as AuthenticatedMensagensRouteImport } from './routes/_authenticated/mensagens'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 
@@ -49,12 +51,22 @@ const AuthenticatedRoomsRoute = AuthenticatedRoomsRouteImport.update({
   path: '/rooms',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedRecargaRoute = AuthenticatedRecargaRouteImport.update({
+  id: '/recarga',
+  path: '/recarga',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedPremiumEmojisRoute =
   AuthenticatedPremiumEmojisRouteImport.update({
     id: '/premium-emojis',
     path: '/premium-emojis',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedPerfilRoute = AuthenticatedPerfilRouteImport.update({
+  id: '/perfil',
+  path: '/perfil',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedMensagensRoute = AuthenticatedMensagensRouteImport.update({
   id: '/mensagens',
   path: '/mensagens',
@@ -72,7 +84,9 @@ export interface FileRoutesByFullPath {
   '/signup': typeof SignupRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/mensagens': typeof AuthenticatedMensagensRoute
+  '/perfil': typeof AuthenticatedPerfilRoute
   '/premium-emojis': typeof AuthenticatedPremiumEmojisRoute
+  '/recarga': typeof AuthenticatedRecargaRoute
   '/rooms': typeof AuthenticatedRoomsRoute
   '/telegram-accounts': typeof AuthenticatedTelegramAccountsRoute
 }
@@ -81,7 +95,9 @@ export interface FileRoutesByTo {
   '/signup': typeof SignupRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/mensagens': typeof AuthenticatedMensagensRoute
+  '/perfil': typeof AuthenticatedPerfilRoute
   '/premium-emojis': typeof AuthenticatedPremiumEmojisRoute
+  '/recarga': typeof AuthenticatedRecargaRoute
   '/rooms': typeof AuthenticatedRoomsRoute
   '/telegram-accounts': typeof AuthenticatedTelegramAccountsRoute
   '/': typeof AuthenticatedIndexRoute
@@ -93,7 +109,9 @@ export interface FileRoutesById {
   '/signup': typeof SignupRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/mensagens': typeof AuthenticatedMensagensRoute
+  '/_authenticated/perfil': typeof AuthenticatedPerfilRoute
   '/_authenticated/premium-emojis': typeof AuthenticatedPremiumEmojisRoute
+  '/_authenticated/recarga': typeof AuthenticatedRecargaRoute
   '/_authenticated/rooms': typeof AuthenticatedRoomsRoute
   '/_authenticated/telegram-accounts': typeof AuthenticatedTelegramAccountsRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
@@ -106,7 +124,9 @@ export interface FileRouteTypes {
     | '/signup'
     | '/dashboard'
     | '/mensagens'
+    | '/perfil'
     | '/premium-emojis'
+    | '/recarga'
     | '/rooms'
     | '/telegram-accounts'
   fileRoutesByTo: FileRoutesByTo
@@ -115,7 +135,9 @@ export interface FileRouteTypes {
     | '/signup'
     | '/dashboard'
     | '/mensagens'
+    | '/perfil'
     | '/premium-emojis'
+    | '/recarga'
     | '/rooms'
     | '/telegram-accounts'
     | '/'
@@ -126,7 +148,9 @@ export interface FileRouteTypes {
     | '/signup'
     | '/_authenticated/dashboard'
     | '/_authenticated/mensagens'
+    | '/_authenticated/perfil'
     | '/_authenticated/premium-emojis'
+    | '/_authenticated/recarga'
     | '/_authenticated/rooms'
     | '/_authenticated/telegram-accounts'
     | '/_authenticated/'
@@ -182,11 +206,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedRoomsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/recarga': {
+      id: '/_authenticated/recarga'
+      path: '/recarga'
+      fullPath: '/recarga'
+      preLoaderRoute: typeof AuthenticatedRecargaRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/premium-emojis': {
       id: '/_authenticated/premium-emojis'
       path: '/premium-emojis'
       fullPath: '/premium-emojis'
       preLoaderRoute: typeof AuthenticatedPremiumEmojisRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/perfil': {
+      id: '/_authenticated/perfil'
+      path: '/perfil'
+      fullPath: '/perfil'
+      preLoaderRoute: typeof AuthenticatedPerfilRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/mensagens': {
@@ -209,7 +247,9 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedMensagensRoute: typeof AuthenticatedMensagensRoute
+  AuthenticatedPerfilRoute: typeof AuthenticatedPerfilRoute
   AuthenticatedPremiumEmojisRoute: typeof AuthenticatedPremiumEmojisRoute
+  AuthenticatedRecargaRoute: typeof AuthenticatedRecargaRoute
   AuthenticatedRoomsRoute: typeof AuthenticatedRoomsRoute
   AuthenticatedTelegramAccountsRoute: typeof AuthenticatedTelegramAccountsRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
@@ -218,7 +258,9 @@ interface AuthenticatedRouteChildren {
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedMensagensRoute: AuthenticatedMensagensRoute,
+  AuthenticatedPerfilRoute: AuthenticatedPerfilRoute,
   AuthenticatedPremiumEmojisRoute: AuthenticatedPremiumEmojisRoute,
+  AuthenticatedRecargaRoute: AuthenticatedRecargaRoute,
   AuthenticatedRoomsRoute: AuthenticatedRoomsRoute,
   AuthenticatedTelegramAccountsRoute: AuthenticatedTelegramAccountsRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
@@ -236,3 +278,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
