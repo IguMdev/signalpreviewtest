@@ -248,6 +248,8 @@ function EngagementCard({ roomId }: { roomId: string }) {
   const fetchSettings = useServerFn(getRoomEngagementSettings);
   const fetchSubs = useServerFn(getMySubscriptions);
   const saveSettings = useServerFn(upsertRoomEngagementSettings);
+  const sendTest = useServerFn(sendRoomTest);
+  const [testingWelcome, setTestingWelcome] = useState(false);
 
   const { data: settings } = useQuery({
     queryKey: ["room-eng-settings", roomId],
@@ -425,6 +427,23 @@ function EngagementCard({ roomId }: { roomId: string }) {
             <p className="text-xs text-muted-foreground">
               Suporta HTML básico: &lt;b&gt;, &lt;i&gt;, &lt;a&gt;.
             </p>
+            <div className="flex justify-end">
+              <Button
+                variant="secondary"
+                size="sm"
+                disabled={!hasWelcome || testingWelcome}
+                onClick={async () => {
+                  try {
+                    setTestingWelcome(true);
+                    await sendTest({ data: { roomId, text: welcomeMessage } });
+                    toast.success("Teste enviado");
+                  } catch (e: any) { toast.error(e.message); }
+                  finally { setTestingWelcome(false); }
+                }}
+              >
+                📩 {testingWelcome ? "Enviando..." : "Enviar teste"}
+              </Button>
+            </div>
           </div>
         </div>
 
