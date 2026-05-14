@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { getCurrentMemberCounts, getMemberStats } from "@/lib/telegram-tracking.functions";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -33,6 +33,13 @@ function MembrosPage() {
   const groups = (currentCounts?.chats ?? []).filter((c) => c.chatType === "group" || c.chatType === "unknown");
   const channels = (currentCounts?.chats ?? []).filter((c) => c.chatType === "channel");
 
+  // Auto-switch to the tab that actually has chats
+  useEffect(() => {
+    if (!currentCounts) return;
+    if (groups.length === 0 && channels.length > 0 && tab === "group") setTab("channel");
+    else if (channels.length === 0 && groups.length > 0 && tab === "channel") setTab("group");
+  }, [currentCounts, groups.length, channels.length, tab]);
+
   const selectedId = tab === "group" ? selectedGroup : selectedChannel;
   const visibleChats = (tab === "group" ? groups : channels).filter(
     (c) => selectedId === "all" || String(c.chatId) === selectedId,
@@ -41,6 +48,11 @@ function MembrosPage() {
     const t = typeByChatId.get(c.chat_id) ?? "unknown";
     const inTab = tab === "group" ? t !== "channel" : t === "channel";
     return inTab && (selectedId === "all" || String(c.chat_id) === selectedId);
+  });
+  const visibleRecent = (data?.recent ?? []).filter((e) => {
+    const t = typeByChatId.get(e.chat_id) ?? "unknown";
+    const inTab = tab === "group" ? t !== "channel" : t === "channel";
+    return inTab && (selectedId === "all" || String(e.chat_id) === selectedId);
   });
 
   const totalMembers = visibleChats.reduce((s, c) => s + (c.count ?? 0), 0);
