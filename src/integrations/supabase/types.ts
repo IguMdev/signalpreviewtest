@@ -258,6 +258,8 @@ export type Database = {
           content: string | null
           created_at: string
           id: string
+          image_mime: string | null
+          image_path: string | null
           is_active: boolean
           is_premium: boolean
           last_fire_key: string | null
@@ -277,6 +279,8 @@ export type Database = {
           content?: string | null
           created_at?: string
           id?: string
+          image_mime?: string | null
+          image_path?: string | null
           is_active?: boolean
           is_premium?: boolean
           last_fire_key?: string | null
@@ -296,6 +300,8 @@ export type Database = {
           content?: string | null
           created_at?: string
           id?: string
+          image_mime?: string | null
+          image_path?: string | null
           is_active?: boolean
           is_premium?: boolean
           last_fire_key?: string | null
