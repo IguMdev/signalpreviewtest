@@ -36,6 +36,19 @@ export const getMySubscription = createServerFn({ method: "GET" })
     return data;
   });
 
+export const getMySubscriptions = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabase } = context;
+    const { data, error } = await supabase
+      .from("user_engagement_subscriptions")
+      .select("*, plan:engagement_plans(*)")
+      .in("status", ["pending", "active"])
+      .order("created_at", { ascending: false });
+    if (error) throw new Error(error.message);
+    return data ?? [];
+  });
+
 export const getRoomEngagementSettings = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ roomId: z.string().uuid() }).parse(d))
@@ -62,6 +75,11 @@ export const upsertRoomEngagementSettings = createServerFn({ method: "POST" })
       delaySecondsMax: z.number().int().min(0).max(3600),
       autoMembersEnabled: z.boolean(),
       membersPerDay: z.number().int().min(1).max(50000),
+      welcomeBotEnabled: z.boolean().optional(),
+      welcomeMessage: z.string().max(2000).optional(),
+      forwarderEnabled: z.boolean().optional(),
+      forwarderSourceChatId: z.number().int().nullable().optional(),
+      forwarderTargetChatIds: z.array(z.number().int()).max(50).optional(),
     }).parse(d),
   )
   .handler(async ({ data, context }) => {
@@ -79,6 +97,11 @@ export const upsertRoomEngagementSettings = createServerFn({ method: "POST" })
           delay_seconds_max: data.delaySecondsMax,
           auto_members_enabled: data.autoMembersEnabled,
           members_per_day: data.membersPerDay,
+          welcome_bot_enabled: data.welcomeBotEnabled ?? false,
+          welcome_message: data.welcomeMessage ?? null,
+          forwarder_enabled: data.forwarderEnabled ?? false,
+          forwarder_source_chat_id: data.forwarderSourceChatId ?? null,
+          forwarder_target_chat_ids: data.forwarderTargetChatIds ?? [],
         },
         { onConflict: "room_id" },
       );
