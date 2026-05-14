@@ -5,11 +5,17 @@ import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
 import { verifyAccount, sendTestMessage, refreshChats } from "@/lib/accounts.functions";
-import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -19,7 +25,18 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Plus, RefreshCw, Send, Trash2, MessageSquare } from "lucide-react";
+import {
+  Plus,
+  RefreshCw,
+  Send,
+  Trash2,
+  MessageSquare,
+  Bot,
+  Sparkles,
+  Check,
+  Users as UsersIcon,
+  UserCircle,
+} from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/telegram-accounts")({
   component: TelegramAccountsPage,
@@ -47,13 +64,17 @@ function TelegramAccountsPage() {
   const [openNew, setOpenNew] = useState(false);
   const [label, setLabel] = useState("");
   const [token, setToken] = useState("");
+  const [accountType, setAccountType] = useState<"bot" | "premium">("bot");
+  const [phone, setPhone] = useState("");
 
   const createMut = useMutation({
     mutationFn: async () => {
       const { error } = await supabase.from("telegram_accounts").insert({
         user_id: user!.id,
         label,
-        bot_token: token,
+        bot_token: token || "premium-no-token",
+        account_type: accountType,
+        phone: accountType === "premium" ? phone : null,
       });
       if (error) throw error;
     },
@@ -62,6 +83,8 @@ function TelegramAccountsPage() {
       setOpenNew(false);
       setLabel("");
       setToken("");
+      setPhone("");
+      setAccountType("bot");
       qc.invalidateQueries({ queryKey: ["telegram-accounts"] });
     },
     onError: (e: Error) => toast.error(e.message),
@@ -84,16 +107,18 @@ function TelegramAccountsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Contas Telegram</h1>
-          <p className="text-sm text-muted-foreground">Gerencie os bots usados para enviar sinais.</p>
+          <p className="text-sm text-muted-foreground">
+            Gerencie seus bots e contas pessoais premium do Telegram.
+          </p>
         </div>
         <Dialog open={openNew} onOpenChange={setOpenNew}>
           <DialogTrigger asChild>
-            <Button>
-              <Plus className="size-4 mr-2" />
-              Nova conta
+            <Button className="gap-2">
+              <Plus className="size-4" />
+              Adicionar Conta
             </Button>
           </DialogTrigger>
           <DialogContent>
@@ -102,27 +127,61 @@ function TelegramAccountsPage() {
             </DialogHeader>
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label>Rótulo</Label>
-                <Input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Ex: Bot principal" />
+                <Label>Tipo da conta</Label>
+                <Select value={accountType} onValueChange={(v) => setAccountType(v as "bot" | "premium")}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="bot">🤖 Bot (Básico)</SelectItem>
+                    <SelectItem value="premium">✨ Conta Premium</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-2">
-                <Label>Bot Token</Label>
+                <Label>{accountType === "bot" ? "Rótulo / Nome do bot" : "Nome da conta"}</Label>
                 <Input
-                  value={token}
-                  onChange={(e) => setToken(e.target.value)}
-                  placeholder="123456:ABC-..."
-                  type="password"
+                  value={label}
+                  onChange={(e) => setLabel(e.target.value)}
+                  placeholder={accountType === "bot" ? "Ex: Bot principal" : "Ex: Leonardo Ferreira"}
                 />
-                <p className="text-xs text-muted-foreground">
-                  Obtenha o token criando um bot com o @BotFather no Telegram.
-                </p>
               </div>
+              {accountType === "bot" ? (
+                <div className="space-y-2">
+                  <Label>Bot Token</Label>
+                  <Input
+                    value={token}
+                    onChange={(e) => setToken(e.target.value)}
+                    placeholder="123456:ABC-..."
+                    type="password"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Crie um bot com o @BotFather no Telegram para obter o token.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <Label>Telefone</Label>
+                  <Input
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="+55 11 99999-0000"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Conta premium para envios personalizados como usuário pessoal.
+                  </p>
+                </div>
+              )}
             </div>
             <DialogFooter>
               <Button variant="ghost" onClick={() => setOpenNew(false)}>Cancelar</Button>
               <Button
                 onClick={() => createMut.mutate()}
-                disabled={!label || !token || createMut.isPending}
+                disabled={
+                  !label ||
+                  (accountType === "bot" ? !token : !phone) ||
+                  createMut.isPending
+                }
               >
                 {createMut.isPending ? "Salvando..." : "Salvar"}
               </Button>
@@ -131,78 +190,66 @@ function TelegramAccountsPage() {
         </Dialog>
       </div>
 
-      <div className="grid gap-3">
-        {accounts.data?.length === 0 && (
-          <Card className="p-10 text-center text-muted-foreground text-sm">
-            <Send className="size-8 mx-auto mb-2 opacity-50" />
-            Nenhuma conta cadastrada ainda.
-          </Card>
-        )}
-        {accounts.data?.map((a) => (
-          <Card key={a.id} className="p-4">
-            <div className="flex items-center gap-4 flex-wrap">
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <h3 className="font-semibold">{a.label}</h3>
-                  <span
-                    className={`text-xs px-2 py-0.5 rounded-full ${
-                      a.status === "ok"
-                        ? "bg-primary/10 text-primary"
-                        : a.status === "error"
-                          ? "bg-destructive/10 text-destructive"
-                          : "bg-muted text-muted-foreground"
-                    }`}
-                  >
-                    {a.status}
-                  </span>
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {a.bot_username ? `@${a.bot_username}` : "—"}
-                  {a.last_error && ` · ${a.last_error}`}
-                </p>
-              </div>
-              <div className="flex items-center gap-1">
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={async () => {
-                    const r = await verify({ data: { accountId: a.id } });
-                    if (r.ok) toast.success("Conta verificada");
-                    else toast.error(r.error ?? "Falha");
-                    qc.invalidateQueries({ queryKey: ["telegram-accounts"] });
-                  }}
-                >
-                  <RefreshCw className="size-4" />
-                </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={async () => {
-                    const r = await refresh({ data: { accountId: a.id } });
-                    if (r.ok) toast.success(`${r.count} chats sincronizados`);
-                    else toast.error(r.error ?? "Falha");
-                  }}
-                  title="Sincronizar grupos visíveis"
-                >
-                  <Users className="size-4" />
-                </Button>
-                <Button size="sm" variant="ghost" onClick={() => setTestFor(a.id)}>
-                  <MessageSquare className="size-4" />
-                </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => {
-                    if (confirm("Remover esta conta?")) deleteMut.mutate(a.id);
-                  }}
-                >
-                  <Trash2 className="size-4 text-destructive" />
-                </Button>
-              </div>
+      {/* Banner explicativo */}
+      <div className="rounded-2xl border border-primary/20 bg-primary/5 p-5">
+        <h3 className="font-semibold mb-3">Tipos de Conta:</h3>
+        <div className="grid sm:grid-cols-2 gap-4 text-sm">
+          <div>
+            <div className="flex items-center gap-2 font-medium mb-2">
+              <Bot className="size-4" /> Bot (Básico)
             </div>
-          </Card>
-        ))}
+            <ul className="space-y-1 text-muted-foreground pl-1">
+              <li>• Mensagens automáticas</li>
+              <li>• Emojis padrão</li>
+              <li>• API oficial do Telegram</li>
+              <li>• Gratuito e simples</li>
+            </ul>
+          </div>
+          <div>
+            <div className="flex items-center gap-2 font-medium mb-2 text-amber-500">
+              <Sparkles className="size-4" /> Conta Premium
+            </div>
+            <ul className="space-y-1 text-muted-foreground pl-1">
+              <li>• Emojis premium exclusivos</li>
+              <li>• Envio como usuário pessoal</li>
+              <li>• Maior personalização</li>
+              <li>• Recursos avançados</li>
+            </ul>
+          </div>
+        </div>
       </div>
+
+      {/* Cards de contas */}
+      {accounts.data?.length === 0 ? (
+        <div className="rounded-2xl border border-dashed border-border p-12 text-center text-muted-foreground text-sm">
+          <Send className="size-8 mx-auto mb-2 opacity-50" />
+          Nenhuma conta cadastrada ainda.
+        </div>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {accounts.data?.map((a) => (
+            <AccountCard
+              key={a.id}
+              account={a}
+              onVerify={async () => {
+                const r = await verify({ data: { accountId: a.id } });
+                if (r.ok) toast.success("Conta verificada");
+                else toast.error(r.error ?? "Falha");
+                qc.invalidateQueries({ queryKey: ["telegram-accounts"] });
+              }}
+              onRefresh={async () => {
+                const r = await refresh({ data: { accountId: a.id } });
+                if (r.ok) toast.success(`${r.count} chats sincronizados`);
+                else toast.error(r.error ?? "Falha");
+              }}
+              onTest={() => setTestFor(a.id)}
+              onDelete={() => {
+                if (confirm("Remover esta conta?")) deleteMut.mutate(a.id);
+              }}
+            />
+          ))}
+        </div>
+      )}
 
       <Dialog open={!!testFor} onOpenChange={(o) => !o && setTestFor(null)}>
         <DialogContent>
@@ -245,14 +292,147 @@ function TelegramAccountsPage() {
   );
 }
 
-function Users(props: React.SVGProps<SVGSVGElement>) {
-  // local fallback to avoid extra import
+type Account = {
+  id: string;
+  label: string;
+  status: string;
+  account_type: "bot" | "premium";
+  bot_username: string | null;
+  phone: string | null;
+  last_error: string | null;
+  last_check_at: string | null;
+  daily_limit: number;
+};
+
+function AccountCard({
+  account: a,
+  onVerify,
+  onRefresh,
+  onTest,
+  onDelete,
+}: {
+  account: Account;
+  onVerify: () => void;
+  onRefresh: () => void;
+  onTest: () => void;
+  onDelete: () => void;
+}) {
+  const isPremium = a.account_type === "premium";
+
+  // Contador de mensagens enviadas hoje
+  const today = useQuery({
+    queryKey: ["account-today", a.id],
+    queryFn: async () => {
+      const start = new Date();
+      start.setHours(0, 0, 0, 0);
+      const { count } = await supabase
+        .from("scheduled_messages")
+        .select("id", { count: "exact", head: true })
+        .eq("account_id", a.id)
+        .eq("status", "sent")
+        .gte("sent_at", start.toISOString());
+      return count ?? 0;
+    },
+  });
+
+  const used = today.data ?? 0;
+  const limit = a.daily_limit || 1000;
+  const pct = Math.min(100, (used / limit) * 100);
+
   return (
-    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-      <circle cx="9" cy="7" r="4" />
-      <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
-      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-    </svg>
+    <div className="rounded-2xl border border-border bg-card p-5 space-y-4 hover:border-primary/40 transition">
+      <div className="flex items-start justify-between">
+        <div className="flex items-center gap-2">
+          <div
+            className={`size-10 rounded-xl grid place-items-center ${
+              isPremium ? "bg-amber-500/10 text-amber-500" : "bg-primary/10 text-primary"
+            }`}
+          >
+            {isPremium ? <UserCircle className="size-5" /> : <Bot className="size-5" />}
+          </div>
+          <span
+            className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+              isPremium
+                ? "bg-gradient-to-r from-amber-500/20 to-pink-500/20 text-amber-500"
+                : "bg-muted text-foreground"
+            }`}
+          >
+            {isPremium ? "✨ Premium" : "Bot"}
+          </span>
+        </div>
+        <span
+          className={`text-xs px-2 py-0.5 rounded-full inline-flex items-center gap-1 ${
+            a.status === "ok"
+              ? "bg-emerald-500/10 text-emerald-500"
+              : a.status === "error"
+                ? "bg-destructive/10 text-destructive"
+                : "bg-muted text-muted-foreground"
+          }`}
+        >
+          <span className="size-1.5 rounded-full bg-current" />
+          {a.status === "ok" ? "Ativo" : a.status === "error" ? "Erro" : "Aguardando"}
+        </span>
+      </div>
+
+      <div>
+        <h3 className="font-bold text-lg leading-tight">{a.label}</h3>
+        <p className="text-sm text-muted-foreground mt-0.5">
+          {isPremium ? a.phone || "—" : a.bot_username ? `@${a.bot_username}` : "—"}
+        </p>
+      </div>
+
+      <div>
+        <p className="text-[11px] font-semibold text-muted-foreground tracking-wider mb-1.5">RECURSOS</p>
+        <ul className="space-y-1 text-sm">
+          {isPremium ? (
+            <>
+              <li className="flex items-center gap-2"><Check className="size-3.5 text-emerald-500" /> Mensagens como usuário pessoal</li>
+              <li className="flex items-center gap-2"><Sparkles className="size-3.5 text-amber-500" /> Emojis Premium</li>
+              <li className="flex items-center gap-2"><Check className="size-3.5 text-emerald-500" /> Recursos Premium</li>
+            </>
+          ) : (
+            <>
+              <li className="flex items-center gap-2"><Check className="size-3.5 text-emerald-500" /> Mensagens básicas</li>
+              <li className="flex items-center gap-2"><Check className="size-3.5 text-emerald-500" /> Emojis padrão</li>
+            </>
+          )}
+        </ul>
+      </div>
+
+      <div>
+        <div className="flex justify-between text-xs text-muted-foreground mb-1.5">
+          <span>Mensagens hoje:</span>
+          <span className="font-medium text-foreground">{used}/{limit}</span>
+        </div>
+        <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+          <div
+            className="h-full bg-gradient-to-r from-primary to-primary/70 transition-all"
+            style={{ width: `${pct}%` }}
+          />
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between pt-2 border-t border-border">
+        <span className="text-xs text-muted-foreground">
+          {a.last_check_at
+            ? `Verificado: ${new Date(a.last_check_at).toLocaleString("pt-BR")}`
+            : "Nunca usado"}
+        </span>
+        <div className="flex items-center gap-0.5">
+          <Button size="icon" variant="ghost" className="size-8" onClick={onVerify} title="Verificar">
+            <RefreshCw className="size-3.5" />
+          </Button>
+          <Button size="icon" variant="ghost" className="size-8" onClick={onRefresh} title="Sincronizar grupos">
+            <UsersIcon className="size-3.5" />
+          </Button>
+          <Button size="icon" variant="ghost" className="size-8" onClick={onTest} title="Enviar teste">
+            <MessageSquare className="size-3.5" />
+          </Button>
+          <Button size="icon" variant="ghost" className="size-8 text-destructive hover:text-destructive" onClick={onDelete} title="Remover">
+            <Trash2 className="size-3.5" />
+          </Button>
+        </div>
+      </div>
+    </div>
   );
 }
