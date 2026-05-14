@@ -63,25 +63,34 @@
 
 :root {
   --radius: 0.75rem;
-  --background: oklch(0.985 0.005 240);
-  --foreground: oklch(0.18 0.03 250);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.18 0.03 250);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.18 0.03 250);
-  --primary: oklch(0.62 0.19 155);
-  --primary-foreground: oklch(0.99 0.01 150);
-  --secondary: oklch(0.96 0.01 240);
-  --secondary-foreground: oklch(0.22 0.04 250);
-  --muted: oklch(0.96 0.01 240);
-  --muted-foreground: oklch(0.5 0.03 250);
-  --accent: oklch(0.94 0.04 155);
-  --accent-foreground: oklch(0.22 0.06 155);
-  --destructive: oklch(0.62 0.24 27);
-  --destructive-foreground: oklch(0.984 0.003 247.858);
-  --border: oklch(0.92 0.01 250);
-  --input: oklch(0.92 0.01 250);
-  --ring: oklch(0.62 0.19 155);
+  /* Cyber light (still neon-tinged) */
+  --background: oklch(0.97 0.02 250);
+  --foreground: oklch(0.18 0.04 270);
+  --card: oklch(1 0 0 / 70%);
+  --card-foreground: oklch(0.18 0.04 270);
+  --popover: oklch(0.99 0.01 250);
+  --popover-foreground: oklch(0.18 0.04 270);
+  --primary: oklch(0.7 0.22 180);
+  --primary-foreground: oklch(0.12 0.04 250);
+  --secondary: oklch(0.94 0.04 280);
+  --secondary-foreground: oklch(0.22 0.05 270);
+  --muted: oklch(0.94 0.02 260);
+  --muted-foreground: oklch(0.48 0.04 270);
+  --accent: oklch(0.85 0.13 320);
+  --accent-foreground: oklch(0.18 0.06 320);
+  --destructive: oklch(0.62 0.26 18);
+  --destructive-foreground: oklch(0.99 0.01 250);
+  --border: oklch(0.7 0.05 270 / 25%);
+  --input: oklch(0.7 0.05 270 / 20%);
+  --ring: oklch(0.7 0.22 180);
+  --neon-cyan: oklch(0.82 0.18 200);
+  --neon-magenta: oklch(0.7 0.28 330);
+  --neon-violet: oklch(0.65 0.25 290);
+  --gradient-cyber: linear-gradient(135deg, oklch(0.7 0.22 180), oklch(0.65 0.25 290) 50%, oklch(0.7 0.28 330));
+  --gradient-cyber-soft: linear-gradient(135deg, oklch(0.7 0.22 180 / 18%), oklch(0.7 0.28 330 / 18%));
+  --shadow-neon: 0 0 0 1px oklch(0.7 0.22 180 / 25%), 0 8px 32px -8px oklch(0.7 0.22 180 / 35%), 0 0 60px -20px oklch(0.7 0.28 330 / 35%);
+  --glass-bg: oklch(1 0 0 / 55%);
+  --glass-border: oklch(1 0 0 / 35%);
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
   --chart-3: oklch(0.398 0.07 227.392);
@@ -98,25 +107,34 @@
 }
 
 .dark {
-  --background: oklch(0.16 0.02 250);
-  --foreground: oklch(0.97 0.01 240);
-  --card: oklch(0.21 0.025 250);
-  --card-foreground: oklch(0.97 0.01 240);
-  --popover: oklch(0.21 0.025 250);
-  --popover-foreground: oklch(0.97 0.01 240);
-  --primary: oklch(0.7 0.19 155);
-  --primary-foreground: oklch(0.16 0.04 155);
-  --secondary: oklch(0.27 0.03 250);
-  --secondary-foreground: oklch(0.97 0.01 240);
-  --muted: oklch(0.27 0.03 250);
-  --muted-foreground: oklch(0.7 0.02 250);
-  --accent: oklch(0.32 0.06 155);
-  --accent-foreground: oklch(0.97 0.04 155);
-  --destructive: oklch(0.62 0.22 22);
-  --destructive-foreground: oklch(0.984 0.003 247.858);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.7 0.19 155);
+  /* Cyber dark — deep space, neon rim */
+  --background: oklch(0.13 0.04 270);
+  --foreground: oklch(0.97 0.02 220);
+  --card: oklch(0.2 0.05 275 / 60%);
+  --card-foreground: oklch(0.97 0.02 220);
+  --popover: oklch(0.18 0.05 275);
+  --popover-foreground: oklch(0.97 0.02 220);
+  --primary: oklch(0.78 0.2 195);
+  --primary-foreground: oklch(0.12 0.05 250);
+  --secondary: oklch(0.25 0.06 280 / 70%);
+  --secondary-foreground: oklch(0.97 0.02 220);
+  --muted: oklch(0.25 0.04 275 / 60%);
+  --muted-foreground: oklch(0.75 0.04 240);
+  --accent: oklch(0.55 0.22 320 / 60%);
+  --accent-foreground: oklch(0.98 0.02 320);
+  --destructive: oklch(0.65 0.26 18);
+  --destructive-foreground: oklch(0.98 0.02 220);
+  --border: oklch(0.78 0.18 200 / 22%);
+  --input: oklch(1 0 0 / 10%);
+  --ring: oklch(0.78 0.2 195);
+  --neon-cyan: oklch(0.85 0.2 200);
+  --neon-magenta: oklch(0.72 0.3 330);
+  --neon-violet: oklch(0.68 0.27 290);
+  --gradient-cyber: linear-gradient(135deg, oklch(0.78 0.2 195), oklch(0.68 0.27 290) 50%, oklch(0.72 0.3 330));
+  --gradient-cyber-soft: linear-gradient(135deg, oklch(0.78 0.2 195 / 22%), oklch(0.72 0.3 330 / 22%));
+  --shadow-neon: 0 0 0 1px oklch(0.78 0.2 195 / 35%), 0 10px 40px -10px oklch(0.78 0.2 195 / 45%), 0 0 80px -20px oklch(0.72 0.3 330 / 45%);
+  --glass-bg: oklch(0.2 0.05 275 / 45%);
+  --glass-border: oklch(0.78 0.2 195 / 25%);
   --chart-1: oklch(0.488 0.243 264.376);
   --chart-2: oklch(0.696 0.17 162.48);
   --chart-3: oklch(0.769 0.188 70.08);
@@ -140,5 +158,64 @@
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
+    background-image:
+      radial-gradient(1200px 600px at 10% -10%, oklch(0.78 0.2 195 / 18%), transparent 60%),
+      radial-gradient(1000px 600px at 110% 10%, oklch(0.72 0.3 330 / 18%), transparent 60%),
+      radial-gradient(900px 600px at 50% 120%, oklch(0.68 0.27 290 / 18%), transparent 60%);
+    background-attachment: fixed;
   }
+}
+
+@layer utilities {
+  .glass {
+    background-color: var(--glass-bg);
+    backdrop-filter: blur(18px) saturate(140%);
+    -webkit-backdrop-filter: blur(18px) saturate(140%);
+    border: 1px solid var(--glass-border);
+  }
+  .glass-strong {
+    background-color: color-mix(in oklab, var(--card) 70%, transparent);
+    backdrop-filter: blur(24px) saturate(160%);
+    -webkit-backdrop-filter: blur(24px) saturate(160%);
+    border: 1px solid var(--glass-border);
+  }
+  .cyber-gradient {
+    background-image: var(--gradient-cyber);
+  }
+  .cyber-gradient-soft {
+    background-image: var(--gradient-cyber-soft);
+  }
+  .cyber-text {
+    background-image: var(--gradient-cyber);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .cyber-border {
+    position: relative;
+  }
+  .cyber-border::before {
+    content: "";
+    position: absolute; inset: 0;
+    padding: 1px;
+    border-radius: inherit;
+    background: var(--gradient-cyber);
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+            mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+            mask-composite: exclude;
+    pointer-events: none;
+  }
+  .neon-glow { box-shadow: var(--shadow-neon); }
+  .grid-bg {
+    background-image:
+      linear-gradient(oklch(0.78 0.2 195 / 8%) 1px, transparent 1px),
+      linear-gradient(90deg, oklch(0.78 0.2 195 / 8%) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+  @keyframes pulse-neon {
+    0%, 100% { box-shadow: 0 0 0 0 oklch(0.78 0.2 195 / 35%), var(--shadow-neon); }
+    50% { box-shadow: 0 0 0 8px oklch(0.78 0.2 195 / 0%), var(--shadow-neon); }
+  }
+  .animate-pulse-neon { animation: pulse-neon 2.5s ease-in-out infinite; }
 }
