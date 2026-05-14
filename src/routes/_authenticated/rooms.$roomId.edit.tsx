@@ -806,15 +806,23 @@ function WindowAssets({
   }
 
   const totalSelected = useAll ? "todos" : `${selected.length} selecionado${selected.length === 1 ? "" : "s"}`;
+  const getAssetState = (code: string) => {
+    const meta = assets.data?.[code];
+    return {
+      meta,
+      isOpen: meta?.is_open === true,
+      payout: meta?.payout ?? DEFAULT_PAYOUT,
+    };
+  };
   const visibleAssetsByCategory = (Object.keys(ASSETS_CATALOG) as AssetCategory[]).map((cat) => ({
     cat,
     assets: ASSETS_CATALOG[cat].filter((code) => {
-      const meta = assets.data?.[code];
-      const isOpen = meta?.is_open ?? false;
-      const payout = meta?.payout ?? DEFAULT_PAYOUT;
+      const { isOpen, payout } = getAssetState(code);
       const normalizedPayout = (payout > 1 ? payout - 1 : payout) * 100;
       const matchesSearch = code.toLowerCase().includes(search.toLowerCase());
-      const matchesStatus = statusFilter === "all" || (statusFilter === "open" ? isOpen : !isOpen);
+      const matchesStatus = statusFilter === "all"
+        || (statusFilter === "open" && isOpen)
+        || (statusFilter === "closed" && !isOpen);
       const matchesPayout = !minPayoutOnly || normalizedPayout >= 70;
       return matchesSearch && matchesStatus && matchesPayout;
     }),
@@ -874,7 +882,7 @@ function WindowAssets({
               {categoryAssets.length === 0 ? (
                 <p className="text-xs text-muted-foreground py-1">Nenhum ativo</p>
               ) : categoryAssets.map((code) => {
-                  const meta = assets.data?.[code];
+                  const { isOpen, payout } = getAssetState(code);
                   const checked = selected.includes(code);
                   return (
                     <div key={code} className="flex items-center gap-2 text-xs">
@@ -885,17 +893,14 @@ function WindowAssets({
                         onClick={() => toggleOpen.mutate(code)}
                         disabled={toggleOpen.isPending}
                         title="Clique para alternar Aberto/Fechado"
-                        className={(meta?.is_open ?? false) === false
+                        className={!isOpen
                           ? "relative z-10 h-6 min-w-14 cursor-pointer rounded border border-border px-2 text-[10px] font-medium text-muted-foreground hover:bg-muted/40 disabled:cursor-wait disabled:opacity-70"
                           : "relative z-10 h-6 min-w-14 cursor-pointer rounded border border-emerald-500/40 bg-emerald-500/20 px-2 text-[10px] font-medium text-emerald-300 hover:bg-emerald-500/30 disabled:cursor-wait disabled:opacity-70"}
                       >
-                        {(meta?.is_open ?? false) === false ? "Fechado" : "Aberto"}
+                        {!isOpen ? "Fechado" : "Aberto"}
                       </button>
                       <span className="text-[10px] text-muted-foreground tabular-nums w-10 text-right">
-                        {(() => {
-                          const p = meta?.payout ?? DEFAULT_PAYOUT;
-                          return `${((p > 1 ? p - 1 : p) * 100).toFixed(0)}%`;
-                        })()}
+                        {`${((payout > 1 ? payout - 1 : payout) * 100).toFixed(0)}%`}
                       </span>
                     </div>
                   );
