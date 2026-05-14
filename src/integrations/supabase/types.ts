@@ -272,6 +272,7 @@ export type Database = {
           updated_at: string
           user_id: string
           video_id: string | null
+          weekday_overrides: Json
           weekdays: number[]
         }
         Insert: {
@@ -293,6 +294,7 @@ export type Database = {
           updated_at?: string
           user_id: string
           video_id?: string | null
+          weekday_overrides?: Json
           weekdays?: number[]
         }
         Update: {
@@ -314,6 +316,7 @@ export type Database = {
           updated_at?: string
           user_id?: string
           video_id?: string | null
+          weekday_overrides?: Json
           weekdays?: number[]
         }
         Relationships: []
