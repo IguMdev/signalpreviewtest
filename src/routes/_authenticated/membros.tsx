@@ -202,12 +202,12 @@ function MembrosPage() {
       </Card>
 
       <Card className="p-6">
-        <h2 className="font-semibold mb-4">Eventos recentes</h2>
-        {!data?.recent.length ? (
-          <p className="text-sm text-muted-foreground py-8 text-center">Nenhum evento.</p>
+        <h2 className="font-semibold mb-4">Eventos recentes (entradas e saídas)</h2>
+        {!visibleRecent.length ? (
+          <p className="text-sm text-muted-foreground py-8 text-center">Nenhum evento para a seleção.</p>
         ) : (
           <div className="space-y-1">
-            {data.recent.map((e) => (
+            {visibleRecent.map((e) => (
               <div key={e.id} className="flex items-center justify-between py-2 border-b border-border last:border-0 text-sm">
                 <div className="flex items-center gap-2 min-w-0">
                   {e.event_type === "join" ? (
