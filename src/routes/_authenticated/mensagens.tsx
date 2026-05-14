@@ -76,6 +76,12 @@ type Schedule = {
   times: string[];
   weekdays: number[];
   weekday_overrides: Record<string, string[]> | null;
+  follow_ups: Array<{
+    delay_minutes: number;
+    content: string | null;
+    image_path: string | null;
+    image_mime: string | null;
+  }> | null;
   is_premium: boolean;
   is_active: boolean;
   timezone: string;
@@ -231,6 +237,7 @@ function MensagensPage() {
       times: [],
       weekdays: [],
       weekday_overrides: {},
+      follow_ups: [],
       is_premium: false,
       is_active: true,
       timezone: "America/Sao_Paulo",
