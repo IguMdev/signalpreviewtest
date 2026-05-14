@@ -903,7 +903,7 @@ export type Database = {
         Row: {
           account_type: Database["public"]["Enums"]["account_type"]
           bot_first_name: string | null
-          bot_token: string
+          bot_token: string | null
           bot_username: string | null
           created_at: string
           daily_limit: number
@@ -914,13 +914,17 @@ export type Database = {
           last_error: string | null
           phone: string | null
           status: Database["public"]["Enums"]["account_status"]
+          tg_api_hash: string | null
+          tg_api_id: number | null
+          tg_phone_code_hash: string | null
+          tg_session: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
           account_type?: Database["public"]["Enums"]["account_type"]
           bot_first_name?: string | null
-          bot_token: string
+          bot_token?: string | null
           bot_username?: string | null
           created_at?: string
           daily_limit?: number
@@ -931,13 +935,17 @@ export type Database = {
           last_error?: string | null
           phone?: string | null
           status?: Database["public"]["Enums"]["account_status"]
+          tg_api_hash?: string | null
+          tg_api_id?: number | null
+          tg_phone_code_hash?: string | null
+          tg_session?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
           account_type?: Database["public"]["Enums"]["account_type"]
           bot_first_name?: string | null
-          bot_token?: string
+          bot_token?: string | null
           bot_username?: string | null
           created_at?: string
           daily_limit?: number
@@ -948,6 +956,10 @@ export type Database = {
           last_error?: string | null
           phone?: string | null
           status?: Database["public"]["Enums"]["account_status"]
+          tg_api_hash?: string | null
+          tg_api_id?: number | null
+          tg_phone_code_hash?: string | null
+          tg_session?: string | null
           updated_at?: string
           user_id?: string
         }
