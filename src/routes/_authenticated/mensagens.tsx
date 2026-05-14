@@ -172,7 +172,9 @@ function MensagensPage() {
 
   const syncPhotoMut = useMutation({
     mutationFn: async (roomId: string) => {
-      return await syncPhotoFn({ data: { roomId } });
+      const res = await syncPhotoFn({ data: { roomId } });
+      if (!res.ok) throw new Error(res.message ?? "Falha ao sincronizar foto");
+      return res;
     },
     onSuccess: () => {
       toast.success("Foto atualizada");
