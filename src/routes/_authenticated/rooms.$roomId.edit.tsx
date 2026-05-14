@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import { ASSETS_CATALOG, type AssetCategory } from "@/lib/assets-catalog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Sparkles, Heart, Users, MessageCircle, Forward } from "lucide-react";
+import { Sparkles, Heart, Users, MessageCircle, Forward, ChevronDown, ChevronUp } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import {
   getRoomEngagementSettings,
@@ -656,7 +656,14 @@ function WindowItem({ window: w, roomId }: { window: any; roomId: string }) {
         </div>
         <div className="space-y-1">
           <Label className="text-xs">Martingale</Label>
-          <Input value={martingale} onChange={(e) => setMartingale(e.target.value)} className="h-9" inputMode="numeric" />
+          <Select value={martingale} onValueChange={setMartingale}>
+            <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {Array.from({ length: 9 }, (_, i) => String(i + 1)).map((n) => (
+                <SelectItem key={n} value={n}>{n}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <div className="space-y-1">
           <div className="flex items-center justify-between">
@@ -716,7 +723,7 @@ function WindowItem({ window: w, roomId }: { window: any; roomId: string }) {
         Usar Todos os Ativos
       </label>
 
-      <WindowAssets selected={filter} setSelected={setFilter} roomId={roomId} windowId={w.id} useAll={useAll} />
+      <WindowAssets selected={filter} setSelected={setFilter} roomId={roomId} windowId={w.id} useAll={useAll} setUseAll={setUseAll} />
 
       <div className="flex justify-end pt-2 border-t border-border">
         <Button
@@ -739,14 +746,17 @@ function WindowItem({ window: w, roomId }: { window: any; roomId: string }) {
 /* Asset grid in 4 columns: Forex / Cripto / Ações / OTC */
 function WindowAssets({
   selected, setSelected, roomId, windowId, useAll,
+  setUseAll,
 }: {
   selected: string[];
   setSelected: (v: string[]) => void;
   roomId: string;
   windowId: string;
   useAll: boolean;
+  setUseAll: (v: boolean) => void;
 }) {
   const [search, setSearch] = useState("");
+  const [collapsed, setCollapsed] = useState(false);
 
   // load per-asset open/payout from room_assets
   const assets = useQuery({
@@ -760,21 +770,38 @@ function WindowAssets({
   });
 
   function toggle(code: string) {
+    // Ao escolher manualmente, desliga "Usar Todos os Ativos" para fixar a seleção
+    if (useAll) {
+      setUseAll(false);
+      setSelected([code]);
+      return;
+    }
     setSelected(selected.includes(code) ? selected.filter((c) => c !== code) : [...selected, code]);
   }
 
+  const totalSelected = useAll ? "todos" : `${selected.length} selecionado${selected.length === 1 ? "" : "s"}`;
+
   return (
     <div className="space-y-3 border rounded-md p-3 bg-background/40">
-      <div className="flex items-center gap-2 flex-wrap text-xs">
-        <span className="font-medium">Legenda:</span>
-        <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/40 hover:bg-emerald-500/20">Aberto</Badge>
-        <span className="text-muted-foreground">mercado disponível</span>
-        <Badge variant="outline" className="text-muted-foreground">Fechado</Badge>
-        <span className="text-muted-foreground">mercado indisponível</span>
-        <Badge className="bg-emerald-600/30 text-emerald-200 border-emerald-600/40">≥ 70%</Badge>
-        <span className="text-muted-foreground">Payout {"<"} 70%</span>
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 flex-wrap text-xs">
+          <span className="font-medium">Ativos:</span>
+          <Badge variant="outline" className="text-xs">{totalSelected}</Badge>
+          {!collapsed && (
+            <>
+              <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/40 hover:bg-emerald-500/20">Aberto</Badge>
+              <Badge variant="outline" className="text-muted-foreground">Fechado</Badge>
+              <Badge className="bg-emerald-600/30 text-emerald-200 border-emerald-600/40">≥ 70%</Badge>
+            </>
+          )}
+        </div>
+        <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => setCollapsed((c) => !c)}>
+          {collapsed ? (<><ChevronDown className="size-3.5 mr-1" />Mostrar ativos</>) : (<><ChevronUp className="size-3.5 mr-1" />Esconder ativos</>)}
+        </Button>
       </div>
 
+      {!collapsed && (
+      <>
       <Input
         placeholder="Buscar ativo..."
         value={search}
@@ -794,7 +821,7 @@ function WindowAssets({
                   const checked = selected.includes(code);
                   return (
                     <div key={code} className="flex items-center gap-2 text-xs">
-                      <Checkbox checked={useAll || checked} disabled={useAll} onCheckedChange={() => toggle(code)} />
+                      <Checkbox checked={useAll ? false : checked} onCheckedChange={() => toggle(code)} />
                       <span className="flex-1 font-mono">{code}</span>
                       <Badge
                         variant={meta?.is_open === false ? "outline" : "default"}
@@ -815,8 +842,10 @@ function WindowAssets({
         ))}
       </div>
       <p className="text-xs text-muted-foreground">
-        * Com "Usar Todos os Ativos" ligado, todos aparecem marcados; desligue para filtrar manualmente.
+        * Com "Usar Todos os Ativos" ligado, qualquer ativo é sorteado. Clique em um ativo para fixar a seleção manual.
       </p>
+      </>
+      )}
       {/* keep windowId referenced to satisfy noUnusedParams */}
       <input type="hidden" value={windowId} readOnly />
     </div>
