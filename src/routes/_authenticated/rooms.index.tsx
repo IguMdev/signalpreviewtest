@@ -268,9 +268,15 @@ function RoomsPage() {
                 return (
                   <TableRow key={r.id}>
                     <TableCell className="font-mono text-xs">
-                      {acc?.bot_username ? `@${acc.bot_username}` : <span className="text-muted-foreground">—</span>}
+                      {acc?.bot_username
+                        ? `@${acc.bot_username}`
+                        : acc?.label
+                        ? acc.label
+                        : <span className="text-muted-foreground">—</span>}
                     </TableCell>
-                    <TableCell className="text-sm">{acc?.label ?? <span className="text-muted-foreground">—</span>}</TableCell>
+                    <TableCell className="text-sm">
+                      {acc?.bot_first_name ?? acc?.label ?? <span className="text-muted-foreground">—</span>}
+                    </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2 min-w-0">
                         {r.photo_url ? (
