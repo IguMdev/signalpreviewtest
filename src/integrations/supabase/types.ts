@@ -259,43 +259,52 @@ export type Database = {
       }
       telegram_accounts: {
         Row: {
+          account_type: Database["public"]["Enums"]["account_type"]
           bot_first_name: string | null
           bot_token: string
           bot_username: string | null
           created_at: string
+          daily_limit: number
           id: string
           is_active: boolean
           label: string
           last_check_at: string | null
           last_error: string | null
+          phone: string | null
           status: Database["public"]["Enums"]["account_status"]
           updated_at: string
           user_id: string
         }
         Insert: {
+          account_type?: Database["public"]["Enums"]["account_type"]
           bot_first_name?: string | null
           bot_token: string
           bot_username?: string | null
           created_at?: string
+          daily_limit?: number
           id?: string
           is_active?: boolean
           label: string
           last_check_at?: string | null
           last_error?: string | null
+          phone?: string | null
           status?: Database["public"]["Enums"]["account_status"]
           updated_at?: string
           user_id: string
         }
         Update: {
+          account_type?: Database["public"]["Enums"]["account_type"]
           bot_first_name?: string | null
           bot_token?: string
           bot_username?: string | null
           created_at?: string
+          daily_limit?: number
           id?: string
           is_active?: boolean
           label?: string
           last_check_at?: string | null
           last_error?: string | null
+          phone?: string | null
           status?: Database["public"]["Enums"]["account_status"]
           updated_at?: string
           user_id?: string
@@ -376,6 +385,7 @@ export type Database = {
     }
     Enums: {
       account_status: "unknown" | "ok" | "error"
+      account_type: "bot" | "premium"
       app_role: "admin" | "user"
       message_status: "pending" | "sending" | "sent" | "failed" | "cancelled"
     }
@@ -506,6 +516,7 @@ export const Constants = {
   public: {
     Enums: {
       account_status: ["unknown", "ok", "error"],
+      account_type: ["bot", "premium"],
       app_role: ["admin", "user"],
       message_status: ["pending", "sending", "sent", "failed", "cancelled"],
     },
