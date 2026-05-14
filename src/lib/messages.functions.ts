@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { callTelegram } from "./telegram.server";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { dispatchVideoNote } from "./videos.functions";
 
 export const scheduleMessage = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -43,7 +44,7 @@ export const dispatchDue = createServerFn({ method: "POST" }).handler(async () =
   const now = new Date().toISOString();
   const { data: due, error } = await supabaseAdmin
     .from("scheduled_messages")
-    .select("id, user_id, room_id, account_id, content, parse_mode")
+    .select("id, user_id, room_id, account_id, content, parse_mode, video_id")
     .eq("status", "pending")
     .lte("scheduled_at", now)
     .limit(50);
@@ -72,14 +73,33 @@ export const dispatchDue = createServerFn({ method: "POST" }).handler(async () =
       continue;
     }
 
+    let video: { storage_path: string; mime_type: string | null; duration_seconds: number | null; title: string } | null = null;
+    if (msg.video_id) {
+      const { data: v } = await supabaseAdmin
+        .from("videos")
+        .select("storage_path, mime_type, duration_seconds, title")
+        .eq("id", msg.video_id)
+        .maybeSingle();
+      video = v ?? null;
+    }
+
     let anyOk = false;
     let lastErr: string | null = null;
     for (const c of chats) {
-      const r = await callTelegram<{ message_id: number }>(acc.bot_token, "sendMessage", {
-        chat_id: c.chat_id,
-        text: msg.content,
-        parse_mode: msg.parse_mode,
-      });
+      const r = video
+        ? await dispatchVideoNote({
+            botToken: acc.bot_token,
+            storagePath: video.storage_path,
+            chatId: c.chat_id,
+            duration: video.duration_seconds,
+            mimeType: video.mime_type,
+            filename: (video.title || "video").replace(/[^\w.-]+/g, "_") + ".mp4",
+          })
+        : await callTelegram<{ message_id: number }>(acc.bot_token, "sendMessage", {
+            chat_id: c.chat_id,
+            text: msg.content ?? "",
+            parse_mode: msg.parse_mode,
+          });
       await supabaseAdmin.from("message_logs").insert({
         scheduled_message_id: msg.id,
         user_id: msg.user_id,
