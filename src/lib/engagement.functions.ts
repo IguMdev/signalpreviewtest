@@ -9,6 +9,72 @@ const SMM_PANEL_URL = "https://justanotherpanel.com/api/v2";
 const SVC_REACTIONS = Number(process.env.SMM_SERVICE_REACTIONS_ID || "8485");
 const SVC_MEMBERS = Number(process.env.SMM_SERVICE_MEMBERS_ID || "7102");
 
+// =====================================================================
+// Telegram URL normalization
+// =====================================================================
+
+/**
+ * Normaliza um link do Telegram para o formato canônico aceito pelo painel JAP.
+ * Aceita entradas como:
+ *   - "@canal"  →  "https://t.me/canal"
+ *   - "canal"   →  "https://t.me/canal"
+ *   - "t.me/canal/"  →  "https://t.me/canal"
+ *   - "https://telegram.me/canal"  →  "https://t.me/canal"
+ *   - "https://t.me/canal/123" (post) → preservado
+ *
+ * Retorna `null` se for um link privado (joinchat / +hash) — esses não
+ * funcionam no JAP porque o serviço precisa de um @username público.
+ * Também retorna `null` para entradas vazias ou com caracteres inválidos.
+ */
+export function normalizeTelegramLink(input: string): string | null {
+  if (!input) return null;
+  let raw = input.trim();
+  if (!raw) return null;
+
+  // remove zero-width / wrapper chars que vêm do copy-paste
+  raw = raw.replace(/[\u200B-\u200D\uFEFF]/g, "");
+
+  // "@username" → "username"
+  if (raw.startsWith("@")) raw = raw.slice(1);
+
+  // adiciona protocolo se vier "t.me/..." sem schema
+  if (/^(t\.me|telegram\.me)\//i.test(raw)) raw = `https://${raw}`;
+
+  // se ainda não tem protocolo nem domínio, assume username puro
+  if (!/^https?:\/\//i.test(raw) && !raw.includes("/")) {
+    if (!/^[a-zA-Z0-9_]{4,64}$/.test(raw)) return null;
+    return `https://t.me/${raw}`;
+  }
+
+  let url: URL;
+  try {
+    url = new URL(raw);
+  } catch {
+    return null;
+  }
+
+  const host = url.hostname.toLowerCase();
+  if (host !== "t.me" && host !== "telegram.me") return null;
+
+  // remove leading/trailing slashes do path
+  const segs = url.pathname.split("/").filter(Boolean);
+  if (segs.length === 0) return null;
+
+  const first = segs[0];
+
+  // Links privados (convite) não funcionam no JAP
+  if (first.toLowerCase() === "joinchat" || first.startsWith("+")) return null;
+
+  // valida username público
+  if (!/^[a-zA-Z0-9_]{4,64}$/.test(first)) return null;
+
+  // segundo segmento (post id) — opcional, deve ser numérico
+  if (segs.length >= 2 && !/^\d+$/.test(segs[1])) return null;
+
+  const path = segs.slice(0, 2).join("/");
+  return `https://t.me/${path}`;
+}
+
 export const listEngagementPlans = createServerFn({ method: "GET" }).handler(
   async () => {
     const { data, error } = await supabaseAdmin
@@ -131,6 +197,12 @@ export const dispatchEngagementBoost = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
+
+    const normalized = normalizeTelegramLink(data.target);
+    if (!normalized) {
+      throw new Error("Link do Telegram inválido. Use um @username público (ex: https://t.me/seucanal).");
+    }
+    data.target = normalized;
 
     // Pick the subscription that matches this bot type
     const botType = data.type === "reaction" ? "interacoes" : "inscritos";
