@@ -757,6 +757,8 @@ function WindowAssets({
 }) {
   const [search, setSearch] = useState("");
   const [collapsed, setCollapsed] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<"all" | "open" | "closed">("all");
+  const [minPayoutOnly, setMinPayoutOnly] = useState(false);
   const qc = useQueryClient();
 
   // load per-asset open/payout from room_assets
@@ -804,6 +806,19 @@ function WindowAssets({
   }
 
   const totalSelected = useAll ? "todos" : `${selected.length} selecionado${selected.length === 1 ? "" : "s"}`;
+  const visibleAssetsByCategory = (Object.keys(ASSETS_CATALOG) as AssetCategory[]).map((cat) => ({
+    cat,
+    assets: ASSETS_CATALOG[cat].filter((code) => {
+      const meta = assets.data?.[code];
+      const isOpen = meta?.is_open !== false;
+      const payout = meta?.payout ?? DEFAULT_PAYOUT;
+      const normalizedPayout = (payout > 1 ? payout - 1 : payout) * 100;
+      const matchesSearch = code.toLowerCase().includes(search.toLowerCase());
+      const matchesStatus = statusFilter === "all" || (statusFilter === "open" ? isOpen : !isOpen);
+      const matchesPayout = !minPayoutOnly || normalizedPayout >= 70;
+      return matchesSearch && matchesStatus && matchesPayout;
+    }),
+  }));
 
   return (
     <div className="space-y-3 border rounded-md p-3 bg-background/40">
@@ -813,9 +828,27 @@ function WindowAssets({
           <Badge variant="outline" className="text-xs">{totalSelected}</Badge>
           {!collapsed && (
             <>
-              <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/40 hover:bg-emerald-500/20">Aberto</Badge>
-              <Badge variant="outline" className="text-muted-foreground">Fechado</Badge>
-              <Badge className="bg-emerald-600/30 text-emerald-200 border-emerald-600/40">≥ 70%</Badge>
+              <button
+                type="button"
+                onClick={() => setStatusFilter((current) => current === "open" ? "all" : "open")}
+                className={statusFilter === "open"
+                  ? "h-6 rounded-full border border-emerald-500/40 bg-emerald-500/20 px-3 text-xs font-medium text-emerald-300 hover:bg-emerald-500/30"
+                  : "h-6 rounded-full border border-border px-3 text-xs font-medium text-muted-foreground hover:bg-muted/40"}
+              >Aberto</button>
+              <button
+                type="button"
+                onClick={() => setStatusFilter((current) => current === "closed" ? "all" : "closed")}
+                className={statusFilter === "closed"
+                  ? "h-6 rounded-full border border-emerald-500/40 bg-emerald-500/20 px-3 text-xs font-medium text-emerald-300 hover:bg-emerald-500/30"
+                  : "h-6 rounded-full border border-border px-3 text-xs font-medium text-muted-foreground hover:bg-muted/40"}
+              >Fechado</button>
+              <button
+                type="button"
+                onClick={() => setMinPayoutOnly((current) => !current)}
+                className={minPayoutOnly
+                  ? "h-6 rounded-full border border-emerald-600/40 bg-emerald-600/30 px-3 text-xs font-medium text-emerald-200 hover:bg-emerald-600/40"
+                  : "h-6 rounded-full border border-border px-3 text-xs font-medium text-muted-foreground hover:bg-muted/40"}
+              >≥ 70%</button>
             </>
           )}
         </div>
