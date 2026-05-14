@@ -19,6 +19,14 @@ import {
 } from "lucide-react";
 import { ASSETS_CATALOG, type AssetCategory } from "@/lib/assets-catalog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Sparkles, Heart, Users } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
+import {
+  getRoomEngagementSettings,
+  upsertRoomEngagementSettings,
+  getMySubscription,
+} from "@/lib/engagement.functions";
+import { Link as RouterLink } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/_authenticated/rooms/$roomId/edit")({
   component: EditRoomPage,
@@ -98,6 +106,7 @@ function EditRoomPage() {
       <TemplatesCard roomId={roomId} />
       <SessionMessagesCard roomId={roomId} />
       <ReportsCard roomId={roomId} />
+      <EngagementCard roomId={roomId} />
       <TimezoneCard room={r} />
       <StopLossCard room={r} />
       <MarketTipsCard room={r} />
