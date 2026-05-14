@@ -82,7 +82,7 @@ function TelegramAccountsPage() {
   const [apiHash, setApiHash] = useState("");
   const [premiumStep, setPremiumStep] = useState<"form" | "code">("form");
   const [pendingAccountId, setPendingAccountId] = useState<string | null>(null);
-  const [smsCode, setSmsCode] = useState("");
+  const [telegramCode, setTelegramCode] = useState("");
   const [twoFa, setTwoFa] = useState("");
   const [needs2fa, setNeeds2fa] = useState(false);
   const [loadingPremium, setLoadingPremium] = useState(false);
@@ -116,7 +116,7 @@ function TelegramAccountsPage() {
     setPhone("");
     setApiId("");
     setApiHash("");
-    setSmsCode("");
+    setTelegramCode("");
     setTwoFa("");
     setNeeds2fa(false);
     setPremiumStep("form");
@@ -167,13 +167,13 @@ function TelegramAccountsPage() {
   }
 
   async function handleConfirmCode() {
-    if (!pendingAccountId || !smsCode) return;
+    if (!pendingAccountId || !telegramCode) return;
     setLoadingPremium(true);
     try {
       const r = await confirmCode({
         data: {
           accountId: pendingAccountId,
-          code: smsCode,
+          code: telegramCode,
           password: twoFa || undefined,
         },
       });
@@ -281,8 +281,8 @@ function TelegramAccountsPage() {
                     <li>V\u00e1 em "API Development Tools" e crie uma aplica\u00e7\u00e3o</li>
                     <li>Copie o <b>API ID</b> e <b>API Hash</b></li>
                     <li>Preencha todos os campos abaixo</li>
-                    <li>Clique em "Solicitar C\u00f3digo" para receber no Telegram</li>
-                    <li>Digite o c\u00f3digo e clique em "Conectar"</li>
+                    <li>Clique em "Solicitar C\u00f3digo" — ele chega no <b>app do Telegram</b> (n\u00e3o por SMS)</li>
+                    <li>Digite o c\u00f3digo recebido no app e clique em "Conectar"</li>
                   </ol>
                   <div className="rounded-md bg-primary/20 px-3 py-2 text-xs">
                     💡 <b>Dica:</b> As credenciais API s\u00e3o necess\u00e1rias para conectar sua conta pessoal.
@@ -318,17 +318,17 @@ function TelegramAccountsPage() {
                 <div className="rounded-xl border border-primary/30 bg-primary/10 p-4 text-sm flex items-start gap-3">
                   <KeyRound className="size-5 mt-0.5" />
                   <div>
-                    <p className="font-semibold">Digite o c\u00f3digo recebido no Telegram</p>
+                    <p className="font-semibold">Digite o c\u00f3digo recebido no app do Telegram</p>
                     <p className="text-muted-foreground text-xs mt-1">
-                      Verifique a conversa com o "Telegram" no app. O c\u00f3digo expira em ~5 minutos.
+                      Abra o app do Telegram e veja a conversa oficial "Telegram". O c\u00f3digo n\u00e3o \u00e9 enviado por SMS e expira em ~5 minutos.
                     </p>
                   </div>
                 </div>
                 <div className="space-y-2">
                   <Label>C\u00f3digo</Label>
                   <Input
-                    value={smsCode}
-                    onChange={(e) => setSmsCode(e.target.value.replace(/\D/g, ""))}
+                    value={telegramCode}
+                    onChange={(e) => setTelegramCode(e.target.value.replace(/\D/g, ""))}
                     placeholder="12345"
                     inputMode="numeric"
                     maxLength={6}
@@ -362,7 +362,7 @@ function TelegramAccountsPage() {
               </Button>
             )}
             {accountType === "premium" && premiumStep === "code" && (
-              <Button onClick={handleConfirmCode} disabled={loadingPremium || !smsCode}>
+              <Button onClick={handleConfirmCode} disabled={loadingPremium || !telegramCode}>
                 {loadingPremium ? "Conectando..." : "Conectar"}
               </Button>
             )}
