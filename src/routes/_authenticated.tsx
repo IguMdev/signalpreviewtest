@@ -158,7 +158,10 @@ function AuthenticatedLayout() {
             );
           })}
         </nav>
-        <div className="p-3 border-t border-border/60 space-y-1">
+        <div className="px-3 pt-3 pb-4 mt-2 border-t border-border/60 bg-background/40 backdrop-blur-sm space-y-1">
+          <p className="px-3 pb-1.5 text-[10px] uppercase tracking-wider text-muted-foreground/70">
+            Ajuda
+          </p>
           {footerNavItems.map(({ to, label, icon: Icon, tour }) => {
             const active = location.pathname === to || location.pathname.startsWith(to + "/");
             return (

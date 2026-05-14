@@ -198,7 +198,7 @@ function RoomsPage() {
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
-            <Button><Plus className="size-4 mr-2" />Adicionar sala</Button>
+            <Button data-tour="add-room"><Plus className="size-4 mr-2" />Adicionar sala</Button>
           </DialogTrigger>
           <DialogContent className="max-w-lg">
             <DialogHeader>

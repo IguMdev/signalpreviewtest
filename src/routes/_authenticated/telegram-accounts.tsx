@@ -242,7 +242,7 @@ function TelegramAccountsPage() {
         </div>
         <Dialog open={openNew} onOpenChange={setOpenNew}>
           <DialogTrigger asChild>
-            <Button className="gap-2">
+            <Button className="gap-2" data-tour="add-account">
               <Plus className="size-4" />
               Adicionar Conta
             </Button>

@@ -135,7 +135,7 @@ function RecargaPage() {
           </div>
         </div>
 
-        <div className="grid gap-3 md:grid-cols-2">
+        <div className="grid gap-3 md:grid-cols-2" data-tour="recharge-plans">
           {salasPlanosResolved.map((p) => (
             <Card key={p.id} className={p.destaque ? "border-primary" : ""}>
               <CardHeader className="pb-2">
