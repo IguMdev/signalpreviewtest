@@ -26,7 +26,6 @@ import {
   upsertRoomEngagementSettings,
   getMySubscription,
 } from "@/lib/engagement.functions";
-import { Link as RouterLink } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/_authenticated/rooms/$roomId/edit")({
   component: EditRoomPage,
