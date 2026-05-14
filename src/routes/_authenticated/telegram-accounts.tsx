@@ -12,6 +12,7 @@ import {
   syncPremiumEmojis,
 } from "@/lib/premium-account.functions";
 import { premiumStrings as S, translatePremiumError } from "@/lib/premium-strings";
+import { useResendCooldown } from "@/lib/use-resend-cooldown";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -87,7 +88,7 @@ function TelegramAccountsPage() {
   const [twoFa, setTwoFa] = useState("");
   const [needs2fa, setNeeds2fa] = useState(false);
   const [loadingPremium, setLoadingPremium] = useState(false);
-  const [resendCooldown, setResendCooldown] = useState(0);
+  const resend = useResendCooldown(60);
 
   const createMut = useMutation({
     mutationFn: async () => {
@@ -160,7 +161,7 @@ function TelegramAccountsPage() {
       setPendingAccountId(row.id);
       setPremiumStep("code");
       toast.success(S.toasts.codeSent);
-      startResendCooldown();
+      resend.start();
       qc.invalidateQueries({ queryKey: ["telegram-accounts"] });
     } catch (e) {
       toast.error(translatePremiumError(e));
@@ -169,27 +170,14 @@ function TelegramAccountsPage() {
     }
   }
 
-  function startResendCooldown() {
-    setResendCooldown(60);
-    const id = window.setInterval(() => {
-      setResendCooldown((s) => {
-        if (s <= 1) {
-          window.clearInterval(id);
-          return 0;
-        }
-        return s - 1;
-      });
-    }, 1000);
-  }
-
   async function handleResendCode() {
-    if (!pendingAccountId || resendCooldown > 0) return;
+    if (!pendingAccountId || !resend.canResend) return;
     const idNum = Number(apiId);
     setLoadingPremium(true);
     try {
       await reqCode({ data: { accountId: pendingAccountId, apiId: idNum, apiHash, phone } });
       toast.success(S.toasts.codeResent);
-      startResendCooldown();
+      resend.start();
     } catch (e) {
       toast.error(translatePremiumError(e));
     } finally {
@@ -377,10 +365,10 @@ function TelegramAccountsPage() {
                     variant="ghost"
                     size="sm"
                     onClick={handleResendCode}
-                    disabled={resendCooldown > 0 || loadingPremium}
+                    disabled={!resend.canResend || loadingPremium}
                   >
-                    {resendCooldown > 0
-                      ? S.buttons.resendIn(resendCooldown)
+                    {!resend.canResend
+                      ? S.buttons.resendIn(resend.remaining)
                       : S.buttons.resend}
                   </Button>
                 </div>
