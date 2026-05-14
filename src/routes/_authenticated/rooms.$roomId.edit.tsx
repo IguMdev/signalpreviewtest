@@ -1479,7 +1479,10 @@ function SessionMessageEditor({
   existing: any;
   onChanged: () => void;
 }) {
-  const [content, setContent] = useState<string>(existing?.content ?? "");
+  const defaultContent = kind === "open"
+    ? "🚀 SESSÃO COMEÇA EM {MINUTOS} MIN!\nPrepare-se para os sinais!"
+    : "🏁 SESSÃO ENCERRADA\nObrigado por operar conosco!";
+  const [content, setContent] = useState<string>(existing?.content ?? defaultContent);
   const [enabled, setEnabled] = useState<boolean>(existing?.enabled ?? true);
   const [lead, setLead] = useState<string>(String(existing?.lead_minutes ?? 5));
   const [imagePath, setImagePath] = useState<string | null>(existing?.image_path ?? null);
@@ -1489,7 +1492,7 @@ function SessionMessageEditor({
   const [testing, setTesting] = useState(false);
 
   useEffect(() => {
-    setContent(existing?.content ?? "");
+    setContent(existing?.content ?? defaultContent);
     setEnabled(existing?.enabled ?? true);
     setLead(String(existing?.lead_minutes ?? 5));
     setImagePath(existing?.image_path ?? null);
