@@ -1395,6 +1395,8 @@ function SessionMessageEditor({
 
 function ReportsCard({ roomId }: { roomId: string }) {
   const qc = useQueryClient();
+  const sendTest = useServerFn(sendRoomTest);
+  const [testing, setTesting] = useState(false);
   const report = useQuery({
     queryKey: ["room_reports", roomId],
     queryFn: async () => {
@@ -1404,6 +1406,21 @@ function ReportsCard({ roomId }: { roomId: string }) {
       return data;
     },
   });
+
+  const onTest = async () => {
+    try {
+      setTesting(true);
+      const sample = (tpl || "📊 RELATÓRIO {SESSAO_NOME}\n✅ Wins: {TOTAL_WINS}\n🔴 Losses: {TOTAL_LOSSES}\n📈 Operações: {TOTAL_OPERACOES}\n🎯 Win rate: {WIN_RATE}%")
+        .replaceAll("{SESSAO_NOME}", "Sessão Teste")
+        .replaceAll("{TOTAL_WINS}", "7")
+        .replaceAll("{TOTAL_LOSSES}", "3")
+        .replaceAll("{TOTAL_OPERACOES}", "10")
+        .replaceAll("{WIN_RATE}", "70");
+      await sendTest({ data: { roomId, text: sample, imagePath: imagePath ?? undefined } });
+      toast.success("Teste enviado");
+    } catch (e: any) { toast.error(e.message); }
+    finally { setTesting(false); }
+  };
 
   const [enabled, setEnabled] = useState<boolean>(false);
   const [delay, setDelay] = useState<string>("1");
@@ -1478,7 +1495,10 @@ function ReportsCard({ roomId }: { roomId: string }) {
         value={imagePath}
         onChange={setImagePath}
       />
-      <div className="flex justify-end pt-2 border-t border-border">
+      <div className="flex items-center justify-between pt-2 border-t border-border">
+        <Button variant="secondary" size="sm" onClick={onTest} disabled={testing}>
+          📩 {testing ? "Enviando..." : "Enviar teste"}
+        </Button>
         <Button size="sm" onClick={() => save.mutate()} disabled={save.isPending}>
           {save.isPending ? "Salvando..." : "Salvar seção"}
         </Button>
