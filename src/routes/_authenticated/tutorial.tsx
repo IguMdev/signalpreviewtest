@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { useTour, type TourStep } from "@/components/tour/TourProvider";
 import {
   PlayCircle,
+  RotateCcw,
   LayoutDashboard,
   Send,
   Sparkles,
@@ -52,6 +53,21 @@ const steps: TourStep[] = [
     placement: "right",
   },
   {
+    id: "add-account",
+    title: "Como cadastrar uma conta",
+    description: (
+      <>
+        Clique em <b>Adicionar Conta</b> para abrir o formulário. Você vai precisar do{" "}
+        <b>token do bot</b> (gerado no @BotFather do Telegram) e de um rótulo para
+        identificá-lo. Para contas premium, escolha o tipo "Premium" e siga os passos de
+        autenticação.
+      </>
+    ),
+    selector: '[data-tour="add-account"]',
+    route: "/telegram-accounts",
+    placement: "left",
+  },
+  {
     id: "premium-emojis",
     title: "Emojis Premium",
     description:
@@ -68,6 +84,20 @@ const steps: TourStep[] = [
     selector: '[data-tour="nav-rooms"]',
     route: "/rooms",
     placement: "right",
+  },
+  {
+    id: "add-room",
+    title: "Como criar uma sala",
+    description: (
+      <>
+        Clique em <b>Adicionar sala</b> e preencha: <b>ID do grupo / canal</b> do Telegram,
+        nome, corretora vinculada e a conta Telegram padrão que vai operar essa sala. Depois de
+        criada você pode adicionar mais chats à mesma sala.
+      </>
+    ),
+    selector: '[data-tour="add-room"]',
+    route: "/rooms",
+    placement: "left",
   },
   {
     id: "membros",
@@ -88,6 +118,21 @@ const steps: TourStep[] = [
     placement: "right",
   },
   {
+    id: "add-schedule",
+    title: "Como criar um agendamento",
+    description: (
+      <>
+        Em cada sala, clique em <b>Adicionar</b>. No formulário você define: <b>título</b>,
+        <b> conteúdo</b> da mensagem (texto, mídia ou vídeo já cadastrado), <b>conta</b> que vai
+        enviar e os <b>horários</b> de disparo. Pode adicionar vários horários para o mesmo
+        agendamento.
+      </>
+    ),
+    selector: '[data-tour="add-schedule"]',
+    route: "/mensagens",
+    placement: "left",
+  },
+  {
     id: "videos",
     title: "Vídeos",
     description: (
@@ -102,6 +147,20 @@ const steps: TourStep[] = [
     placement: "right",
   },
   {
+    id: "video-upload",
+    title: "Como enviar um vídeo",
+    description: (
+      <>
+        Escolha o <b>Tipo</b> (redondo ou normal), selecione o arquivo MP4, dê um <b>título</b> e
+        clique em <b>Enviar</b>. Depois de salvo, use o botão <b>Enviar agora</b> no card do
+        vídeo para disparar para uma sala específica.
+      </>
+    ),
+    selector: '[data-tour="video-upload"]',
+    route: "/videos",
+    placement: "top",
+  },
+  {
     id: "recarga",
     title: "Recarga",
     description:
@@ -111,12 +170,39 @@ const steps: TourStep[] = [
     placement: "right",
   },
   {
+    id: "recharge-plans",
+    title: "Como fazer a recarga",
+    description: (
+      <>
+        Escolha um <b>plano de sala</b> ou um pacote de bot (Inscritos, Interações, Boas-vindas
+        ou Encaminhador) e clique no botão de <b>Comprar</b>. Você é redirecionado ao checkout
+        seguro e os créditos / planos são liberados automaticamente após o pagamento.
+      </>
+    ),
+    selector: '[data-tour="recharge-plans"]',
+    route: "/recarga",
+    placement: "top",
+  },
+  {
     id: "perfil",
     title: "Minha conta",
     description:
       "Atualize seus dados pessoais, foto de perfil e preferências. Aqui também ficam as opções de segurança da conta.",
     selector: '[data-tour="nav-perfil"]',
     route: "/perfil",
+    placement: "right",
+  },
+  {
+    id: "tutorial-footer",
+    title: "Sempre disponível",
+    description: (
+      <>
+        O <b>Tutorial</b> fica fixo no rodapé do menu lateral. Volte aqui sempre que quiser
+        revisar uma ferramenta ou clicar em <b>Reiniciar tutorial</b> para começar do zero.
+      </>
+    ),
+    selector: '[data-tour="nav-tutorial"]',
+    route: "/tutorial",
     placement: "right",
   },
   {
@@ -157,13 +243,20 @@ function TutorialPage() {
         <div>
           <h2 className="font-semibold">Tour interativo</h2>
           <p className="text-sm text-muted-foreground">
-            {steps.length} passos · cerca de 2 minutos. Pode pausar e retomar quando quiser.
+            {steps.length} passos · cerca de 3 minutos. Vamos te mostrar como cadastrar conta,
+            criar agendamento, enviar vídeo e fazer a recarga.
           </p>
         </div>
-        <Button onClick={() => start(steps)} size="lg">
-          <PlayCircle className="size-5" />
-          Iniciar tour
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button onClick={() => start(steps)} size="lg">
+            <PlayCircle className="size-5" />
+            Iniciar tour
+          </Button>
+          <Button onClick={() => start(steps)} size="lg" variant="outline">
+            <RotateCcw className="size-4" />
+            Reiniciar tutorial
+          </Button>
+        </div>
       </Card>
 
       <div>
