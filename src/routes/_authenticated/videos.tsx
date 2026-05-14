@@ -30,12 +30,12 @@ export const Route = createFileRoute("/_authenticated/videos")({
   component: VideosPage,
 });
 
-const MAX_BYTES = 50 * 1024 * 1024;
+const MAX_BYTES = 12 * 1024 * 1024;
 const MAX_DURATION = 60;
 
 async function validateVideoFile(file: File): Promise<{ duration: number }> {
   if (file.size > MAX_BYTES) {
-    throw new Error("O vídeo deve ter no máximo 50 MB (limite do Telegram).");
+    throw new Error("O vídeo redondo deve ter no máximo 12 MB (limite do Telegram para video note).");
   }
   return new Promise((resolve, reject) => {
     const url = URL.createObjectURL(file);
@@ -202,15 +202,15 @@ function VideosPage() {
         </div>
         <p className="text-sm text-muted-foreground">
           Envie vídeos no formato "video note" (redondo) do Telegram. Exigências: vídeo quadrado
-          (1:1), MP4/H.264, até 60s e 50 MB. Fora desse formato o Telegram rejeita ou envia como
-          vídeo normal.
+          (1:1), MP4/H.264, até 60s e <b>12 MB</b>. Fora desse formato o Telegram rejeita ou envia
+          como vídeo normal.
         </p>
       </div>
 
       <Card className="p-5 space-y-4">
         <div className="flex flex-col sm:flex-row gap-3 sm:items-end">
           <div className="flex-1 space-y-2">
-            <Label>Vídeo quadrado MP4/H.264 (≤ 60s, ≤ 50 MB)</Label>
+            <Label>Vídeo quadrado MP4/H.264 (≤ 60s, ≤ 12 MB)</Label>
             <Input ref={fileRef} type="file" accept="video/*" onChange={onPickFile} />
           </div>
           <div className="flex-1 space-y-2">
@@ -345,7 +345,7 @@ function VideosPage() {
                 <li>Proporção <b>1:1</b> (quadrado, ex.: 480×480 ou 640×640)</li>
                 <li>Formato <b>MP4</b> com codec <b>H.264</b> + áudio AAC</li>
                 <li>Duração <b>até 60s</b></li>
-                <li>Tamanho <b>até 50 MB</b></li>
+                <li>Tamanho <b>até 12 MB</b> (limite do Telegram para vídeo redondo)</li>
               </ul>
             </div>
 
@@ -357,7 +357,7 @@ function VideosPage() {
                 <li>Em "Proporção / Canvas", escolha <b>1:1</b></li>
                 <li>Arraste o vídeo para enquadrar a parte que quer mostrar</li>
                 <li>Corte para no máximo 60 segundos</li>
-                <li>Exporte em <b>720p</b> ou <b>480p</b> (mantém abaixo de 50 MB)</li>
+                <li>Exporte em <b>480p</b> ou <b>360p</b> com qualidade <b>média</b> (para ficar abaixo de 12 MB)</li>
               </ol>
             </div>
 
@@ -368,16 +368,16 @@ function VideosPage() {
               </p>
               <pre className="bg-muted p-3 rounded text-xs overflow-x-auto">
 {`ffmpeg -i entrada.mp4 \\
-  -vf "crop=min(iw\\,ih):min(iw\\,ih),scale=480:480" \\
-  -t 60 -c:v libx264 -crf 28 -preset medium \\
-  -c:a aac -b:a 64k -movflags +faststart \\
+  -vf "crop=min(iw\\,ih):min(iw\\,ih),scale=384:384" \\
+  -t 60 -c:v libx264 -crf 30 -preset medium \\
+  -c:a aac -b:a 48k -movflags +faststart \\
   saida.mp4`}
               </pre>
             </div>
 
             <div className="rounded-md border border-amber-500/30 bg-amber-500/10 p-3 text-xs">
-              ⚠️ Se o arquivo final passar de 50 MB, diminua a resolução (ex.: 360×360) ou aumente
-              o <code>-crf</code> para 30. O Telegram rejeita arquivos maiores.
+              ⚠️ O Telegram limita vídeos redondos a <b>12 MB</b>. Se passar disso, diminua a
+              resolução (ex.: 320×320), reduza a duração ou aumente o <code>-crf</code> para 32.
             </div>
           </div>
           <DialogFooter>
