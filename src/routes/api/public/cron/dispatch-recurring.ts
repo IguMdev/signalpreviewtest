@@ -36,9 +36,47 @@ type Schedule = {
   times: string[];
   weekdays: number[];
   weekday_overrides: Record<string, string[]> | null;
+  follow_ups: Array<{
+    delay_minutes: number;
+    content: string | null;
+    image_path: string | null;
+    image_mime: string | null;
+  }> | null;
   timezone: string;
   last_fire_key: string | null;
 };
+
+type PendingFollowup = {
+  id: string;
+  user_id: string;
+  room_id: string;
+  account_id: string | null;
+  content: string | null;
+  image_path: string | null;
+  image_mime: string | null;
+  parse_mode: string;
+};
+
+async function sendOne(
+  botToken: string | null | undefined,
+  chatId: number | string,
+  msg: { content: string | null; image_path: string | null; parse_mode: string },
+) {
+  if (msg.image_path) {
+    const { data: pub } = supabaseAdmin.storage.from("room-images").getPublicUrl(msg.image_path);
+    return await callTelegram<{ message_id: number }>(botToken, "sendPhoto", {
+      chat_id: chatId,
+      photo: pub.publicUrl,
+      caption: msg.content ?? undefined,
+      parse_mode: msg.content ? msg.parse_mode : undefined,
+    });
+  }
+  return await callTelegram<{ message_id: number }>(botToken, "sendMessage", {
+    chat_id: chatId,
+    text: msg.content ?? "",
+    parse_mode: msg.parse_mode,
+  });
+}
 
 export const Route = createFileRoute("/api/public/cron/dispatch-recurring")({
   server: {
@@ -47,7 +85,7 @@ export const Route = createFileRoute("/api/public/cron/dispatch-recurring")({
         const { data: schedules, error } = await supabaseAdmin
           .from("recurring_schedules")
           .select(
-            "id, user_id, room_id, account_id, content, video_id, image_path, image_mime, parse_mode, times, weekdays, weekday_overrides, timezone, last_fire_key",
+            "id, user_id, room_id, account_id, content, video_id, image_path, image_mime, parse_mode, times, weekdays, weekday_overrides, follow_ups, timezone, last_fire_key",
           )
           .eq("is_active", true);
         if (error) {
@@ -167,9 +205,121 @@ export const Route = createFileRoute("/api/public/cron/dispatch-recurring")({
             .update({ last_sent_at: new Date().toISOString() })
             .eq("id", s.id);
           if (okAny) fired++;
+
+          // Enqueue follow-ups
+          const fups = Array.isArray(s.follow_ups) ? s.follow_ups : [];
+          if (fups.length > 0) {
+            let cumulative = 0;
+            const rows = fups.map((f) => {
+              cumulative += Math.max(1, Number(f.delay_minutes) || 1);
+              return {
+                schedule_id: s.id,
+                user_id: s.user_id,
+                room_id: s.room_id,
+                account_id: accountId,
+                scheduled_at: new Date(Date.now() + cumulative * 60_000).toISOString(),
+                content: f.content ?? null,
+                image_path: f.image_path ?? null,
+                image_mime: f.image_mime ?? null,
+                parse_mode: s.parse_mode,
+              };
+            });
+            await supabaseAdmin.from("recurring_pending_followups").insert(rows);
+          }
         }
 
-        return Response.json({ ok: true, processed, fired });
+        // Process due follow-ups
+        const nowIso = new Date().toISOString();
+        const { data: pendings } = await supabaseAdmin
+          .from("recurring_pending_followups")
+          .select("id, user_id, room_id, account_id, content, image_path, image_mime, parse_mode")
+          .eq("status", "pending")
+          .lte("scheduled_at", nowIso)
+          .limit(100);
+
+        let followupsFired = 0;
+        for (const p of (pendings ?? []) as PendingFollowup[]) {
+          // Claim
+          const { data: claim } = await supabaseAdmin
+            .from("recurring_pending_followups")
+            .update({ status: "sending" })
+            .eq("id", p.id)
+            .eq("status", "pending")
+            .select("id")
+            .maybeSingle();
+          if (!claim) continue;
+
+          let accountId = p.account_id;
+          if (!accountId) {
+            const { data: room } = await supabaseAdmin
+              .from("rooms")
+              .select("default_account_id")
+              .eq("id", p.room_id)
+              .maybeSingle();
+            accountId = room?.default_account_id ?? null;
+          }
+          if (!accountId) {
+            await supabaseAdmin
+              .from("recurring_pending_followups")
+              .update({ status: "failed", last_error: "Sem conta" })
+              .eq("id", p.id);
+            continue;
+          }
+          const { data: acc } = await supabaseAdmin
+            .from("telegram_accounts")
+            .select("bot_token")
+            .eq("id", accountId)
+            .maybeSingle();
+          const { data: chats } = await supabaseAdmin
+            .from("room_chats")
+            .select("chat_id")
+            .eq("room_id", p.room_id);
+          if (!acc || !chats?.length) {
+            await supabaseAdmin
+              .from("recurring_pending_followups")
+              .update({ status: "failed", last_error: "Sem grupos" })
+              .eq("id", p.id);
+            continue;
+          }
+
+          let okAny = false;
+          let lastErr: string | null = null;
+          for (const c of chats) {
+            const r = await sendOne(acc.bot_token, c.chat_id, {
+              content: p.content,
+              image_path: p.image_path,
+              parse_mode: p.parse_mode,
+            });
+            await supabaseAdmin.from("message_logs").insert({
+              user_id: p.user_id,
+              chat_id: c.chat_id,
+              ok: r.ok,
+              telegram_message_id: r.result?.message_id ?? null,
+              error: r.ok ? null : r.description ?? "erro",
+            });
+            if (r.ok) okAny = true;
+            else lastErr = r.description ?? "erro";
+            if (r.ok && r.result?.message_id) {
+              await triggerSignalReactions({
+                userId: p.user_id,
+                chatId: c.chat_id,
+                telegramMessageId: r.result.message_id,
+                roomId: p.room_id,
+              });
+            }
+          }
+          await supabaseAdmin
+            .from("recurring_pending_followups")
+            .update({
+              status: okAny ? "sent" : "failed",
+              sent_at: new Date().toISOString(),
+              last_error: okAny ? null : lastErr,
+            })
+            .eq("id", p.id);
+          if (okAny) followupsFired++;
+        }
+
+        return Response.json({ ok: true, processed, fired, followupsFired });
       },
     },
   },

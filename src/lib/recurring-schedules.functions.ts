@@ -7,6 +7,13 @@ import { dispatchVideoNote } from "@/lib/videos.functions";
 
 const TimeRe = /^([01]\d|2[0-3]):[0-5]\d$/;
 
+const FollowUpInput = z.object({
+  delayMinutes: z.number().int().min(1).max(1440),
+  content: z.string().max(4000).nullable().optional(),
+  imagePath: z.string().max(500).nullable().optional(),
+  imageMime: z.string().max(100).nullable().optional(),
+});
+
 const ScheduleInput = z.object({
   id: z.string().uuid().optional(),
   roomId: z.string().uuid(),
@@ -22,6 +29,7 @@ const ScheduleInput = z.object({
   weekdayOverrides: z
     .record(z.string().regex(/^[1-7]$/), z.array(z.string().regex(TimeRe)).max(24))
     .default({}),
+  followUps: z.array(FollowUpInput).max(10).default([]),
   isPremium: z.boolean().default(false),
   isActive: z.boolean().default(true),
   timezone: z.string().default("America/Sao_Paulo"),
@@ -49,6 +57,12 @@ export const upsertSchedule = createServerFn({ method: "POST" })
           .map(([k, v]) => [k, Array.from(new Set(v)).sort()] as const)
           .filter(([, v]) => v.length > 0),
       ),
+      follow_ups: (data.followUps ?? []).map((f) => ({
+        delay_minutes: f.delayMinutes,
+        content: f.content ?? null,
+        image_path: f.imagePath ?? null,
+        image_mime: f.imageMime ?? null,
+      })),
       is_premium: data.isPremium,
       is_active: data.isActive,
       timezone: data.timezone,

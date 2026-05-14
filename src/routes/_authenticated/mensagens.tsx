@@ -76,6 +76,12 @@ type Schedule = {
   times: string[];
   weekdays: number[];
   weekday_overrides: Record<string, string[]> | null;
+  follow_ups: Array<{
+    delay_minutes: number;
+    content: string | null;
+    image_path: string | null;
+    image_mime: string | null;
+  }> | null;
   is_premium: boolean;
   is_active: boolean;
   timezone: string;
@@ -231,6 +237,7 @@ function MensagensPage() {
       times: [],
       weekdays: [],
       weekday_overrides: {},
+      follow_ups: [],
       is_premium: false,
       is_active: true,
       timezone: "America/Sao_Paulo",
@@ -482,6 +489,12 @@ function ScheduleDialog({
     times: string[];
     weekdays: number[];
     weekdayOverrides: Record<string, string[]>;
+    followUps: Array<{
+      delayMinutes: number;
+      content: string | null;
+      imagePath: string | null;
+      imageMime: string | null;
+    }>;
     isPremium: boolean;
     isActive: boolean;
     timezone: string;
@@ -499,6 +512,10 @@ function ScheduleDialog({
   const [weekdays, setWeekdays] = useState<number[]>([]);
   const [weekdayOverrides, setWeekdayOverrides] = useState<Record<string, string[]>>({});
   const [overrideInputs, setOverrideInputs] = useState<Record<string, string>>({});
+  const [followUps, setFollowUps] = useState<
+    Array<{ delayMinutes: number; content: string; imagePath: string; imageMime: string }>
+  >([]);
+  const [followUpUploading, setFollowUpUploading] = useState<number | null>(null);
   const [isPremium, setIsPremium] = useState(false);
   const [isActive, setIsActive] = useState(true);
   const [newTime, setNewTime] = useState("");
@@ -518,6 +535,14 @@ function ScheduleDialog({
       setWeekdays(editing.weekdays);
       setWeekdayOverrides(editing.weekday_overrides ?? {});
       setOverrideInputs({});
+      setFollowUps(
+        (editing.follow_ups ?? []).map((f) => ({
+          delayMinutes: f.delay_minutes,
+          content: f.content ?? "",
+          imagePath: f.image_path ?? "",
+          imageMime: f.image_mime ?? "",
+        })),
+      );
       setIsPremium(editing.is_premium);
       setIsActive(editing.is_active);
       setNewTime("");
@@ -740,6 +765,170 @@ function ScheduleDialog({
                 </Select>
               </div>
             </Card>
+
+            {/* Follow-ups */}
+            <Card className="p-5 space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-semibold">Mensagens em sequência</h3>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Envie mais mensagens após a primeira, com um intervalo em minutos.
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={followUps.length >= 10}
+                  onClick={() =>
+                    setFollowUps([
+                      ...followUps,
+                      { delayMinutes: 1, content: "", imagePath: "", imageMime: "" },
+                    ])
+                  }
+                >
+                  <Plus className="size-4" />
+                  Adicionar conteúdo
+                </Button>
+              </div>
+              {followUps.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  Nenhuma mensagem em sequência.
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  {followUps.map((f, idx) => {
+                    const update = (
+                      patch: Partial<{
+                        delayMinutes: number;
+                        content: string;
+                        imagePath: string;
+                        imageMime: string;
+                      }>,
+                    ) => {
+                      const next = [...followUps];
+                      next[idx] = { ...next[idx], ...patch };
+                      setFollowUps(next);
+                    };
+                    const remove = () =>
+                      setFollowUps(followUps.filter((_, i) => i !== idx));
+                    const previewUrl = f.imagePath
+                      ? supabase.storage.from("room-images").getPublicUrl(f.imagePath).data
+                          .publicUrl
+                      : "";
+                    return (
+                      <div key={idx} className="rounded-md border p-3 space-y-3">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-sm font-medium">
+                            Mensagem #{idx + 2}
+                          </span>
+                          <Button
+                            type="button"
+                            size="icon"
+                            variant="ghost"
+                            onClick={remove}
+                          >
+                            <Trash2 className="size-4" />
+                          </Button>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Label className="text-xs whitespace-nowrap">
+                            Após (min):
+                          </Label>
+                          <Input
+                            type="number"
+                            min={1}
+                            max={1440}
+                            value={f.delayMinutes}
+                            onChange={(e) =>
+                              update({
+                                delayMinutes: Math.max(
+                                  1,
+                                  Math.min(1440, Number(e.target.value) || 1),
+                                ),
+                              })
+                            }
+                            className="max-w-[100px]"
+                          />
+                          <span className="text-xs text-muted-foreground">
+                            depois da mensagem anterior
+                          </span>
+                        </div>
+                        <Textarea
+                          rows={3}
+                          value={f.content}
+                          onChange={(e) => update({ content: e.target.value })}
+                          placeholder="Texto desta mensagem (ou apenas legenda da imagem)"
+                        />
+                        {f.imagePath ? (
+                          <div className="flex items-start gap-3">
+                            <img
+                              src={previewUrl}
+                              alt="Preview"
+                              className="size-20 rounded-md object-cover border border-border"
+                            />
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              onClick={() => update({ imagePath: "", imageMime: "" })}
+                            >
+                              <X className="size-4" /> Remover imagem
+                            </Button>
+                          </div>
+                        ) : (
+                          <label className="flex items-center gap-2 px-3 py-2 rounded-md border border-dashed cursor-pointer hover:bg-muted/40 text-sm w-fit">
+                            {followUpUploading === idx ? (
+                              <Loader2 className="size-4 animate-spin" />
+                            ) : (
+                              <ImageIcon className="size-4" />
+                            )}
+                            <span>
+                              {followUpUploading === idx
+                                ? "Enviando..."
+                                : "Imagem (opcional)"}
+                            </span>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={async (e) => {
+                                const file = e.target.files?.[0];
+                                e.target.value = "";
+                                if (!file) return;
+                                setFollowUpUploading(idx);
+                                try {
+                                  const { data: u } = await supabase.auth.getUser();
+                                  const uid = u.user?.id;
+                                  if (!uid) throw new Error("Sessão expirada");
+                                  const ext = (
+                                    file.name.split(".").pop() || "jpg"
+                                  ).toLowerCase();
+                                  const path = `messages/${uid}/${Date.now()}-fu.${ext}`;
+                                  const { error } = await supabase.storage
+                                    .from("room-images")
+                                    .upload(path, file, {
+                                      contentType: file.type,
+                                      upsert: false,
+                                    });
+                                  if (error) throw error;
+                                  update({ imagePath: path, imageMime: file.type });
+                                  toast.success("Imagem carregada");
+                                } catch (err) {
+                                  toast.error((err as Error).message);
+                                } finally {
+                                  setFollowUpUploading(null);
+                                }
+                              }}
+                            />
+                          </label>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </Card>
           </div>
 
           {/* RIGHT COLUMN */}
@@ -922,6 +1111,12 @@ function ScheduleDialog({
                 times,
                 weekdays,
                 weekdayOverrides,
+                followUps: followUps.map((f) => ({
+                  delayMinutes: f.delayMinutes,
+                  content: f.content || null,
+                  imagePath: f.imagePath || null,
+                  imageMime: f.imageMime || null,
+                })),
                 isPremium,
                 isActive,
                 timezone: "America/Sao_Paulo",

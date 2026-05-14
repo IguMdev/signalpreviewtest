@@ -252,11 +252,71 @@ export type Database = {
         }
         Relationships: []
       }
+      recurring_pending_followups: {
+        Row: {
+          account_id: string | null
+          content: string | null
+          created_at: string
+          id: string
+          image_mime: string | null
+          image_path: string | null
+          last_error: string | null
+          parse_mode: string
+          room_id: string
+          schedule_id: string
+          scheduled_at: string
+          sent_at: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          account_id?: string | null
+          content?: string | null
+          created_at?: string
+          id?: string
+          image_mime?: string | null
+          image_path?: string | null
+          last_error?: string | null
+          parse_mode?: string
+          room_id: string
+          schedule_id: string
+          scheduled_at: string
+          sent_at?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          account_id?: string | null
+          content?: string | null
+          created_at?: string
+          id?: string
+          image_mime?: string | null
+          image_path?: string | null
+          last_error?: string | null
+          parse_mode?: string
+          room_id?: string
+          schedule_id?: string
+          scheduled_at?: string
+          sent_at?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recurring_pending_followups_schedule_id_fkey"
+            columns: ["schedule_id"]
+            isOneToOne: false
+            referencedRelation: "recurring_schedules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       recurring_schedules: {
         Row: {
           account_id: string | null
           content: string | null
           created_at: string
+          follow_ups: Json
           id: string
           image_mime: string | null
           image_path: string | null
@@ -279,6 +339,7 @@ export type Database = {
           account_id?: string | null
           content?: string | null
           created_at?: string
+          follow_ups?: Json
           id?: string
           image_mime?: string | null
           image_path?: string | null
@@ -301,6 +362,7 @@ export type Database = {
           account_id?: string | null
           content?: string | null
           created_at?: string
+          follow_ups?: Json
           id?: string
           image_mime?: string | null
           image_path?: string | null
