@@ -885,11 +885,11 @@ function WindowAssets({
                         onClick={() => toggleOpen.mutate(code)}
                         disabled={toggleOpen.isPending}
                         title="Clique para alternar Aberto/Fechado"
-                        className={meta?.is_open === false
+                        className={(meta?.is_open ?? false) === false
                           ? "relative z-10 h-6 min-w-14 cursor-pointer rounded border border-border px-2 text-[10px] font-medium text-muted-foreground hover:bg-muted/40 disabled:cursor-wait disabled:opacity-70"
                           : "relative z-10 h-6 min-w-14 cursor-pointer rounded border border-emerald-500/40 bg-emerald-500/20 px-2 text-[10px] font-medium text-emerald-300 hover:bg-emerald-500/30 disabled:cursor-wait disabled:opacity-70"}
                       >
-                        {meta?.is_open === false ? "Fechado" : "Aberto"}
+                        {(meta?.is_open ?? false) === false ? "Fechado" : "Aberto"}
                       </button>
                       <span className="text-[10px] text-muted-foreground tabular-nums w-10 text-right">
                         {(() => {
