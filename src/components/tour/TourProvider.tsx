@@ -230,7 +230,7 @@ function TourOverlay({
     <div className="fixed inset-0 z-[100] pointer-events-none">
       {/* Spotlight via SVG mask, allows underneath to remain visible but blocks clicks */}
       <svg
-        className="absolute inset-0 w-full h-full pointer-events-auto"
+        className="absolute inset-0 w-full h-full pointer-events-auto text-primary"
         onClick={(e) => {
           // click on dim area = no-op (don't close accidentally)
           e.stopPropagation();
@@ -267,7 +267,7 @@ function TourOverlay({
             rx={12}
             ry={12}
             fill="none"
-            stroke="hsl(var(--primary))"
+            stroke="currentColor"
             strokeWidth={2}
             className="animate-pulse"
           />
