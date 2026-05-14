@@ -134,6 +134,19 @@ function DashboardPage() {
     const inTab = tab === "group" ? t !== "channel" : t === "channel";
     return inTab && (selectedId === "all" || chatId === selectedId);
   });
+  const perChatById = useMemo(
+    () => new Map(visiblePerChat.map((c) => [String(c.chat_id), c])),
+    [visiblePerChat],
+  );
+  const visibleChatActivity = visibleChats.map((chat) => {
+    const stats = perChatById.get(String(chat.chatId));
+    return {
+      chat_id: chat.chatId,
+      chat_title: stats?.chat_title || chat.chatTitle || chat.roomName || null,
+      joins: stats?.joins ?? 0,
+      leaves: stats?.leaves ?? 0,
+    };
+  });
   const visibleRecent = (statsQ.data?.recent ?? []).filter((e) => {
     const chatId = String(e.chat_id);
     const t = typeByChatId.get(chatId) ?? "unknown";
@@ -332,6 +345,27 @@ function DashboardPage() {
                       <span className="text-muted-foreground tabular-nums shrink-0 ml-2">
                         {new Date(e.occurred_at).toLocaleString("pt-BR")}
                       </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {visibleChatActivity.length > 0 && (
+              <div>
+                <h3 className="text-sm font-medium mb-2">Entradas e saídas {tab === "group" ? "por grupo" : "por canal"}</h3>
+                <div className="space-y-2">
+                  {visibleChatActivity.map((c) => (
+                    <div key={c.chat_id} className="flex items-center justify-between p-3 rounded-lg bg-muted/50 gap-3">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium truncate">{c.chat_title || `Chat ${c.chat_id}`}</p>
+                        <p className="text-xs text-muted-foreground">ID: {c.chat_id}</p>
+                      </div>
+                      <div className="flex gap-3 text-sm tabular-nums shrink-0">
+                        <span className="text-emerald-500">+{c.joins}</span>
+                        <span className="text-rose-500">-{c.leaves}</span>
+                        <span className="font-semibold">= {c.joins - c.leaves}</span>
+                      </div>
                     </div>
                   ))}
                 </div>
