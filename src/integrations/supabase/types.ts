@@ -45,7 +45,7 @@ export type Database = {
           error: string | null
           id: string
           ok: boolean
-          scheduled_message_id: string
+          scheduled_message_id: string | null
           telegram_message_id: number | null
           user_id: string
         }
@@ -55,7 +55,7 @@ export type Database = {
           error?: string | null
           id?: string
           ok: boolean
-          scheduled_message_id: string
+          scheduled_message_id?: string | null
           telegram_message_id?: number | null
           user_id: string
         }
@@ -65,7 +65,7 @@ export type Database = {
           error?: string | null
           id?: string
           ok?: boolean
-          scheduled_message_id?: string
+          scheduled_message_id?: string | null
           telegram_message_id?: number | null
           user_id?: string
         }
@@ -203,7 +203,7 @@ export type Database = {
       scheduled_messages: {
         Row: {
           account_id: string | null
-          content: string
+          content: string | null
           created_at: string
           id: string
           last_error: string | null
@@ -213,10 +213,11 @@ export type Database = {
           sent_at: string | null
           status: Database["public"]["Enums"]["message_status"]
           user_id: string
+          video_id: string | null
         }
         Insert: {
           account_id?: string | null
-          content: string
+          content?: string | null
           created_at?: string
           id?: string
           last_error?: string | null
@@ -226,10 +227,11 @@ export type Database = {
           sent_at?: string | null
           status?: Database["public"]["Enums"]["message_status"]
           user_id: string
+          video_id?: string | null
         }
         Update: {
           account_id?: string | null
-          content?: string
+          content?: string | null
           created_at?: string
           id?: string
           last_error?: string | null
@@ -239,6 +241,7 @@ export type Database = {
           sent_at?: string | null
           status?: Database["public"]["Enums"]["message_status"]
           user_id?: string
+          video_id?: string | null
         }
         Relationships: [
           {
@@ -253,6 +256,13 @@ export type Database = {
             columns: ["room_id"]
             isOneToOne: false
             referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scheduled_messages_video_id_fkey"
+            columns: ["video_id"]
+            isOneToOne: false
+            referencedRelation: "videos"
             referencedColumns: ["id"]
           },
         ]
@@ -366,6 +376,42 @@ export type Database = {
         Update: {
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      videos: {
+        Row: {
+          created_at: string
+          duration_seconds: number | null
+          file_size: number | null
+          id: string
+          mime_type: string | null
+          storage_path: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          duration_seconds?: number | null
+          file_size?: number | null
+          id?: string
+          mime_type?: string | null
+          storage_path: string
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          duration_seconds?: number | null
+          file_size?: number | null
+          id?: string
+          mime_type?: string | null
+          storage_path?: string
+          title?: string
+          updated_at?: string
           user_id?: string
         }
         Relationships: []

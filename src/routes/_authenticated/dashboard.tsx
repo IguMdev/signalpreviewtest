@@ -92,7 +92,7 @@ function DashboardPage() {
             {upcoming.data?.map((m) => (
               <div key={m.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
                 <div className="min-w-0">
-                  <p className="text-sm font-medium truncate">{m.content.slice(0, 80)}</p>
+                  <p className="text-sm font-medium truncate">{(m.content ?? "🎬 Vídeo").slice(0, 80)}</p>
                   <p className="text-xs text-muted-foreground">
                     {new Date(m.scheduled_at).toLocaleString("pt-BR")}
                   </p>

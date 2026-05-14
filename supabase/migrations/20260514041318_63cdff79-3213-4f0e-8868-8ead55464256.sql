@@ -1,0 +1,1 @@
+ALTER TABLE public.message_logs ALTER COLUMN scheduled_message_id DROP NOT NULL;
