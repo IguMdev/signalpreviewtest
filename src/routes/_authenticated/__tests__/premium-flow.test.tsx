@@ -85,10 +85,11 @@ function renderPage() {
 
 async function abrirDialogPremium(user: ReturnType<typeof userEvent.setup>) {
   await user.click(screen.getByRole("button", { name: /Adicionar conta/i }));
-  // muda o tipo para premium
   const dialog = await screen.findByRole("dialog");
+  // abre o select de tipo de conta e escolhe Premium
   await user.click(within(dialog).getByRole("combobox"));
-  await user.click(await screen.findByText(/Conta Premium/i));
+  const option = await screen.findByRole("option", { name: /Conta Premium/i });
+  await user.click(option);
   return dialog;
 }
 
