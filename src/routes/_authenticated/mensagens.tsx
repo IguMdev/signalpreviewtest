@@ -75,6 +75,7 @@ type Schedule = {
   parse_mode: string;
   times: string[];
   weekdays: number[];
+  weekday_overrides: Record<string, string[]> | null;
   is_premium: boolean;
   is_active: boolean;
   timezone: string;
@@ -229,6 +230,7 @@ function MensagensPage() {
       parse_mode: "HTML",
       times: [],
       weekdays: [],
+      weekday_overrides: {},
       is_premium: false,
       is_active: true,
       timezone: "America/Sao_Paulo",
