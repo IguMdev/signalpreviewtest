@@ -21,6 +21,7 @@ import { Route as AuthenticatedPremiumEmojisRouteImport } from './routes/_authen
 import { Route as AuthenticatedPerfilRouteImport } from './routes/_authenticated/perfil'
 import { Route as AuthenticatedMensagensRouteImport } from './routes/_authenticated/mensagens'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as ApiPublicCronDispatchRecurringRouteImport } from './routes/api/public/cron/dispatch-recurring'
 
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
@@ -83,6 +84,12 @@ const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const ApiPublicCronDispatchRecurringRoute =
+  ApiPublicCronDispatchRecurringRouteImport.update({
+    id: '/api/public/cron/dispatch-recurring',
+    path: '/api/public/cron/dispatch-recurring',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
@@ -96,6 +103,7 @@ export interface FileRoutesByFullPath {
   '/rooms': typeof AuthenticatedRoomsRoute
   '/telegram-accounts': typeof AuthenticatedTelegramAccountsRoute
   '/videos': typeof AuthenticatedVideosRoute
+  '/api/public/cron/dispatch-recurring': typeof ApiPublicCronDispatchRecurringRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
@@ -109,6 +117,7 @@ export interface FileRoutesByTo {
   '/telegram-accounts': typeof AuthenticatedTelegramAccountsRoute
   '/videos': typeof AuthenticatedVideosRoute
   '/': typeof AuthenticatedIndexRoute
+  '/api/public/cron/dispatch-recurring': typeof ApiPublicCronDispatchRecurringRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -124,6 +133,7 @@ export interface FileRoutesById {
   '/_authenticated/telegram-accounts': typeof AuthenticatedTelegramAccountsRoute
   '/_authenticated/videos': typeof AuthenticatedVideosRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
+  '/api/public/cron/dispatch-recurring': typeof ApiPublicCronDispatchRecurringRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -139,6 +149,7 @@ export interface FileRouteTypes {
     | '/rooms'
     | '/telegram-accounts'
     | '/videos'
+    | '/api/public/cron/dispatch-recurring'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/login'
@@ -152,6 +163,7 @@ export interface FileRouteTypes {
     | '/telegram-accounts'
     | '/videos'
     | '/'
+    | '/api/public/cron/dispatch-recurring'
   id:
     | '__root__'
     | '/_authenticated'
@@ -166,12 +178,14 @@ export interface FileRouteTypes {
     | '/_authenticated/telegram-accounts'
     | '/_authenticated/videos'
     | '/_authenticated/'
+    | '/api/public/cron/dispatch-recurring'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   LoginRoute: typeof LoginRoute
   SignupRoute: typeof SignupRoute
+  ApiPublicCronDispatchRecurringRoute: typeof ApiPublicCronDispatchRecurringRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -260,6 +274,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/api/public/cron/dispatch-recurring': {
+      id: '/api/public/cron/dispatch-recurring'
+      path: '/api/public/cron/dispatch-recurring'
+      fullPath: '/api/public/cron/dispatch-recurring'
+      preLoaderRoute: typeof ApiPublicCronDispatchRecurringRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -295,7 +316,18 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
   LoginRoute: LoginRoute,
   SignupRoute: SignupRoute,
+  ApiPublicCronDispatchRecurringRoute: ApiPublicCronDispatchRecurringRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
