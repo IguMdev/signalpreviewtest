@@ -114,6 +114,8 @@ export const sendRoomTest = createServerFn({ method: "POST" })
         text: z.string().max(4000).optional(),
         imagePath: z.string().optional(),
         imageBucket: z.string().optional(),
+        imageMime: z.string().optional(),
+        imageExt: z.string().optional(),
       })
       .parse(d),
   )
@@ -147,8 +149,14 @@ export const sendRoomTest = createServerFn({ method: "POST" })
     if (data.imagePath) {
       const bucket = data.imageBucket || "room-images";
       const { data: pub } = supabase.storage.from(bucket).getPublicUrl(data.imagePath);
-      const lower = data.imagePath.toLowerCase();
-      const isSticker = lower.endsWith(".webp") || lower.endsWith(".tgs") || lower.endsWith(".webm");
+      const mime = (data.imageMime || "").toLowerCase();
+      const ext = (data.imageExt || data.imagePath.split(".").pop() || "").toLowerCase();
+      const isStickerByMime =
+        mime === "image/webp" ||
+        mime === "application/x-tgsticker" ||
+        mime === "video/webm";
+      const isStickerByExt = ext === "webp" || ext === "tgs" || ext === "webm";
+      const isSticker = isStickerByMime || (!mime && isStickerByExt);
       if (isSticker) {
         r = await callTelegram<{ message_id: number }>(acc.bot_token, "sendSticker", {
           chat_id: chat.chat_id,
