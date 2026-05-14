@@ -14,9 +14,11 @@ import {
 import { toast } from "sonner";
 import {
   ArrowLeft, Settings, Clock, CandlestickChart, MessageSquare, Image as ImageIcon,
-  PlayCircle, BarChart3, Globe2, ShieldAlert,
+  PlayCircle, BarChart3, Globe2, ShieldAlert, Plus, Trash2,
 } from "lucide-react";
 import { AssetSelectorDialog } from "@/components/AssetSelectorDialog";
+import { ASSETS_CATALOG } from "@/lib/assets-catalog";
+import { Badge } from "@/components/ui/badge";
 
 export const Route = createFileRoute("/_authenticated/rooms/$roomId/edit")({
   component: EditRoomPage,
@@ -97,8 +99,8 @@ function EditRoomPage() {
           {section === "config" && room.data && <ConfigSection room={room.data} />}
           {section === "timezone" && room.data && <TimezoneSection room={room.data} />}
           {section === "stoploss" && room.data && <StopLossSection room={room.data} />}
-          {section === "windows" && <PlaceholderSection title="Janelas de Operação" />}
-          {section === "templates" && <PlaceholderSection title="Templates de Mensagens" />}
+          {section === "windows" && <WindowsSection roomId={roomId} />}
+          {section === "templates" && <TemplatesSection roomId={roomId} />}
           {section === "images" && <PlaceholderSection title="Imagens GAIN / LOSS" />}
           {section === "session" && <PlaceholderSection title="Mensagens de Sessão" />}
           {section === "reports" && <PlaceholderSection title="Relatórios de fim de sessão" />}
