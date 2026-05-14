@@ -1121,7 +1121,7 @@ function ReportsCard({ roomId }: { roomId: string }) {
       </div>
       <p className="text-xs text-muted-foreground">
         Envia um resumo automático ao final de cada janela de operação.
-        Macros disponíveis: <code>{`{TOTAL}, {WINS}, {LOSSES}, {WINRATE}, {SESSAO}`}</code>.
+        Macros disponíveis: <code>{`{SESSAO_NOME}, {TOTAL_WINS}, {TOTAL_LOSSES}, {WIN_RATE}, {TOTAL_OPERACOES}`}</code>.
       </p>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-1.5">
