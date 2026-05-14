@@ -994,6 +994,54 @@ export type Database = {
           },
         ]
       }
+      telegram_member_events: {
+        Row: {
+          account_id: string
+          chat_id: number
+          chat_title: string | null
+          created_at: string
+          event_type: string
+          id: string
+          new_status: string | null
+          occurred_at: string
+          old_status: string | null
+          tg_first_name: string | null
+          tg_user_id: number
+          tg_username: string | null
+          user_id: string
+        }
+        Insert: {
+          account_id: string
+          chat_id: number
+          chat_title?: string | null
+          created_at?: string
+          event_type: string
+          id?: string
+          new_status?: string | null
+          occurred_at?: string
+          old_status?: string | null
+          tg_first_name?: string | null
+          tg_user_id: number
+          tg_username?: string | null
+          user_id: string
+        }
+        Update: {
+          account_id?: string
+          chat_id?: number
+          chat_title?: string | null
+          created_at?: string
+          event_type?: string
+          id?: string
+          new_status?: string | null
+          occurred_at?: string
+          old_status?: string | null
+          tg_first_name?: string | null
+          tg_user_id?: number
+          tg_username?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_engagement_subscriptions: {
         Row: {
           bot_type: Database["public"]["Enums"]["engagement_bot_type"] | null
