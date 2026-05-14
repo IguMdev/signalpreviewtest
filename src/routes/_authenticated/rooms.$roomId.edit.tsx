@@ -1458,7 +1458,7 @@ function ReportsCard({ roomId }: { roomId: string }) {
         .replaceAll("{TOTAL_LOSSES}", "3")
         .replaceAll("{TOTAL_OPERACOES}", "10")
         .replaceAll("{WIN_RATE}", "70");
-      await sendTest({ data: { roomId, text: sample, imagePath: imagePath ?? undefined } });
+      await sendTest({ data: { roomId, text: sample, imagePath: imagePath ?? undefined, imageMime: imageMime ?? undefined, imageExt: imageExt ?? undefined } });
       toast.success("Teste enviado");
     } catch (e: any) { toast.error(e.message); }
     finally { setTesting(false); }
