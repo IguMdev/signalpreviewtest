@@ -669,14 +669,25 @@ type TemplateKind =
   | "signal" | "win" | "win_martingale" | "loss"
   | "buy_direction" | "sell_direction" | "entry" | "gain" | "event";
 
-const TEMPLATE_TABS: { kind: TemplateKind; label: string; placeholder: string }[] = [
-  { kind: "signal",         label: "Sinal",         placeholder: "🎯 SINAL: {ATIVO}\n⏱ {TIMEFRAME}\n📈 {DIRECAO}\n💰 Entrada: {ENTRADA}" },
-  { kind: "win",            label: "Vitória",       placeholder: "✅ VITÓRIA no {ATIVO} 🟢" },
-  { kind: "win_martingale", label: "Vitória MG",    placeholder: "✅ VITÓRIA no martingale {ATIVO} 🟢" },
-  { kind: "loss",           label: "Derrota",       placeholder: "🔴 DERROTA no {ATIVO}" },
-  { kind: "buy_direction",  label: "Direção COMPRA", placeholder: "📈 COMPRA" },
-  { kind: "sell_direction", label: "Direção VENDA",  placeholder: "📉 VENDA" },
+const SIGNAL_PLACEHOLDERS = {
+  message: "🎯 SINAL: {ATIVO}\n⏱ {TIMEFRAME}\n📈 {DIRECAO}\n💰 Entrada: {ENTRADA}\n🔁 Gale 1: {ENTRADAGALE1}\n🔁 Gale 2: {ENTRADAGALE2}",
+  list: "📋 LISTA DE SINAIS\n{LISTA_SINAIS}\n\nGerenciamento: {MARTINGALE} martingale(s)",
+};
+
+const RESULT_TEMPLATES: { kind: TemplateKind; title: string; placeholder: string; tone: string }[] = [
+  { kind: "win", title: "Vitória", placeholder: "✅ VITÓRIA no {ATIVO} 🟢", tone: "GAIN" },
+  { kind: "win_martingale", title: "Vitória Martingale", placeholder: "✅ VITÓRIA no martingale {ATIVO} 🟢", tone: "GAIN" },
+  { kind: "loss", title: "Derrota", placeholder: "🔴 DERROTA no {ATIVO}", tone: "LOSS" },
 ];
+
+const DIRECTION_TEMPLATES: { kind: TemplateKind; title: string; placeholder: string }[] = [
+  { kind: "buy_direction", title: "Template de Compra", placeholder: "📈 COMPRA" },
+  { kind: "sell_direction", title: "Template de Venda", placeholder: "📉 VENDA" },
+];
+
+function pickTemplate(list: any[] | undefined, kind: TemplateKind) {
+  return list?.find((x: any) => x.kind === kind);
+}
 
 function TemplatesCard({ roomId }: { roomId: string }) {
   const qc = useQueryClient();
