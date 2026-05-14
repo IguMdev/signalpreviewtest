@@ -1,0 +1,1 @@
+alter table public.room_templates add column if not exists image_path text;
