@@ -166,6 +166,7 @@ export const getCurrentMemberCounts = createServerFn({ method: "GET" })
       accountLabel: string | null;
       count: number | null;
       error: string | null;
+      chatType: "group" | "channel" | "unknown";
     }> = [];
 
     for (const room of rooms ?? []) {
@@ -181,12 +182,17 @@ export const getCurrentMemberCounts = createServerFn({ method: "GET" })
             accountLabel: account?.label ?? null,
             count: null,
             error: "Sala sem bot padrão com token.",
+            chatType: "unknown",
           });
           continue;
         }
-        const response = await callTelegram<number>(account.bot_token, "getChatMemberCount", {
-          chat_id: chat.chat_id,
-        });
+        const [response, info] = await Promise.all([
+          callTelegram<number>(account.bot_token, "getChatMemberCount", { chat_id: chat.chat_id }),
+          callTelegram<{ type?: string }>(account.bot_token, "getChat", { chat_id: chat.chat_id }),
+        ]);
+        const tgType = info.ok ? info.result?.type : undefined;
+        const chatType: "group" | "channel" | "unknown" =
+          tgType === "channel" ? "channel" : tgType === "group" || tgType === "supergroup" ? "group" : "unknown";
         results.push({
           roomId: room.id,
           roomName: room.name,
@@ -195,6 +201,7 @@ export const getCurrentMemberCounts = createServerFn({ method: "GET" })
           accountLabel: account.label ?? account.bot_username ?? null,
           count: response.ok ? response.result ?? 0 : null,
           error: response.ok ? null : response.description ?? "Falha ao consultar membros.",
+          chatType,
         });
       }
     }
