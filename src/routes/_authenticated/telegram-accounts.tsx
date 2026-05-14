@@ -321,12 +321,14 @@ function AccountCard({
   onRefresh,
   onTest,
   onDelete,
+  onEnableTracking,
 }: {
   account: Account;
   onVerify: () => void;
   onRefresh: () => void;
   onTest: () => void;
   onDelete: () => void;
+  onEnableTracking: () => void;
 }) {
   const isPremium = a.account_type === "premium";
 
@@ -438,6 +440,9 @@ function AccountCard({
           </Button>
           <Button size="icon" variant="ghost" className="size-8" onClick={onTest} title="Enviar teste">
             <MessageSquare className="size-3.5" />
+          </Button>
+          <Button size="icon" variant="ghost" className="size-8" onClick={onEnableTracking} title="Ativar rastreamento de membros">
+            <Activity className="size-3.5" />
           </Button>
           <Button size="icon" variant="ghost" className="size-8 text-destructive hover:text-destructive" onClick={onDelete} title="Remover">
             <Trash2 className="size-3.5" />
