@@ -269,36 +269,262 @@ export type Database = {
           },
         ]
       }
-      rooms: {
+      room_images: {
         Row: {
           created_at: string
-          default_account_id: string | null
-          description: string | null
           id: string
-          name: string
-          photo_updated_at: string | null
-          photo_url: string | null
+          kind: Database["public"]["Enums"]["room_image_kind"]
+          room_id: string
+          storage_path: string
           user_id: string
         }
         Insert: {
           created_at?: string
-          default_account_id?: string | null
-          description?: string | null
           id?: string
-          name: string
-          photo_updated_at?: string | null
-          photo_url?: string | null
+          kind: Database["public"]["Enums"]["room_image_kind"]
+          room_id: string
+          storage_path: string
           user_id: string
         }
         Update: {
           created_at?: string
+          id?: string
+          kind?: Database["public"]["Enums"]["room_image_kind"]
+          room_id?: string
+          storage_path?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "room_images_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      room_reports: {
+        Row: {
+          created_at: string
+          enabled: boolean
+          id: string
+          include_stats: boolean
+          room_id: string
+          send_time: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          include_stats?: boolean
+          room_id: string
+          send_time?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          include_stats?: boolean
+          room_id?: string
+          send_time?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "room_reports_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: true
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      room_session_messages: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          kind: Database["public"]["Enums"]["session_msg_kind"]
+          room_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content?: string
+          created_at?: string
+          id?: string
+          kind: Database["public"]["Enums"]["session_msg_kind"]
+          room_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          kind?: Database["public"]["Enums"]["session_msg_kind"]
+          room_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "room_session_messages_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      room_templates: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          kind: Database["public"]["Enums"]["template_kind"]
+          parse_mode: string
+          room_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content?: string
+          created_at?: string
+          id?: string
+          kind: Database["public"]["Enums"]["template_kind"]
+          parse_mode?: string
+          room_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          kind?: Database["public"]["Enums"]["template_kind"]
+          parse_mode?: string
+          room_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "room_templates_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      room_windows: {
+        Row: {
+          asset_filter: string[]
+          created_at: string
+          end_time: string
+          id: string
+          is_active: boolean
+          name: string
+          room_id: string
+          start_time: string
+          updated_at: string
+          user_id: string
+          weekdays: number[]
+        }
+        Insert: {
+          asset_filter?: string[]
+          created_at?: string
+          end_time: string
+          id?: string
+          is_active?: boolean
+          name: string
+          room_id: string
+          start_time: string
+          updated_at?: string
+          user_id: string
+          weekdays?: number[]
+        }
+        Update: {
+          asset_filter?: string[]
+          created_at?: string
+          end_time?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          room_id?: string
+          start_time?: string
+          updated_at?: string
+          user_id?: string
+          weekdays?: number[]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "room_windows_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rooms: {
+        Row: {
+          broker: string | null
+          created_at: string
+          default_account_id: string | null
+          description: string | null
+          expires_at: string | null
+          id: string
+          is_active: boolean
+          name: string
+          photo_updated_at: string | null
+          photo_url: string | null
+          stop_loss_enabled: boolean
+          stop_loss_value: number | null
+          timezone: string
+          user_id: string
+          welcome_message: string | null
+        }
+        Insert: {
+          broker?: string | null
+          created_at?: string
           default_account_id?: string | null
           description?: string | null
+          expires_at?: string | null
           id?: string
+          is_active?: boolean
+          name: string
+          photo_updated_at?: string | null
+          photo_url?: string | null
+          stop_loss_enabled?: boolean
+          stop_loss_value?: number | null
+          timezone?: string
+          user_id: string
+          welcome_message?: string | null
+        }
+        Update: {
+          broker?: string | null
+          created_at?: string
+          default_account_id?: string | null
+          description?: string | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
           name?: string
           photo_updated_at?: string | null
           photo_url?: string | null
+          stop_loss_enabled?: boolean
+          stop_loss_value?: number | null
+          timezone?: string
           user_id?: string
+          welcome_message?: string | null
         }
         Relationships: [
           {
@@ -544,6 +770,9 @@ export type Database = {
       account_type: "bot" | "premium"
       app_role: "admin" | "user"
       message_status: "pending" | "sending" | "sent" | "failed" | "cancelled"
+      room_image_kind: "gain" | "loss"
+      session_msg_kind: "open" | "close"
+      template_kind: "entry" | "gain" | "loss" | "event"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -675,6 +904,9 @@ export const Constants = {
       account_type: ["bot", "premium"],
       app_role: ["admin", "user"],
       message_status: ["pending", "sending", "sent", "failed", "cancelled"],
+      room_image_kind: ["gain", "loss"],
+      session_msg_kind: ["open", "close"],
+      template_kind: ["entry", "gain", "loss", "event"],
     },
   },
 } as const
