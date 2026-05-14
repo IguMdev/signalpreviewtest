@@ -6,11 +6,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import {
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+} from "@/components/ui/table";
+import {
   DoorOpen, Sparkles, ExternalLink, Crown,
   Users, Heart, MessageCircle, Forward,
+  History, CheckCircle2, Clock, XCircle, AlertCircle,
 } from "lucide-react";
 import { toast } from "sonner";
-import { listEngagementPlans, getMySubscriptions } from "@/lib/engagement.functions";
+import { listEngagementPlans, getMySubscriptions, listMyPaymentHistory } from "@/lib/engagement.functions";
 import { useAuth } from "@/lib/auth-context";
 
 export const Route = createFileRoute("/_authenticated/recarga")({
@@ -57,11 +61,17 @@ function RecargaPage() {
   const { user } = useAuth();
   const fetchPlans = useServerFn(listEngagementPlans);
   const fetchSubs = useServerFn(getMySubscriptions);
+  const fetchHistory = useServerFn(listMyPaymentHistory);
 
   const plansQ = useQuery({ queryKey: ["engagement-plans"], queryFn: () => fetchPlans() });
   const subsQ = useQuery({
     queryKey: ["engagement-subs", user?.id],
     queryFn: () => fetchSubs(),
+    enabled: !!user,
+  });
+  const historyQ = useQuery({
+    queryKey: ["payment-history", user?.id],
+    queryFn: () => fetchHistory(),
     enabled: !!user,
   });
 
@@ -236,6 +246,88 @@ function RecargaPage() {
           );
         })}
       </div>
+
+      {/* Payment History */}
+      <PaymentHistorySection
+        rows={(historyQ.data ?? []) as any[]}
+        isLoading={historyQ.isLoading}
+      />
     </div>
+  );
+}
+
+const STATUS_META: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline"; icon: any }> = {
+  active:   { label: "Pagamento aprovado", variant: "default",     icon: CheckCircle2 },
+  pending:  { label: "Aguardando pagamento", variant: "secondary", icon: Clock },
+  canceled: { label: "Cancelado",            variant: "outline",   icon: XCircle },
+  refunded: { label: "Reembolsado",          variant: "outline",   icon: XCircle },
+  failed:   { label: "Pagamento recusado",   variant: "destructive", icon: AlertCircle },
+  expired:  { label: "Expirado",             variant: "outline",   icon: XCircle },
+};
+
+function PaymentHistorySection({ rows, isLoading }: { rows: any[]; isLoading: boolean }) {
+  return (
+    <section className="space-y-3">
+      <div className="flex items-center gap-2">
+        <div className="size-9 rounded-md bg-primary/10 flex items-center justify-center">
+          <History className="size-5 text-primary" />
+        </div>
+        <div>
+          <h2 className="font-semibold">Histórico de pagamentos</h2>
+          <p className="text-xs text-muted-foreground">
+            Acompanhe o status dos seus pagamentos e assinaturas.
+          </p>
+        </div>
+      </div>
+
+      <Card>
+        <CardContent className="p-0">
+          {isLoading ? (
+            <div className="p-6 text-sm text-muted-foreground text-center">Carregando…</div>
+          ) : rows.length === 0 ? (
+            <div className="p-6 text-sm text-muted-foreground text-center">
+              Nenhum pagamento registrado ainda.
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Data</TableHead>
+                  <TableHead>Plano</TableHead>
+                  <TableHead>Valor</TableHead>
+                  <TableHead>Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {rows.map((r) => {
+                  const meta = STATUS_META[r.status] ?? { label: r.status, variant: "outline" as const, icon: AlertCircle };
+                  const Icon = meta.icon;
+                  const date = r.created_at ? new Date(r.created_at).toLocaleString("pt-BR", {
+                    day: "2-digit", month: "2-digit", year: "numeric",
+                    hour: "2-digit", minute: "2-digit",
+                  }) : "—";
+                  const price = r.plan?.price_brl != null
+                    ? `R$ ${Number(r.plan.price_brl).toFixed(2).replace(".", ",")}`
+                    : "—";
+                  return (
+                    <TableRow key={r.id}>
+                      <TableCell className="text-xs text-muted-foreground whitespace-nowrap">{date}</TableCell>
+                      <TableCell className="text-sm">{r.plan?.name ?? "—"}</TableCell>
+                      <TableCell className="text-sm font-medium">{price}</TableCell>
+                      <TableCell>
+                        <Badge variant={meta.variant} className="gap-1">
+                          <Icon className="size-3" />
+                          {meta.label}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+    </section>
   );
 }
