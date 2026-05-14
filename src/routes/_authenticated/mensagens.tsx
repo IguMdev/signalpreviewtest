@@ -111,7 +111,7 @@ function MensagensPage() {
         {list.data?.map((m) => (
           <Card key={m.id} className="p-4 flex items-start gap-3">
             <div className="flex-1 min-w-0">
-              <p className="text-sm whitespace-pre-wrap">{m.content.slice(0, 200)}</p>
+              <p className="text-sm whitespace-pre-wrap">{(m.content ?? "🎬 Vídeo").slice(0, 200)}</p>
               <p className="text-xs text-muted-foreground mt-2">
                 {new Date(m.scheduled_at).toLocaleString("pt-BR")} · <span className="capitalize">{m.status}</span>
                 {m.last_error && ` · ${m.last_error}`}
