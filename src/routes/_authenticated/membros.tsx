@@ -25,8 +25,8 @@ function MembrosPage() {
   const [selectedChannel, setSelectedChannel] = useState<string>("all");
 
   const typeByChatId = useMemo(() => {
-    const m = new Map<number, "group" | "channel" | "unknown">();
-    for (const c of currentCounts?.chats ?? []) m.set(c.chatId, c.chatType);
+    const m = new Map<string, "group" | "channel" | "unknown">();
+    for (const c of currentCounts?.chats ?? []) m.set(String(c.chatId), c.chatType);
     return m;
   }, [currentCounts]);
 
@@ -45,14 +45,16 @@ function MembrosPage() {
     (c) => selectedId === "all" || String(c.chatId) === selectedId,
   );
   const visiblePerChat = (data?.perChat ?? []).filter((c) => {
-    const t = typeByChatId.get(c.chat_id) ?? "unknown";
+    const chatId = String(c.chat_id);
+    const t = typeByChatId.get(chatId) ?? "unknown";
     const inTab = tab === "group" ? t !== "channel" : t === "channel";
-    return inTab && (selectedId === "all" || String(c.chat_id) === selectedId);
+    return inTab && (selectedId === "all" || chatId === selectedId);
   });
   const visibleRecent = (data?.recent ?? []).filter((e) => {
-    const t = typeByChatId.get(e.chat_id) ?? "unknown";
+    const chatId = String(e.chat_id);
+    const t = typeByChatId.get(chatId) ?? "unknown";
     const inTab = tab === "group" ? t !== "channel" : t === "channel";
-    return inTab && (selectedId === "all" || String(e.chat_id) === selectedId);
+    return inTab && (selectedId === "all" || chatId === selectedId);
   });
 
   const totalMembers = visibleChats.reduce((s, c) => s + (c.count ?? 0), 0);
