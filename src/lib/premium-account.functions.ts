@@ -7,7 +7,7 @@ function userbot() {
   const token = process.env.USERBOT_TOKEN;
   if (!url || !token) {
     throw new Error(
-      "Servi\u00e7o de userbot n\u00e3o configurado. Configure os secrets USERBOT_API_URL e USERBOT_TOKEN.",
+      "Serviço de userbot não configurado. Configure os secrets USERBOT_API_URL e USERBOT_TOKEN.",
     );
   }
   return { url: url.replace(/\/$/, ""), token };
@@ -79,9 +79,9 @@ export const confirmPremiumCode = createServerFn({ method: "POST" })
       .select("tg_api_id, tg_api_hash, phone, tg_phone_code_hash")
       .eq("id", data.accountId)
       .maybeSingle();
-    if (error || !acc) throw new Error("Conta n\u00e3o encontrada");
+    if (error || !acc) throw new Error("Conta não encontrada");
     if (!acc.tg_api_id || !acc.tg_api_hash || !acc.phone || !acc.tg_phone_code_hash) {
-      throw new Error("Solicite o c\u00f3digo novamente.");
+      throw new Error("Solicite o código novamente.");
     }
     try {
       const r = await call<{
@@ -133,7 +133,7 @@ export const syncPremiumEmojis = createServerFn({ method: "POST" })
       .select("tg_api_id, tg_api_hash, tg_session")
       .eq("id", data.accountId)
       .maybeSingle();
-    if (error || !acc) throw new Error("Conta n\u00e3o encontrada");
+    if (error || !acc) throw new Error("Conta não encontrada");
     if (!acc.tg_session) throw new Error("Conecte a conta premium primeiro.");
     const list = await call<Array<{ id: string; emoji?: string; setName?: string }>>(
       "/emojis/list",
@@ -171,7 +171,7 @@ export const sendPremiumMessage = createServerFn({ method: "POST" })
       .select("tg_api_id, tg_api_hash, tg_session")
       .eq("id", data.accountId)
       .maybeSingle();
-    if (error || !acc) throw new Error("Conta n\u00e3o encontrada");
+    if (error || !acc) throw new Error("Conta não encontrada");
     if (!acc.tg_session) throw new Error("Conecte a conta premium primeiro.");
     const r = await call<{ messageId: number }>("/messages/send", {
       apiId: acc.tg_api_id,
