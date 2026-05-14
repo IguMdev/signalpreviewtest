@@ -131,7 +131,7 @@ function TelegramAccountsPage() {
     }
     const idNum = Number(apiId);
     if (!Number.isInteger(idNum) || idNum <= 0) {
-      toast.error("API ID inv\u00e1lido");
+      toast.error("API ID inválido");
       return;
     }
     setLoadingPremium(true);
@@ -151,13 +151,13 @@ function TelegramAccountsPage() {
         .select("id")
         .single();
       if (error) throw error;
-      // 2) chama o servi\u00e7o externo
+      // 2) chama o serviço externo
       await reqCode({
         data: { accountId: row.id, apiId: idNum, apiHash, phone },
       });
       setPendingAccountId(row.id);
       setPremiumStep("code");
-      toast.success("C\u00f3digo enviado pelo Telegram");
+      toast.success("Código enviado pelo Telegram");
       qc.invalidateQueries({ queryKey: ["telegram-accounts"] });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Falha");
@@ -179,7 +179,7 @@ function TelegramAccountsPage() {
       });
       if (r.needsPassword) {
         setNeeds2fa(true);
-        toast.message("Esta conta tem 2FA \u2014 informe a senha de nuvem");
+        toast.message("Esta conta tem 2FA — informe a senha de nuvem");
         return;
       }
       toast.success("Conta conectada!");
@@ -258,7 +258,7 @@ function TelegramAccountsPage() {
             {accountType === "bot" && (
               <>
                 <div className="space-y-2">
-                  <Label>R\u00f3tulo / Nome do bot</Label>
+                  <Label>Rótulo / Nome do bot</Label>
                   <Input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Ex: Bot principal" />
                 </div>
                 <div className="space-y-2">
@@ -277,15 +277,15 @@ function TelegramAccountsPage() {
                   <p className="font-semibold">Como conectar sua conta Telegram:</p>
                   <p className="font-medium">📱 Passo a passo:</p>
                   <ol className="list-decimal pl-5 space-y-1 text-muted-foreground">
-                    <li>Acesse <a href="https://my.telegram.org" target="_blank" rel="noreferrer" className="underline">my.telegram.org</a> e fa\u00e7a login</li>
-                    <li>V\u00e1 em "API Development Tools" e crie uma aplica\u00e7\u00e3o</li>
+                    <li>Acesse <a href="https://my.telegram.org" target="_blank" rel="noreferrer" className="underline">my.telegram.org</a> e faça login</li>
+                    <li>Vá em "API Development Tools" e crie uma aplicação</li>
                     <li>Copie o <b>API ID</b> e <b>API Hash</b></li>
                     <li>Preencha todos os campos abaixo</li>
-                    <li>Clique em "Solicitar C\u00f3digo" — ele chega no <b>app do Telegram</b> (n\u00e3o por SMS)</li>
-                    <li>Digite o c\u00f3digo recebido no app e clique em "Conectar"</li>
+                    <li>Clique em "Solicitar Código" — ele chega no <b>app do Telegram</b> (não por SMS)</li>
+                    <li>Digite o código recebido no app e clique em "Conectar"</li>
                   </ol>
                   <div className="rounded-md bg-primary/20 px-3 py-2 text-xs">
-                    💡 <b>Dica:</b> As credenciais API s\u00e3o necess\u00e1rias para conectar sua conta pessoal.
+                    💡 <b>Dica:</b> As credenciais API são necessárias para conectar sua conta pessoal.
                   </div>
                 </div>
                 <div className="grid sm:grid-cols-2 gap-4">
@@ -295,9 +295,9 @@ function TelegramAccountsPage() {
                     <p className="text-xs text-muted-foreground">Nome para identificar esta conta no sistema</p>
                   </div>
                   <div className="space-y-2">
-                    <Label>N\u00famero do Telefone</Label>
+                    <Label>Número do Telefone</Label>
                     <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+5511999999999" />
-                    <p className="text-xs text-muted-foreground">N\u00famero completo com c\u00f3digo do pa\u00eds (ex: +55)</p>
+                    <p className="text-xs text-muted-foreground">Número completo com código do país (ex: +55)</p>
                   </div>
                   <div className="space-y-2">
                     <Label>API ID</Label>
@@ -318,14 +318,14 @@ function TelegramAccountsPage() {
                 <div className="rounded-xl border border-primary/30 bg-primary/10 p-4 text-sm flex items-start gap-3">
                   <KeyRound className="size-5 mt-0.5" />
                   <div>
-                    <p className="font-semibold">Digite o c\u00f3digo recebido no app do Telegram</p>
+                    <p className="font-semibold">Digite o código recebido no app do Telegram</p>
                     <p className="text-muted-foreground text-xs mt-1">
-                      Abra o app do Telegram e veja a conversa oficial "Telegram". O c\u00f3digo n\u00e3o \u00e9 enviado por SMS e expira em ~5 minutos.
+                      Abra o app do Telegram e veja a conversa oficial "Telegram". O código não é enviado por SMS e expira em ~5 minutos.
                     </p>
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label>C\u00f3digo</Label>
+                  <Label>Código</Label>
                   <Input
                     value={telegramCode}
                     onChange={(e) => setTelegramCode(e.target.value.replace(/\D/g, ""))}
@@ -337,7 +337,7 @@ function TelegramAccountsPage() {
                 </div>
                 {needs2fa && (
                   <div className="space-y-2">
-                    <Label>Senha 2FA (verifica\u00e7\u00e3o em duas etapas)</Label>
+                    <Label>Senha 2FA (verificação em duas etapas)</Label>
                     <Input type="password" value={twoFa} onChange={(e) => setTwoFa(e.target.value)} />
                   </div>
                 )}
@@ -358,7 +358,7 @@ function TelegramAccountsPage() {
             )}
             {accountType === "premium" && premiumStep === "form" && (
               <Button onClick={handleRequestCode} disabled={loadingPremium}>
-                {loadingPremium ? "Enviando..." : "Solicitar C\u00f3digo"}
+                {loadingPremium ? "Enviando..." : "Solicitar Código"}
               </Button>
             )}
             {accountType === "premium" && premiumStep === "code" && (
