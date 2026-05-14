@@ -27,6 +27,7 @@ import {
   getMySubscriptions,
 } from "@/lib/engagement.functions";
 import { sendRoomTest } from "@/lib/accounts.functions";
+import { testWindow } from "@/lib/test-signal.functions";
 
 export const Route = createFileRoute("/_authenticated/rooms/$roomId/edit")({
   component: EditRoomPage,
@@ -615,6 +616,16 @@ function WindowItem({ window: w, roomId }: { window: any; roomId: string }) {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const runTest = useServerFn(testWindow);
+  const test = useMutation({
+    mutationFn: async () => runTest({ data: { windowId: w.id } }),
+    onSuccess: (r) => {
+      if (r.ok) toast.success(`Sinal de teste enviado: ${r.asset} ${r.direction === "buy" ? "🟢" : "🔴"}`);
+      else toast.error(r.errors?.[0] ?? "Falha ao enviar teste");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   function toggleArr<T>(arr: T[], item: T): T[] {
     return arr.includes(item) ? arr.filter((x) => x !== item) : [...arr, item];
   }
@@ -708,6 +719,15 @@ function WindowItem({ window: w, roomId }: { window: any; roomId: string }) {
       <WindowAssets selected={filter} setSelected={setFilter} roomId={roomId} windowId={w.id} useAll={useAll} />
 
       <div className="flex justify-end pt-2 border-t border-border">
+        <Button
+          size="sm"
+          variant="outline"
+          className="mr-2"
+          onClick={() => test.mutate()}
+          disabled={test.isPending}
+        >
+          {test.isPending ? "Enviando..." : "Testar sessão"}
+        </Button>
         <Button size="sm" onClick={() => save.mutate()} disabled={save.isPending}>
           {save.isPending ? "Salvando..." : "Salvar janela"}
         </Button>
