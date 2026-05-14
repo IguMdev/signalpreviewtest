@@ -118,3 +118,76 @@ export const getMemberStats = createServerFn({ method: "GET" })
       recent: recent ?? [],
     };
   });
+
+export const getCurrentMemberCounts = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabase } = context;
+    const { data: rooms, error } = await supabase
+      .from("rooms")
+      .select("id, name, default_account_id, premium_account_id, room_chats(chat_id, chat_title)")
+      .eq("is_active", true)
+      .order("created_at", { ascending: false });
+    if (error) throw new Error(error.message);
+
+    const accountIds = Array.from(
+      new Set(
+        (rooms ?? [])
+          .map((room) => room.default_account_id ?? room.premium_account_id)
+          .filter(Boolean) as string[],
+      ),
+    );
+
+    const { data: accounts, error: accountsError } = await supabase
+      .from("telegram_accounts")
+      .select("id, bot_token, label, bot_username")
+      .in("id", accountIds.length ? accountIds : ["00000000-0000-0000-0000-000000000000"]);
+    if (accountsError) throw new Error(accountsError.message);
+    const accountById = new Map((accounts ?? []).map((account) => [account.id, account]));
+
+    const results: Array<{
+      roomId: string;
+      roomName: string;
+      chatId: number;
+      chatTitle: string | null;
+      accountLabel: string | null;
+      count: number | null;
+      error: string | null;
+    }> = [];
+
+    for (const room of rooms ?? []) {
+      const accountId = room.default_account_id ?? room.premium_account_id;
+      const account = accountId ? accountById.get(accountId) : null;
+      for (const chat of room.room_chats ?? []) {
+        if (!account?.bot_token) {
+          results.push({
+            roomId: room.id,
+            roomName: room.name,
+            chatId: chat.chat_id,
+            chatTitle: chat.chat_title,
+            accountLabel: account?.label ?? null,
+            count: null,
+            error: "Sala sem bot padrão com token.",
+          });
+          continue;
+        }
+        const response = await callTelegram<number>(account.bot_token, "getChatMemberCount", {
+          chat_id: chat.chat_id,
+        });
+        results.push({
+          roomId: room.id,
+          roomName: room.name,
+          chatId: chat.chat_id,
+          chatTitle: chat.chat_title,
+          accountLabel: account.label ?? account.bot_username ?? null,
+          count: response.ok ? response.result ?? 0 : null,
+          error: response.ok ? null : response.description ?? "Falha ao consultar membros.",
+        });
+      }
+    }
+
+    return {
+      total: results.reduce((sum, row) => sum + (row.count ?? 0), 0),
+      chats: results,
+    };
+  });
