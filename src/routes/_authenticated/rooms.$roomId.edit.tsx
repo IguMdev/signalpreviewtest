@@ -1308,12 +1308,16 @@ function SessionMessageEditor({
   const [content, setContent] = useState<string>(existing?.content ?? "");
   const [enabled, setEnabled] = useState<boolean>(existing?.enabled ?? true);
   const [lead, setLead] = useState<string>(String(existing?.lead_minutes ?? 5));
+  const [imagePath, setImagePath] = useState<string | null>(existing?.image_path ?? null);
+  const sendTest = useServerFn(sendRoomTest);
+  const [testing, setTesting] = useState(false);
 
   useEffect(() => {
     setContent(existing?.content ?? "");
     setEnabled(existing?.enabled ?? true);
     setLead(String(existing?.lead_minutes ?? 5));
-  }, [existing?.id, existing?.content, existing?.enabled, existing?.lead_minutes]);
+    setImagePath(existing?.image_path ?? null);
+  }, [existing?.id, existing?.content, existing?.enabled, existing?.lead_minutes, existing?.image_path]);
 
   const save = useMutation({
     mutationFn: async () => {
@@ -1322,6 +1326,7 @@ function SessionMessageEditor({
         content,
         enabled,
         lead_minutes: parseInt(lead, 10) || 0,
+        image_path: imagePath,
       };
       if (existing) {
         const { error } = await supabase.from("room_session_messages").update(payload).eq("id", existing.id);
@@ -1336,6 +1341,15 @@ function SessionMessageEditor({
     onSuccess: () => { toast.success(`${title} salva`); onChanged(); },
     onError: (e: Error) => toast.error(e.message),
   });
+
+  const onTest = async () => {
+    try {
+      setTesting(true);
+      await sendTest({ data: { roomId, text: content, imagePath: imagePath ?? undefined } });
+      toast.success("Teste enviado");
+    } catch (e: any) { toast.error(e.message); }
+    finally { setTesting(false); }
+  };
 
   return (
     <div className="border rounded-md p-4 space-y-3 bg-card/40">
@@ -1357,9 +1371,16 @@ function SessionMessageEditor({
             ? "🚀 SESSÃO COMEÇA EM {MINUTOS} MIN!\nPrepare-se para os sinais!"
             : "🏁 SESSÃO ENCERRADA\nObrigado por operar conosco!"} />
       </div>
-      <ImageAttachmentMock tone={kind === "open" ? "INÍCIO" : "TÉRMINO"} />
+      <ImageAttachment
+        tone={kind === "open" ? "INÍCIO" : "TÉRMINO"}
+        roomId={roomId}
+        value={imagePath}
+        onChange={setImagePath}
+      />
       <div className="flex items-center justify-between gap-3 pt-2 border-t border-border">
-        <Button variant="secondary" size="sm" disabled><Send className="size-4 mr-1" />Enviar teste</Button>
+        <Button variant="secondary" size="sm" onClick={onTest} disabled={testing}>
+          <Send className="size-4 mr-1" />{testing ? "Enviando..." : "Enviar teste"}
+        </Button>
         <Button size="sm" onClick={() => save.mutate()} disabled={save.isPending}>
           {save.isPending ? "Salvando..." : "Salvar"}
         </Button>
