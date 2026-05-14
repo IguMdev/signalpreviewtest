@@ -380,11 +380,15 @@ export const setSubscriptionTarget = createServerFn({ method: "POST" })
   .inputValidator((d) =>
     z.object({
       subscriptionId: z.string().uuid(),
-      targetLink: z.string().url().regex(/^https?:\/\/(t\.me|telegram\.me)\//i, "Use um link público do Telegram"),
+      targetLink: z.string().min(1).max(500),
     }).parse(d),
   )
   .handler(async ({ data, context }) => {
     const { userId } = context;
+    const normalized = normalizeTelegramLink(data.targetLink);
+    if (!normalized) {
+      throw new Error("Link inválido. Use um canal/grupo público do Telegram (ex: https://t.me/seucanal). Convites privados (joinchat/+hash) não são aceitos.");
+    }
     const { data: sub, error: subErr } = await supabaseAdmin
       .from("user_engagement_subscriptions")
       .select("*, plan:engagement_plans(*)")
@@ -405,14 +409,14 @@ export const setSubscriptionTarget = createServerFn({ method: "POST" })
 
     await supabaseAdmin
       .from("user_engagement_subscriptions")
-      .update({ target_link: data.targetLink })
+      .update({ target_link: normalized })
       .eq("id", sub.id);
 
     const result = await placeSmmOrder({
       userId,
       subscriptionId: sub.id,
       serviceId,
-      link: data.targetLink,
+      link: normalized,
       quantity,
       type: "members",
     });
@@ -424,6 +428,72 @@ export const setSubscriptionTarget = createServerFn({ method: "POST" })
       .update({ units_used: quantity })
       .eq("id", sub.id);
     return { ok: true, smmOrderId: result.smmOrderId };
+  });
+
+/**
+ * Re-tenta um pedido SMM falhado, mantendo a mesma assinatura, link e quantidade.
+ * Não consome cota adicional (a cota original já foi reservada no primeiro
+ * disparo). Apenas pedidos com status `failed` podem ser re-tentados.
+ */
+export const retryEngagementOrder = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ orderId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { userId } = context;
+    const { data: order, error } = await supabaseAdmin
+      .from("engagement_orders")
+      .select("*")
+      .eq("id", data.orderId)
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!order) throw new Error("Pedido não encontrado.");
+    if (order.status !== "failed") {
+      throw new Error("Apenas pedidos com falha podem ser re-tentados.");
+    }
+
+    const normalized = normalizeTelegramLink(order.target) ?? order.target;
+    const serviceId = order.smm_service_id ?? (order.type === "reaction" ? SVC_REACTIONS : SVC_MEMBERS);
+
+    // Reset para pending antes de tentar de novo
+    await supabaseAdmin
+      .from("engagement_orders")
+      .update({ status: "pending", error: null, raw_response: null })
+      .eq("id", order.id);
+
+    try {
+      const resp = await callSmmPanel({
+        action: "add",
+        service: serviceId,
+        link: normalized,
+        quantity: order.quantity,
+      });
+      if (resp.error || !resp.order) {
+        await supabaseAdmin
+          .from("engagement_orders")
+          .update({ status: "failed", error: resp.error ?? "no order id", raw_response: resp as never })
+          .eq("id", order.id);
+        throw new Error(resp.error ?? "Falha ao re-despachar pedido");
+      }
+      await supabaseAdmin
+        .from("engagement_orders")
+        .update({
+          status: "in_progress",
+          smm_order_id: String(resp.order),
+          cost_usd: resp.charge ? Number(resp.charge) : null,
+          raw_response: resp as never,
+          target: normalized,
+        })
+        .eq("id", order.id);
+      return { ok: true, smmOrderId: resp.order };
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      await supabaseAdmin
+        .from("engagement_orders")
+        .update({ status: "failed", error: msg })
+        .eq("id", order.id);
+      throw err;
+    }
   });
 
 /**
