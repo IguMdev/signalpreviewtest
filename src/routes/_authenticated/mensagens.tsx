@@ -435,139 +435,195 @@ function ScheduleDialog({
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{editing?.id ? "Editar agendamento" : "Novo agendamento"}</DialogTitle>
+          <DialogTitle>{editing?.id ? "Editar mensagem" : "Nova mensagem"}</DialogTitle>
         </DialogHeader>
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <Label>Título</Label>
-            <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ex.: Bom dia Traders" />
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Sala / Grupo</Label>
-              <Select
-                value={roomId}
-                onValueChange={(v) => {
-                  setRoomId(v);
-                  if (!accountId) {
-                    const r = rooms.find((x) => x.id === v);
-                    if (r?.default_account_id) setAccountId(r.default_account_id);
-                  }
-                }}
-              >
-                <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                <SelectContent>
-                  {rooms.map((r) => (
-                    <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Conta Telegram (opcional)</Label>
-              <Select value={accountId} onValueChange={setAccountId}>
-                <SelectTrigger><SelectValue placeholder="Padrão da sala" /></SelectTrigger>
-                <SelectContent>
-                  {accounts.map((a) => (
-                    <SelectItem key={a.id} value={a.id}>{a.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Vídeo redondo (opcional — substitui texto)</Label>
-            <Select value={videoId || "none"} onValueChange={(v) => setVideoId(v === "none" ? "" : v)}>
-              <SelectTrigger><SelectValue placeholder="Nenhum (enviar texto)" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">Nenhum (enviar texto)</SelectItem>
-                {videos.map((v) => (
-                  <SelectItem key={v.id} value={v.id}>{v.title}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {!videoId && (
-            <div className="space-y-2">
-              <Label>Mensagem (HTML permitido)</Label>
-              <Textarea value={content} onChange={(e) => setContent(e.target.value)} rows={5} />
-            </div>
-          )}
-
-          <div className="space-y-2">
-            <Label>Horários</Label>
-            <div className="flex gap-2">
-              <Input
-                type="time"
-                value={newTime}
-                onChange={(e) => setNewTime(e.target.value)}
-                className="max-w-[140px]"
-              />
-              <Button type="button" variant="outline" onClick={addTime}>
-                <Plus className="size-4" />
-                Adicionar
-              </Button>
-            </div>
-            {times.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 pt-1">
-                {times.map((t) => (
-                  <Badge key={t} variant="secondary" className="gap-1 pr-1">
-                    <Clock className="size-3" />
-                    {t}
-                    <button
-                      type="button"
-                      onClick={() => setTimes(times.filter((x) => x !== t))}
-                      className="ml-1 hover:bg-background/40 rounded p-0.5"
-                    >
-                      <X className="size-3" />
-                    </button>
-                  </Badge>
-                ))}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* LEFT COLUMN */}
+          <div className="space-y-4">
+            {/* Identificação */}
+            <Card className="p-5 space-y-4">
+              <h3 className="font-semibold">Identificação</h3>
+              <div className="space-y-2">
+                <Label>
+                  Título <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="Ex: Bom dia traders!"
+                />
               </div>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <Label>Dias da semana</Label>
-            <div className="flex flex-wrap gap-1.5">
-              {WEEKDAYS.map((d) => {
-                const on = weekdays.includes(d.value);
-                return (
-                  <button
-                    key={d.value}
-                    type="button"
-                    onClick={() => toggleWeekday(d.value)}
-                    className={`px-3 py-1.5 rounded-md text-sm border transition ${
-                      on
-                        ? "bg-primary text-primary-foreground border-primary"
-                        : "bg-background border-border text-muted-foreground hover:bg-muted"
-                    }`}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label>
+                    Sala <span className="text-destructive">*</span>
+                  </Label>
+                  <Select
+                    value={roomId}
+                    onValueChange={(v) => {
+                      setRoomId(v);
+                      if (!accountId) {
+                        const r = rooms.find((x) => x.id === v);
+                        if (r?.default_account_id) setAccountId(r.default_account_id);
+                      }
+                    }}
                   >
-                    {d.short}
-                  </button>
-                );
-              })}
-            </div>
+                    <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                    <SelectContent>
+                      {rooms.map((r) => (
+                        <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Conta Telegram</Label>
+                  <Select value={accountId} onValueChange={setAccountId}>
+                    <SelectTrigger><SelectValue placeholder="Padrão da sala" /></SelectTrigger>
+                    <SelectContent>
+                      {accounts.map((a) => (
+                        <SelectItem key={a.id} value={a.id}>{a.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="flex items-center gap-6 pt-1">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={isActive}
+                    onChange={(e) => setIsActive(e.target.checked)}
+                    className="size-4 rounded accent-primary"
+                  />
+                  <span className="text-sm font-medium">Ativo</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={isPremium}
+                    onChange={(e) => setIsPremium(e.target.checked)}
+                    className="size-4 rounded accent-primary"
+                  />
+                  <span className="text-sm font-medium">Usar emoji premium</span>
+                </label>
+              </div>
+              <p className="text-xs text-muted-foreground -mt-2">
+                Processa emojis premium da sala antes do envio
+              </p>
+            </Card>
+
+            {/* Conteúdo */}
+            <Card className="p-5 space-y-4">
+              <h3 className="font-semibold">Conteúdo</h3>
+              <div className="space-y-2">
+                <Label>
+                  Mensagem <span className="text-destructive">*</span>
+                </Label>
+                <Textarea
+                  value={content}
+                  onChange={(e) => setContent(e.target.value)}
+                  rows={6}
+                  placeholder="Texto da mensagem. Use {EMOJI:NOME} para emojis premium."
+                  disabled={!!videoId}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Suporta HTML do Telegram: &lt;b&gt;, &lt;i&gt;, &lt;u&gt;, &lt;code&gt;. Para emojis premium (se ativados), use{" "}
+                  <code className="px-1 py-0.5 rounded bg-muted">{"{EMOJI:NOME}"}</code>.
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label>Vídeo da biblioteca (opcional — substitui texto)</Label>
+                <Select value={videoId || "none"} onValueChange={(v) => setVideoId(v === "none" ? "" : v)}>
+                  <SelectTrigger><SelectValue placeholder="Nenhum (enviar texto)" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Nenhum (enviar texto)</SelectItem>
+                    {videos.map((v) => (
+                      <SelectItem key={v.id} value={v.id}>{v.title}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </Card>
           </div>
 
-          <div className="flex items-center justify-between gap-4 pt-2 border-t">
-            <div className="flex items-center gap-2">
-              <Switch checked={isPremium} onCheckedChange={setIsPremium} id="prem" />
-              <Label htmlFor="prem" className="cursor-pointer">Marcar como Premium</Label>
-            </div>
-            <div className="flex items-center gap-2">
-              <Switch checked={isActive} onCheckedChange={setIsActive} id="act" />
-              <Label htmlFor="act" className="cursor-pointer">Ativo</Label>
-            </div>
+          {/* RIGHT COLUMN */}
+          <div className="space-y-4">
+            {/* Dias da semana */}
+            <Card className="p-5 space-y-3">
+              <h3 className="font-semibold">
+                Dias da semana <span className="text-destructive">*</span>
+              </h3>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {WEEKDAYS.map((d) => {
+                  const on = weekdays.includes(d.value);
+                  return (
+                    <label
+                      key={d.value}
+                      className={`flex items-center gap-2 px-3 py-2.5 rounded-md border cursor-pointer transition ${
+                        on
+                          ? "border-primary bg-primary/10"
+                          : "border-border hover:bg-muted/50"
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={on}
+                        onChange={() => toggleWeekday(d.value)}
+                        className="size-4 rounded accent-primary"
+                      />
+                      <span className="text-sm font-medium">{d.label}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            </Card>
+
+            {/* Horários */}
+            <Card className="p-5 space-y-3">
+              <h3 className="font-semibold">
+                Horários <span className="text-destructive">*</span>
+              </h3>
+              <p className="text-xs text-muted-foreground">
+                Adicione um ou mais horários de envio. A mensagem será enviada a cada horário marcado nos dias configurados.
+              </p>
+              {times.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Nenhum horário adicionado.</p>
+              ) : (
+                <div className="flex flex-wrap gap-1.5">
+                  {times.map((t) => (
+                    <Badge key={t} variant="secondary" className="gap-1 pr-1">
+                      <Clock className="size-3" />
+                      {t}
+                      <button
+                        type="button"
+                        onClick={() => setTimes(times.filter((x) => x !== t))}
+                        className="ml-1 hover:bg-background/40 rounded p-0.5"
+                      >
+                        <X className="size-3" />
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+              )}
+              <div className="flex gap-2">
+                <Input
+                  type="time"
+                  value={newTime}
+                  onChange={(e) => setNewTime(e.target.value)}
+                  className="max-w-[140px]"
+                />
+                <Button type="button" onClick={addTime}>
+                  <Plus className="size-4" />
+                  Adicionar
+                </Button>
+              </div>
+            </Card>
           </div>
         </div>
-        <DialogFooter>
-          <Button variant="ghost" onClick={onClose}>Cancelar</Button>
+        <DialogFooter className="gap-2 sm:gap-2">
           <Button
             disabled={!canSave}
             onClick={() =>
@@ -587,8 +643,9 @@ function ScheduleDialog({
               })
             }
           >
-            Salvar
+            {editing?.id ? "Salvar alterações" : "Criar mensagem"}
           </Button>
+          <Button variant="secondary" onClick={onClose}>Cancelar</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
