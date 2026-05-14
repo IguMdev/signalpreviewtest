@@ -132,21 +132,21 @@ export const dispatchEngagementBoost = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
 
-    // Verify active subscription + remaining quota
+    // Pick the subscription that matches this bot type
+    const botType = data.type === "reaction" ? "interacoes" : "inscritos";
     const { data: sub } = await supabase
       .from("user_engagement_subscriptions")
       .select("*, plan:engagement_plans(*)")
       .eq("status", "active")
+      .eq("bot_type", botType)
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
 
-    if (!sub) throw new Error("Você não tem uma assinatura de engajamento ativa.");
+    if (!sub) throw new Error(`Você não tem uma assinatura ativa de Bot${botType === "interacoes" ? "Interações" : "Inscritos"}.`);
 
     const plan = (sub as any).plan;
-    const usedField = data.type === "reaction" ? "reactions_used" : "members_used";
-    const quotaField = data.type === "reaction" ? "monthly_reactions_quota" : "monthly_members_quota";
-    const remaining = (plan?.[quotaField] ?? 0) - ((sub as any)[usedField] ?? 0);
+    const remaining = (plan?.monthly_quota ?? 0) - ((sub as any).units_used ?? 0);
     if (remaining < data.quantity) {
       throw new Error(`Cota insuficiente. Restam ${remaining}.`);
     }
@@ -194,12 +194,10 @@ export const dispatchEngagementBoost = createServerFn({ method: "POST" })
         .eq("id", order.id);
 
       // Decrement quota
-      const newUsed = ((sub as any)[usedField] ?? 0) + data.quantity;
-      const updatePayload: Record<string, number> = {};
-      updatePayload[usedField] = newUsed;
+      const newUsed = ((sub as any).units_used ?? 0) + data.quantity;
       await supabaseAdmin
         .from("user_engagement_subscriptions")
-        .update(updatePayload as never)
+        .update({ units_used: newUsed } as never)
         .eq("id", (sub as any).id);
 
       return { ok: true, orderId: order.id, smmOrderId: resp.order };
