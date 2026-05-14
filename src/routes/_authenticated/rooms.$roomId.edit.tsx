@@ -867,13 +867,13 @@ function WindowAssets({
       />
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {(Object.keys(ASSETS_CATALOG) as AssetCategory[]).map((cat) => (
+        {visibleAssetsByCategory.map(({ cat, assets: categoryAssets }) => (
           <div key={cat} className="space-y-1.5">
             <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{cat}</h4>
             <div className="space-y-1">
-              {ASSETS_CATALOG[cat]
-                .filter((a) => a.toLowerCase().includes(search.toLowerCase()))
-                .map((code) => {
+              {categoryAssets.length === 0 ? (
+                <p className="text-xs text-muted-foreground py-1">Nenhum ativo</p>
+              ) : categoryAssets.map((code) => {
                   const meta = assets.data?.[code];
                   const checked = selected.includes(code);
                   return (
@@ -883,10 +883,11 @@ function WindowAssets({
                       <button
                         type="button"
                         onClick={() => toggleOpen.mutate(code)}
+                        disabled={toggleOpen.isPending}
                         title="Clique para alternar Aberto/Fechado"
                         className={meta?.is_open === false
-                          ? "h-4 text-[10px] px-1.5 rounded border border-border text-muted-foreground hover:bg-muted/40"
-                          : "h-4 text-[10px] px-1.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-500/30"}
+                          ? "relative z-10 h-6 min-w-14 cursor-pointer rounded border border-border px-2 text-[10px] font-medium text-muted-foreground hover:bg-muted/40 disabled:cursor-wait disabled:opacity-70"
+                          : "relative z-10 h-6 min-w-14 cursor-pointer rounded border border-emerald-500/40 bg-emerald-500/20 px-2 text-[10px] font-medium text-emerald-300 hover:bg-emerald-500/30 disabled:cursor-wait disabled:opacity-70"}
                       >
                         {meta?.is_open === false ? "Fechado" : "Aberto"}
                       </button>
