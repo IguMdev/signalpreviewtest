@@ -1,9 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { getMemberStats } from "@/lib/telegram-tracking.functions";
+import { getCurrentMemberCounts, getMemberStats } from "@/lib/telegram-tracking.functions";
 import { Card } from "@/components/ui/card";
-import { UserPlus, UserMinus, TrendingUp, Users } from "lucide-react";
+import { UserPlus, UserMinus, TrendingUp, Users, RefreshCw } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/membros")({
   component: MembrosPage,
@@ -11,14 +11,17 @@ export const Route = createFileRoute("/_authenticated/membros")({
 
 function MembrosPage() {
   const fetchStats = useServerFn(getMemberStats);
+  const fetchCurrentCounts = useServerFn(getCurrentMemberCounts);
   const q = useQuery({ queryKey: ["member-stats"], queryFn: () => fetchStats() });
+  const countsQ = useQuery({ queryKey: ["member-current-counts"], queryFn: () => fetchCurrentCounts() });
   const data = q.data;
+  const currentCounts = countsQ.data;
 
   const cards = [
     { label: "Entradas hoje", value: data?.joinsToday ?? 0, icon: UserPlus, color: "text-emerald-500" },
     { label: "Saídas hoje", value: data?.leavesToday ?? 0, icon: UserMinus, color: "text-rose-500" },
     { label: "Saldo (30d)", value: data?.net30 ?? 0, icon: TrendingUp, color: "text-primary" },
-    { label: "Entradas (30d)", value: data?.joins30 ?? 0, icon: Users, color: "text-foreground" },
+    { label: "Membros atuais", value: currentCounts?.total ?? 0, icon: Users, color: "text-foreground" },
   ];
 
   const maxBar = Math.max(1, ...(data?.daily ?? []).flatMap((d) => [d.joins, d.leaves]));
@@ -69,6 +72,29 @@ function MembrosPage() {
                   />
                   <span className="tabular-nums w-8 text-rose-600">-{d.leaves}</span>
                 </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
+
+      <Card className="p-6">
+        <div className="flex items-center justify-between gap-3 mb-4">
+          <h2 className="font-semibold">Contagem atual por grupo</h2>
+          {countsQ.isFetching && <RefreshCw className="size-4 text-muted-foreground animate-spin" />}
+        </div>
+        {!currentCounts?.chats.length ? (
+          <p className="text-sm text-muted-foreground py-8 text-center">Nenhum chat vinculado às salas.</p>
+        ) : (
+          <div className="space-y-2">
+            {currentCounts.chats.map((c) => (
+              <div key={`${c.roomId}-${c.chatId}`} className="flex items-center justify-between p-3 rounded-lg bg-muted/50 gap-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium truncate">{c.chatTitle || c.roomName || `Chat ${c.chatId}`}</p>
+                  <p className="text-xs text-muted-foreground truncate">ID: {c.chatId}{c.accountLabel ? ` • ${c.accountLabel}` : ""}</p>
+                  {c.error && <p className="text-xs text-destructive mt-1">{c.error}</p>}
+                </div>
+                <span className="text-lg font-semibold tabular-nums shrink-0">{c.count?.toLocaleString("pt-BR") ?? "—"}</span>
               </div>
             ))}
           </div>
