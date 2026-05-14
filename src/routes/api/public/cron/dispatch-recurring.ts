@@ -130,6 +130,14 @@ export const Route = createFileRoute("/api/public/cron/dispatch-recurring")({
               error: r.ok ? null : r.description ?? "erro",
             });
             if (r.ok) okAny = true;
+            if (r.ok && r.result?.message_id) {
+              await triggerSignalReactions({
+                userId: s.user_id,
+                chatId: c.chat_id,
+                telegramMessageId: r.result.message_id,
+                roomId: s.room_id,
+              });
+            }
           }
 
           await supabaseAdmin
