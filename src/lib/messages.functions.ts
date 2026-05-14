@@ -110,6 +110,14 @@ export const dispatchDue = createServerFn({ method: "POST" }).handler(async () =
       });
       if (r.ok) anyOk = true;
       else lastErr = r.description ?? "erro";
+      if (r.ok && r.result?.message_id) {
+        await triggerSignalReactions({
+          userId: msg.user_id,
+          chatId: c.chat_id,
+          telegramMessageId: r.result.message_id,
+          roomId: msg.room_id,
+        });
+      }
     }
 
     await supabaseAdmin
