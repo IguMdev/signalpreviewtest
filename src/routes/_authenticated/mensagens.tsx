@@ -447,6 +447,8 @@ function ScheduleDialog({
     title: string;
     content: string | null;
     videoId: string | null;
+    imagePath: string | null;
+    imageMime: string | null;
     parseMode: "HTML" | "Markdown" | "MarkdownV2";
     times: string[];
     weekdays: number[];
@@ -460,6 +462,9 @@ function ScheduleDialog({
   const [accountId, setAccountId] = useState<string>("");
   const [content, setContent] = useState("");
   const [videoId, setVideoId] = useState<string>("");
+  const [imagePath, setImagePath] = useState<string>("");
+  const [imageMime, setImageMime] = useState<string>("");
+  const [uploading, setUploading] = useState(false);
   const [times, setTimes] = useState<string[]>([]);
   const [weekdays, setWeekdays] = useState<number[]>([]);
   const [isPremium, setIsPremium] = useState(false);
@@ -475,6 +480,8 @@ function ScheduleDialog({
       setAccountId(editing.account_id ?? "");
       setContent(editing.content ?? "");
       setVideoId(editing.video_id ?? "");
+      setImagePath(editing.image_path ?? "");
+      setImageMime(editing.image_mime ?? "");
       setTimes(editing.times);
       setWeekdays(editing.weekdays);
       setIsPremium(editing.is_premium);
@@ -482,6 +489,35 @@ function ScheduleDialog({
       setNewTime("");
     }
   }, [editing, presetRoomId]);
+
+  const imagePublicUrl = useMemo(() => {
+    if (!imagePath) return "";
+    const { data } = supabase.storage.from("room-images").getPublicUrl(imagePath);
+    return data.publicUrl;
+  }, [imagePath]);
+
+  async function handleImageUpload(file: File) {
+    setUploading(true);
+    try {
+      const { data: u } = await supabase.auth.getUser();
+      const uid = u.user?.id;
+      if (!uid) throw new Error("Sessão expirada");
+      const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
+      const path = `messages/${uid}/${Date.now()}.${ext}`;
+      const { error } = await supabase.storage
+        .from("room-images")
+        .upload(path, file, { contentType: file.type, upsert: false });
+      if (error) throw error;
+      setImagePath(path);
+      setImageMime(file.type);
+      setVideoId("");
+      toast.success("Imagem carregada");
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setUploading(false);
+    }
+  }
 
   const addTime = () => {
     if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(newTime)) return;
@@ -589,7 +625,11 @@ function ScheduleDialog({
                   value={content}
                   onChange={(e) => setContent(e.target.value)}
                   rows={6}
-                  placeholder="Texto da mensagem. Use {EMOJI:NOME} para emojis premium."
+                  placeholder={
+                    imagePath
+                      ? "Legenda da imagem (opcional)"
+                      : "Texto da mensagem. Use {EMOJI:NOME} para emojis premium."
+                  }
                   disabled={!!videoId}
                 />
                 <p className="text-xs text-muted-foreground">
@@ -598,8 +638,64 @@ function ScheduleDialog({
                 </p>
               </div>
               <div className="space-y-2">
-                <Label>Vídeo da biblioteca (opcional — substitui texto)</Label>
-                <Select value={videoId || "none"} onValueChange={(v) => setVideoId(v === "none" ? "" : v)}>
+                <Label>Imagem (opcional — texto vira legenda)</Label>
+                {imagePath ? (
+                  <div className="flex items-start gap-3">
+                    <img
+                      src={imagePublicUrl}
+                      alt="Preview"
+                      className="size-24 rounded-md object-cover border border-border"
+                    />
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setImagePath("");
+                        setImageMime("");
+                      }}
+                    >
+                      <X className="size-4" /> Remover imagem
+                    </Button>
+                  </div>
+                ) : (
+                  <label
+                    className={`flex items-center gap-2 px-3 py-2 rounded-md border border-dashed cursor-pointer hover:bg-muted/40 text-sm ${
+                      videoId ? "opacity-50 pointer-events-none" : ""
+                    }`}
+                  >
+                    {uploading ? (
+                      <Loader2 className="size-4 animate-spin" />
+                    ) : (
+                      <ImageIcon className="size-4" />
+                    )}
+                    <span>{uploading ? "Enviando..." : "Selecionar imagem"}</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        if (f) handleImageUpload(f);
+                        e.target.value = "";
+                      }}
+                    />
+                  </label>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label>Vídeo da biblioteca (opcional — substitui texto/imagem)</Label>
+                <Select
+                  value={videoId || "none"}
+                  onValueChange={(v) => {
+                    const next = v === "none" ? "" : v;
+                    setVideoId(next);
+                    if (next) {
+                      setImagePath("");
+                      setImageMime("");
+                    }
+                  }}
+                >
                   <SelectTrigger><SelectValue placeholder="Nenhum (enviar texto)" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">Nenhum (enviar texto)</SelectItem>
@@ -695,8 +791,10 @@ function ScheduleDialog({
                 roomId,
                 accountId: accountId || null,
                 title: title.trim(),
-                content: videoId ? null : content,
+                content: videoId ? null : content || null,
                 videoId: videoId || null,
+                imagePath: videoId ? null : imagePath || null,
+                imageMime: videoId ? null : imageMime || null,
                 parseMode: "HTML",
                 times,
                 weekdays,
