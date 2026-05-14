@@ -4,10 +4,10 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 const SMM_PANEL_URL = "https://justanotherpanel.com/api/v2";
-// Default service IDs on JustAnotherPanel for Telegram. The user can override
-// later via env if their account uses different IDs.
-const SVC_REACTIONS = Number(process.env.SMM_SERVICE_REACTIONS_ID || "5993");
-const SVC_MEMBERS = Number(process.env.SMM_SERVICE_MEMBERS_ID || "157");
+// IDs padrão no JustAnotherPanel (podem ser sobrescritos por plano via
+// engagement_plans.smm_service_id).
+const SVC_REACTIONS = Number(process.env.SMM_SERVICE_REACTIONS_ID || "8485");
+const SVC_MEMBERS = Number(process.env.SMM_SERVICE_MEMBERS_ID || "7102");
 
 export const listEngagementPlans = createServerFn({ method: "GET" }).handler(
   async () => {
@@ -110,8 +110,8 @@ export const upsertRoomEngagementSettings = createServerFn({ method: "POST" })
   });
 
 async function callSmmPanel(params: Record<string, string | number>) {
-  const key = process.env.SMM_PANEL_API_KEY;
-  if (!key) throw new Error("SMM_PANEL_API_KEY não configurado");
+  const key = process.env.JAP_API_KEY || process.env.SMM_PANEL_API_KEY;
+  if (!key) throw new Error("JAP_API_KEY não configurado");
   const body = new URLSearchParams({ key, ...Object.fromEntries(Object.entries(params).map(([k, v]) => [k, String(v)])) });
   const res = await fetch(SMM_PANEL_URL, { method: "POST", body });
   const json = await res.json().catch(() => ({}));
