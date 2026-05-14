@@ -1,0 +1,1 @@
+drop policy if exists tme_insert_service on public.telegram_member_events;
