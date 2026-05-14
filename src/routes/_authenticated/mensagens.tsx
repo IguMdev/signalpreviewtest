@@ -8,6 +8,7 @@ import {
   toggleSchedule,
   deleteSchedule,
 } from "@/lib/recurring-schedules.functions";
+import { syncRoomPhoto } from "@/lib/room-photos.functions";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -41,6 +42,7 @@ import {
   Clock,
   Sparkles,
   X,
+  RefreshCw,
 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/mensagens")({
@@ -73,13 +75,19 @@ type Schedule = {
   last_sent_at: string | null;
 };
 
-type Room = { id: string; name: string; default_account_id: string | null };
+type Room = {
+  id: string;
+  name: string;
+  default_account_id: string | null;
+  photo_url: string | null;
+};
 
 function MensagensPage() {
   const qc = useQueryClient();
   const upsertFn = useServerFn(upsertSchedule);
   const toggleFn = useServerFn(toggleSchedule);
   const delFn = useServerFn(deleteSchedule);
+  const syncPhotoFn = useServerFn(syncRoomPhoto);
 
   const [search, setSearch] = useState("");
   const [editing, setEditing] = useState<Schedule | null>(null);
@@ -88,7 +96,7 @@ function MensagensPage() {
   const rooms = useQuery({
     queryKey: ["rooms-min"],
     queryFn: async () =>
-      ((await supabase.from("rooms").select("id, name, default_account_id")).data ?? []) as Room[],
+      ((await supabase.from("rooms").select("id, name, default_account_id, photo_url")).data ?? []) as Room[],
   });
 
   const accounts = useQuery({
@@ -162,6 +170,17 @@ function MensagensPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const syncPhotoMut = useMutation({
+    mutationFn: async (roomId: string) => {
+      return await syncPhotoFn({ data: { roomId } });
+    },
+    onSuccess: () => {
+      toast.success("Foto atualizada");
+      qc.invalidateQueries({ queryKey: ["rooms-min"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const openNew = (roomId?: string) => {
     setPresetRoomId(roomId ?? null);
     setEditing({
@@ -223,9 +242,17 @@ function MensagensPage() {
             <Card key={room.id} className="p-5 space-y-4">
               <div className="flex items-center justify-between gap-3 flex-wrap">
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="size-10 rounded-full bg-primary/10 text-primary grid place-items-center shrink-0">
-                    <Users className="size-5" />
-                  </div>
+                  {room.photo_url ? (
+                    <img
+                      src={room.photo_url}
+                      alt={room.name}
+                      className="size-10 rounded-full object-cover shrink-0 bg-muted"
+                    />
+                  ) : (
+                    <div className="size-10 rounded-full bg-primary/10 text-primary grid place-items-center shrink-0">
+                      <Users className="size-5" />
+                    </div>
+                  )}
                   <div className="min-w-0">
                     <p className="font-semibold truncate">{room.name}</p>
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -238,10 +265,24 @@ function MensagensPage() {
                     </div>
                   </div>
                 </div>
-                <Button size="sm" onClick={() => openNew(room.id)}>
-                  <Plus className="size-4" />
-                  Adicionar
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => syncPhotoMut.mutate(room.id)}
+                    disabled={syncPhotoMut.isPending && syncPhotoMut.variables === room.id}
+                    title="Atualizar foto do grupo"
+                  >
+                    <RefreshCw
+                      className={`size-4 ${syncPhotoMut.isPending && syncPhotoMut.variables === room.id ? "animate-spin" : ""}`}
+                    />
+                    Foto
+                  </Button>
+                  <Button size="sm" onClick={() => openNew(room.id)}>
+                    <Plus className="size-4" />
+                    Adicionar
+                  </Button>
+                </div>
               </div>
 
               {items.length === 0 ? (
