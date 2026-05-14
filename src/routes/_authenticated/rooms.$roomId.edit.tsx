@@ -780,7 +780,7 @@ function WindowAssets({
       const cat = (Object.keys(ASSETS_CATALOG) as AssetCategory[])
         .find((c) => ASSETS_CATALOG[c].includes(code)) ?? "OTC";
       const current = assets.data?.[code];
-      const nextOpen = !(current?.is_open ?? false);
+      const nextOpen = !(current?.is_open ?? true);
       const { error } = await supabase.from("room_assets").upsert({
         user_id: uid,
         room_id: roomId,
@@ -810,7 +810,7 @@ function WindowAssets({
     const meta = assets.data?.[code];
     return {
       meta,
-      isOpen: meta?.is_open === true,
+      isOpen: meta?.is_open !== false,
       payout: meta?.payout ?? DEFAULT_PAYOUT,
     };
   };
