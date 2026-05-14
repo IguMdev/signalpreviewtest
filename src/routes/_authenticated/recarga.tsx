@@ -55,7 +55,8 @@ const BOT_META: Record<BotType, { title: string; icon: any; tagline: string; quo
   encaminhador: { title: "BotEncaminhador", icon: Forward,       tagline: "Encaminha mensagens entre canais",       quotaLabel: "" },
 };
 
-const BOT_ORDER: BotType[] = ["inscritos", "interacoes", "boasvindas", "encaminhador"];
+const BOT_ORDER: BotType[] = ["inscritos", "interacoes"];
+const BOT_PAIR: BotType[] = ["boasvindas", "encaminhador"];
 
 function RecargaPage() {
   const { user } = useAuth();
@@ -245,6 +246,96 @@ function RecargaPage() {
             </section>
           );
         })}
+
+        {/* Boas-vindas + Encaminhador lado a lado */}
+        <div className="grid gap-6 md:grid-cols-2">
+          {BOT_PAIR.map((bot) => {
+            const meta = BOT_META[bot];
+            const Icon = meta.icon;
+            const plans = plansByBot.get(bot) ?? [];
+            const sub = subByBot.get(bot);
+            const activePlan = sub?.plan;
+            const usagePct = activePlan?.monthly_quota
+              ? Math.min(100, ((sub?.units_used ?? 0) / activePlan.monthly_quota) * 100)
+              : 0;
+
+            if (plans.length === 0) return null;
+
+            return (
+              <section key={bot} className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="size-9 rounded-md bg-primary/10 flex items-center justify-center">
+                      <Icon className="size-5 text-primary" />
+                    </div>
+                    <div>
+                      <h2 className="font-semibold">{meta.title}</h2>
+                      <p className="text-xs text-muted-foreground">{meta.tagline}</p>
+                    </div>
+                  </div>
+                  {sub && (
+                    <Badge variant={sub.status === "active" ? "default" : "secondary"} className="gap-1">
+                      <Crown className="size-3" /> {sub.status}
+                    </Badge>
+                  )}
+                </div>
+
+                {sub && activePlan && activePlan.monthly_quota > 0 && (
+                  <Card className="bg-muted/30">
+                    <CardContent className="py-3 space-y-1.5">
+                      <div className="flex items-center justify-between text-xs">
+                        <span>{activePlan.name}</span>
+                        <span className="text-muted-foreground">
+                          {(sub.units_used ?? 0).toLocaleString("pt-BR")} / {activePlan.monthly_quota.toLocaleString("pt-BR")} {meta.quotaLabel}
+                        </span>
+                      </div>
+                      <Progress value={usagePct} />
+                    </CardContent>
+                  </Card>
+                )}
+
+                <div className="grid gap-3">
+                  {plans.map((p: any) => {
+                    const isCurrent = activePlan?.id === p.id;
+                    return (
+                      <Card key={p.id} className={isCurrent ? "border-primary" : ""}>
+                        <CardHeader className="pb-2">
+                          <CardTitle className="text-base flex items-center justify-between">
+                            <span>{p.name}</span>
+                            {isCurrent && <Badge className="text-[10px]">Atual</Badge>}
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-3">
+                          <div className="text-2xl font-bold">
+                            R$ {Number(p.price_brl).toFixed(2)}
+                            <span className="text-xs font-normal text-muted-foreground">/mês</span>
+                          </div>
+                          <p className="text-xs text-muted-foreground min-h-[32px]">{p.description}</p>
+                          {p.kirvano_checkout_url ? (
+                            <Button asChild size="sm" className="w-full" disabled={isCurrent}>
+                              <a
+                                href={`${p.kirvano_checkout_url}${p.kirvano_checkout_url.includes("?") ? "&" : "?"}utm_content=${user?.id ?? ""}`}
+                                target="_blank"
+                                rel="noreferrer"
+                              >
+                                {isCurrent ? "Plano atual" : "Adquirir agora"}
+                                <ExternalLink className="size-3 ml-1" />
+                              </a>
+                            </Button>
+                          ) : (
+                            <Button size="sm" className="w-full" disabled variant="secondary">
+                              Em breve
+                            </Button>
+                          )}
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              </section>
+            );
+          })}
+        </div>
       </div>
 
       {/* Payment History */}
