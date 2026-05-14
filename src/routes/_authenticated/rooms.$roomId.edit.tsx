@@ -1081,10 +1081,12 @@ const SIGNAL_PLACEHOLDERS = {
   list: "📋 LISTA DE SINAIS\n{LISTA_SINAIS}\n\nGerenciamento: {MARTINGALE} martingale(s)",
 };
 
-const RESULT_TEMPLATES: { kind: TemplateKind; title: string; placeholder: string; tone: string }[] = [
-  { kind: "win", title: "Vitória", placeholder: "✅ VITÓRIA no {ATIVO} 🟢", tone: "GAIN" },
-  { kind: "win_martingale", title: "Vitória Martingale", placeholder: "✅ VITÓRIA no martingale {ATIVO} 🟢", tone: "GAIN" },
-  { kind: "loss", title: "Derrota", placeholder: "🔴 DERROTA no {ATIVO}", tone: "LOSS" },
+const DEFAULT_GAIN_IMAGE = "_defaults/template-gain.png";
+const DEFAULT_LOSS_IMAGE = "_defaults/template-loss.png";
+const RESULT_TEMPLATES: { kind: TemplateKind; title: string; placeholder: string; tone: string; defaultImagePath?: string }[] = [
+  { kind: "win", title: "Vitória", placeholder: "✅ VITÓRIA no {ATIVO} 🟢", tone: "GAIN", defaultImagePath: DEFAULT_GAIN_IMAGE },
+  { kind: "win_martingale", title: "Vitória Martingale", placeholder: "✅ VITÓRIA no martingale {ATIVO} 🟢", tone: "GAIN", defaultImagePath: DEFAULT_GAIN_IMAGE },
+  { kind: "loss", title: "Derrota", placeholder: "🔴 DERROTA no {ATIVO}", tone: "LOSS", defaultImagePath: DEFAULT_LOSS_IMAGE },
 ];
 
 const DIRECTION_TEMPLATES: { kind: TemplateKind; title: string; placeholder: string }[] = [
@@ -1170,6 +1172,7 @@ function TemplatesCard({ roomId }: { roomId: string }) {
                   actionMode="test"
                   showImageTools
                   imageTone={item.tone}
+                  defaultImagePath={item.defaultImagePath}
                   rows={4}
                   onChanged={refresh}
                 />
@@ -1202,6 +1205,7 @@ function TemplatesCard({ roomId }: { roomId: string }) {
 function TemplateEditor({
   roomId, kind, title, helper, placeholder, existing, buttons, onChanged,
   showButtonManager = false, showImageTools = false, imageTone = "GAIN", actionMode = "none", rows = 5,
+  defaultImagePath,
 }: {
   roomId: string;
   kind: TemplateKind;
@@ -1216,11 +1220,12 @@ function TemplateEditor({
   imageTone?: string;
   actionMode?: "full" | "test" | "none";
   rows?: number;
+  defaultImagePath?: string;
 }) {
   const [content, setContent] = useState<string>(existing?.content ?? placeholder);
-  const [imagePath, setImagePath] = useState<string | null>(existing?.image_path ?? null);
-  const [imageMime, setImageMime] = useState<string | null>(existing?.image_mime ?? null);
-  const [imageExt, setImageExt] = useState<string | null>(existing?.image_ext ?? null);
+  const [imagePath, setImagePath] = useState<string | null>(existing?.image_path ?? defaultImagePath ?? null);
+  const [imageMime, setImageMime] = useState<string | null>(existing?.image_mime ?? (defaultImagePath ? "image/png" : null));
+  const [imageExt, setImageExt] = useState<string | null>(existing?.image_ext ?? (defaultImagePath ? "png" : null));
   const [newLabel, setNewLabel] = useState("");
   const [newUrl, setNewUrl] = useState("");
   const sendTest = useServerFn(sendRoomTest);
@@ -1228,9 +1233,9 @@ function TemplateEditor({
 
   useEffect(() => {
     setContent(existing?.content ?? placeholder);
-    setImagePath(existing?.image_path ?? null);
-    setImageMime(existing?.image_mime ?? null);
-    setImageExt(existing?.image_ext ?? null);
+    setImagePath(existing?.image_path ?? defaultImagePath ?? null);
+    setImageMime(existing?.image_mime ?? (defaultImagePath ? "image/png" : null));
+    setImageExt(existing?.image_ext ?? (defaultImagePath ? "png" : null));
   }, [existing?.id, existing?.content, existing?.image_path, existing?.image_mime, existing?.image_ext]);
 
   const saveTpl = useMutation({
