@@ -249,7 +249,7 @@ function VideosPage() {
         </p>
       </div>
 
-      <Card className="p-5 space-y-4">
+      <Card className="p-5 space-y-4" data-tour="video-upload">
         <div className="flex flex-col sm:flex-row gap-3 sm:items-end">
           <div className="space-y-2 sm:w-44">
             <Label>Tipo</Label>
