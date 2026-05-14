@@ -28,7 +28,7 @@ const navItems = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/telegram-accounts", label: "Contas Telegram", icon: Send },
   { to: "/premium-emojis", label: "Emojis Premium", icon: Sparkles },
-  { to: "/rooms", label: "Grupos", icon: Users },
+  { to: "/rooms", label: "Salas", icon: Users },
   { to: "/mensagens", label: "Agendamentos", icon: CalendarClock },
   { to: "/videos", label: "Vídeos redondos", icon: Video },
   { to: "/recarga", label: "Recarga", icon: Wallet },

@@ -22,6 +22,7 @@ import { Route as AuthenticatedPerfilRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedMensagensRouteImport } from './routes/_authenticated/mensagens'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as ApiPublicCronDispatchRecurringRouteImport } from './routes/api/public/cron/dispatch-recurring'
+import { Route as AuthenticatedRoomsRoomIdEditRouteImport } from './routes/_authenticated/rooms.$roomId.edit'
 
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
@@ -90,6 +91,12 @@ const ApiPublicCronDispatchRecurringRoute =
     path: '/api/public/cron/dispatch-recurring',
     getParentRoute: () => rootRouteImport,
   } as any)
+const AuthenticatedRoomsRoomIdEditRoute =
+  AuthenticatedRoomsRoomIdEditRouteImport.update({
+    id: '/$roomId/edit',
+    path: '/$roomId/edit',
+    getParentRoute: () => AuthenticatedRoomsRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
@@ -100,9 +107,10 @@ export interface FileRoutesByFullPath {
   '/perfil': typeof AuthenticatedPerfilRoute
   '/premium-emojis': typeof AuthenticatedPremiumEmojisRoute
   '/recarga': typeof AuthenticatedRecargaRoute
-  '/rooms': typeof AuthenticatedRoomsRoute
+  '/rooms': typeof AuthenticatedRoomsRouteWithChildren
   '/telegram-accounts': typeof AuthenticatedTelegramAccountsRoute
   '/videos': typeof AuthenticatedVideosRoute
+  '/rooms/$roomId/edit': typeof AuthenticatedRoomsRoomIdEditRoute
   '/api/public/cron/dispatch-recurring': typeof ApiPublicCronDispatchRecurringRoute
 }
 export interface FileRoutesByTo {
@@ -113,10 +121,11 @@ export interface FileRoutesByTo {
   '/perfil': typeof AuthenticatedPerfilRoute
   '/premium-emojis': typeof AuthenticatedPremiumEmojisRoute
   '/recarga': typeof AuthenticatedRecargaRoute
-  '/rooms': typeof AuthenticatedRoomsRoute
+  '/rooms': typeof AuthenticatedRoomsRouteWithChildren
   '/telegram-accounts': typeof AuthenticatedTelegramAccountsRoute
   '/videos': typeof AuthenticatedVideosRoute
   '/': typeof AuthenticatedIndexRoute
+  '/rooms/$roomId/edit': typeof AuthenticatedRoomsRoomIdEditRoute
   '/api/public/cron/dispatch-recurring': typeof ApiPublicCronDispatchRecurringRoute
 }
 export interface FileRoutesById {
@@ -129,10 +138,11 @@ export interface FileRoutesById {
   '/_authenticated/perfil': typeof AuthenticatedPerfilRoute
   '/_authenticated/premium-emojis': typeof AuthenticatedPremiumEmojisRoute
   '/_authenticated/recarga': typeof AuthenticatedRecargaRoute
-  '/_authenticated/rooms': typeof AuthenticatedRoomsRoute
+  '/_authenticated/rooms': typeof AuthenticatedRoomsRouteWithChildren
   '/_authenticated/telegram-accounts': typeof AuthenticatedTelegramAccountsRoute
   '/_authenticated/videos': typeof AuthenticatedVideosRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
+  '/_authenticated/rooms/$roomId/edit': typeof AuthenticatedRoomsRoomIdEditRoute
   '/api/public/cron/dispatch-recurring': typeof ApiPublicCronDispatchRecurringRoute
 }
 export interface FileRouteTypes {
@@ -149,6 +159,7 @@ export interface FileRouteTypes {
     | '/rooms'
     | '/telegram-accounts'
     | '/videos'
+    | '/rooms/$roomId/edit'
     | '/api/public/cron/dispatch-recurring'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -163,6 +174,7 @@ export interface FileRouteTypes {
     | '/telegram-accounts'
     | '/videos'
     | '/'
+    | '/rooms/$roomId/edit'
     | '/api/public/cron/dispatch-recurring'
   id:
     | '__root__'
@@ -178,6 +190,7 @@ export interface FileRouteTypes {
     | '/_authenticated/telegram-accounts'
     | '/_authenticated/videos'
     | '/_authenticated/'
+    | '/_authenticated/rooms/$roomId/edit'
     | '/api/public/cron/dispatch-recurring'
   fileRoutesById: FileRoutesById
 }
@@ -281,8 +294,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicCronDispatchRecurringRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/rooms/$roomId/edit': {
+      id: '/_authenticated/rooms/$roomId/edit'
+      path: '/$roomId/edit'
+      fullPath: '/rooms/$roomId/edit'
+      preLoaderRoute: typeof AuthenticatedRoomsRoomIdEditRouteImport
+      parentRoute: typeof AuthenticatedRoomsRoute
+    }
   }
 }
+
+interface AuthenticatedRoomsRouteChildren {
+  AuthenticatedRoomsRoomIdEditRoute: typeof AuthenticatedRoomsRoomIdEditRoute
+}
+
+const AuthenticatedRoomsRouteChildren: AuthenticatedRoomsRouteChildren = {
+  AuthenticatedRoomsRoomIdEditRoute: AuthenticatedRoomsRoomIdEditRoute,
+}
+
+const AuthenticatedRoomsRouteWithChildren =
+  AuthenticatedRoomsRoute._addFileChildren(AuthenticatedRoomsRouteChildren)
 
 interface AuthenticatedRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
@@ -290,7 +321,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedPerfilRoute: typeof AuthenticatedPerfilRoute
   AuthenticatedPremiumEmojisRoute: typeof AuthenticatedPremiumEmojisRoute
   AuthenticatedRecargaRoute: typeof AuthenticatedRecargaRoute
-  AuthenticatedRoomsRoute: typeof AuthenticatedRoomsRoute
+  AuthenticatedRoomsRoute: typeof AuthenticatedRoomsRouteWithChildren
   AuthenticatedTelegramAccountsRoute: typeof AuthenticatedTelegramAccountsRoute
   AuthenticatedVideosRoute: typeof AuthenticatedVideosRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
@@ -302,7 +333,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedPerfilRoute: AuthenticatedPerfilRoute,
   AuthenticatedPremiumEmojisRoute: AuthenticatedPremiumEmojisRoute,
   AuthenticatedRecargaRoute: AuthenticatedRecargaRoute,
-  AuthenticatedRoomsRoute: AuthenticatedRoomsRoute,
+  AuthenticatedRoomsRoute: AuthenticatedRoomsRouteWithChildren,
   AuthenticatedTelegramAccountsRoute: AuthenticatedTelegramAccountsRoute,
   AuthenticatedVideosRoute: AuthenticatedVideosRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
