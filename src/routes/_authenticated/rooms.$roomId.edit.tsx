@@ -757,6 +757,7 @@ function WindowAssets({
 }) {
   const [search, setSearch] = useState("");
   const [collapsed, setCollapsed] = useState(false);
+  const qc = useQueryClient();
 
   // load per-asset open/payout from room_assets
   const assets = useQuery({
@@ -767,6 +768,29 @@ function WindowAssets({
       (data ?? []).forEach((a: any) => { map[a.asset_code] = { payout: Number(a.payout), is_open: a.is_open }; });
       return map;
     },
+  });
+
+  const toggleOpen = useMutation({
+    mutationFn: async (code: string) => {
+      const { data: u } = await supabase.auth.getUser();
+      const uid = u.user?.id;
+      if (!uid) throw new Error("Sem sessão");
+      const cat = (Object.keys(ASSETS_CATALOG) as AssetCategory[])
+        .find((c) => ASSETS_CATALOG[c].includes(code)) ?? "OTC";
+      const current = assets.data?.[code];
+      const nextOpen = !(current?.is_open ?? true);
+      const { error } = await supabase.from("room_assets").upsert({
+        user_id: uid,
+        room_id: roomId,
+        asset_code: code,
+        category: cat,
+        payout: current?.payout ?? DEFAULT_PAYOUT,
+        is_open: nextOpen,
+      }, { onConflict: "room_id,asset_code" });
+      if (error) throw error;
+    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["room_assets", roomId] }); },
+    onError: (e: Error) => toast.error(e.message),
   });
 
   function toggle(code: string) {
@@ -823,14 +847,16 @@ function WindowAssets({
                     <div key={code} className="flex items-center gap-2 text-xs">
                       <Checkbox checked={useAll ? false : checked} onCheckedChange={() => toggle(code)} />
                       <span className="flex-1 font-mono">{code}</span>
-                      <Badge
-                        variant={meta?.is_open === false ? "outline" : "default"}
+                      <button
+                        type="button"
+                        onClick={() => toggleOpen.mutate(code)}
+                        title="Clique para alternar Aberto/Fechado"
                         className={meta?.is_open === false
-                          ? "h-4 text-[10px] px-1.5"
-                          : "h-4 text-[10px] px-1.5 bg-emerald-500/20 text-emerald-300 border-emerald-500/40 hover:bg-emerald-500/20"}
+                          ? "h-4 text-[10px] px-1.5 rounded border border-border text-muted-foreground hover:bg-muted/40"
+                          : "h-4 text-[10px] px-1.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-500/30"}
                       >
                         {meta?.is_open === false ? "Fechado" : "Aberto"}
-                      </Badge>
+                      </button>
                       <span className="text-[10px] text-muted-foreground tabular-nums w-10 text-right">
                         {(() => {
                           const p = meta?.payout ?? DEFAULT_PAYOUT;
