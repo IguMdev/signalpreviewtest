@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Send, Users, CalendarClock, Wallet, Sparkles, CreditCard } from "lucide-react";
+import { Send, Users, CalendarClock, Wallet, Sparkles, CreditCard, UserPlus, UserMinus } from "lucide-react";
 import { getMySubscriptions } from "@/lib/engagement.functions";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
@@ -20,7 +20,9 @@ function DashboardPage() {
     queryKey: ["dashboard-stats", user?.id],
     enabled: !!user,
     queryFn: async () => {
-      const [accounts, rooms, scheduled, profile] = await Promise.all([
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      const [accounts, rooms, scheduled, profile, joinsToday, leavesToday, totalJoins, totalLeaves] = await Promise.all([
         supabase.from("telegram_accounts").select("id", { count: "exact", head: true }),
         supabase.from("rooms").select("id", { count: "exact", head: true }),
         supabase
@@ -28,6 +30,24 @@ function DashboardPage() {
           .select("id", { count: "exact", head: true })
           .eq("status", "pending"),
         supabase.from("profiles").select("credits, display_name").eq("id", user!.id).maybeSingle(),
+        supabase
+          .from("telegram_member_events")
+          .select("id", { count: "exact", head: true })
+          .eq("event_type", "join")
+          .gte("occurred_at", todayStart.toISOString()),
+        supabase
+          .from("telegram_member_events")
+          .select("id", { count: "exact", head: true })
+          .in("event_type", ["leave", "kicked"])
+          .gte("occurred_at", todayStart.toISOString()),
+        supabase
+          .from("telegram_member_events")
+          .select("id", { count: "exact", head: true })
+          .eq("event_type", "join"),
+        supabase
+          .from("telegram_member_events")
+          .select("id", { count: "exact", head: true })
+          .in("event_type", ["leave", "kicked"]),
       ]);
       return {
         accounts: accounts.count ?? 0,
@@ -35,6 +55,9 @@ function DashboardPage() {
         pending: scheduled.count ?? 0,
         credits: profile.data?.credits ?? 0,
         name: profile.data?.display_name ?? "",
+        joinsToday: joinsToday.count ?? 0,
+        leavesToday: leavesToday.count ?? 0,
+        netTotal: (totalJoins.count ?? 0) - (totalLeaves.count ?? 0),
       };
     },
   });
@@ -72,6 +95,9 @@ function DashboardPage() {
     { label: "Créditos", value: stats.data?.credits ?? 0, icon: Wallet },
     { label: "Contas Telegram", value: stats.data?.accounts ?? 0, icon: Send },
     { label: "Grupos", value: stats.data?.rooms ?? 0, icon: Users },
+    { label: "Entradas hoje", value: stats.data?.joinsToday ?? 0, icon: UserPlus },
+    { label: "Saídas hoje", value: stats.data?.leavesToday ?? 0, icon: UserMinus },
+    { label: "Saldo de membros", value: stats.data?.netTotal ?? 0, icon: Users },
   ];
 
   return (
