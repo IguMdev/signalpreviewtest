@@ -314,7 +314,7 @@ function MensagensPage() {
                     />
                     Foto
                   </Button>
-                  <Button size="sm" onClick={() => openNew(room.id)}>
+                  <Button size="sm" onClick={() => openNew(room.id)} data-tour="add-schedule">
                     <Plus className="size-4" />
                     Adicionar
                   </Button>
