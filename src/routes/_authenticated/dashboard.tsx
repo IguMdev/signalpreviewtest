@@ -102,8 +102,8 @@ function DashboardPage() {
     { label: "Contas Telegram", value: stats.data?.accounts ?? 0, icon: Send },
     { label: "Bots ativos", value: stats.data?.activeBots ?? 0, icon: Bot },
     { label: "Grupos", value: stats.data?.rooms ?? 0, icon: Users },
-    { label: "Entradas hoje", value: stats.data?.joinsToday ?? 0, icon: UserPlus },
-    { label: "Saídas hoje", value: stats.data?.leavesToday ?? 0, icon: UserMinus },
+    { label: "Entrada de Membros", value: stats.data?.joinsToday ?? 0, icon: UserPlus },
+    { label: "Saída de Membros", value: stats.data?.leavesToday ?? 0, icon: UserMinus },
     { label: "Saldo de membros", value: stats.data?.netTotal ?? 0, icon: Users },
   ];
 
