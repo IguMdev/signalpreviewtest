@@ -1,3 +1,25 @@
+function fillForm(
+  user: ReturnType<typeof userEvent.setup>,
+  dialog: HTMLElement,
+  apiId = "12345",
+) {
+  return (async () => {
+    await user.type(
+      within(dialog).getByPlaceholderText(S.fields.accountNamePlaceholder),
+      "Conta",
+    );
+    await user.type(
+      within(dialog).getByPlaceholderText(S.fields.phonePlaceholder),
+      "+5511999999999",
+    );
+    await user.type(within(dialog).getByPlaceholderText("12345678"), apiId);
+    await user.type(
+      within(dialog).getByPlaceholderText("abcdef1234567890..."),
+      "abcdefabcdef",
+    );
+  })();
+}
+
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -131,10 +153,7 @@ describe("Fluxo Premium e2e (componente)", () => {
     const user = userEvent.setup();
     renderPage();
     const dialog = await abrirDialogPremium(user);
-    await user.type(within(dialog).getByLabelText(S.fields.accountName), "Conta");
-    await user.type(within(dialog).getByLabelText(S.fields.phone), "+5511999999999");
-    await user.type(within(dialog).getByLabelText(S.fields.apiId), "abc");
-    await user.type(within(dialog).getByLabelText(S.fields.apiHash), "abcdefabcdef");
+    await fillForm(user, dialog, "abc");
     await user.click(within(dialog).getByRole("button", { name: S.buttons.requestCode }));
     expect(toastError).toHaveBeenCalledWith(S.toasts.invalidApiId);
   });
@@ -143,16 +162,13 @@ describe("Fluxo Premium e2e (componente)", () => {
     const user = userEvent.setup();
     renderPage();
     const dialog = await abrirDialogPremium(user);
-    await user.type(within(dialog).getByLabelText(S.fields.accountName), "Conta");
-    await user.type(within(dialog).getByLabelText(S.fields.phone), "+5511999999999");
-    await user.type(within(dialog).getByLabelText(S.fields.apiId), "12345");
-    await user.type(within(dialog).getByLabelText(S.fields.apiHash), "abcdefabcdef");
+    await fillForm(user, dialog);
     await user.click(within(dialog).getByRole("button", { name: S.buttons.requestCode }));
 
     await waitFor(() => expect(reqCodeMock).toHaveBeenCalled());
     expect(toastSuccess).toHaveBeenCalledWith(S.toasts.codeSent);
     expect(await within(dialog).findByText(S.codeStep.heading)).toBeInTheDocument();
-    expect(within(dialog).getByLabelText(S.fields.code)).toBeInTheDocument();
+    expect(within(dialog).getByPlaceholderText("12345")).toBeInTheDocument();
     // botão reenviar começa em cooldown
     const resendBtn = within(dialog).getByRole("button", { name: /Reenviar em \d+s/ });
     expect(resendBtn).toBeDisabled();
@@ -164,15 +180,12 @@ describe("Fluxo Premium e2e (componente)", () => {
     const user = userEvent.setup();
     renderPage();
     const dialog = await abrirDialogPremium(user);
-    await user.type(within(dialog).getByLabelText(S.fields.accountName), "C");
-    await user.type(within(dialog).getByLabelText(S.fields.phone), "+5511999999999");
-    await user.type(within(dialog).getByLabelText(S.fields.apiId), "12345");
-    await user.type(within(dialog).getByLabelText(S.fields.apiHash), "abcdefabcdef");
+    await fillForm(user, dialog);
     await user.click(within(dialog).getByRole("button", { name: S.buttons.requestCode }));
     await within(dialog).findByText(S.codeStep.heading);
-    await user.type(within(dialog).getByLabelText(S.fields.code), "12345");
+    await user.type(within(dialog).getByPlaceholderText("12345"), "12345");
     await user.click(within(dialog).getByRole("button", { name: S.buttons.connect }));
     await waitFor(() => expect(toastMessage).toHaveBeenCalledWith(S.toasts.needs2fa));
-    expect(await within(dialog).findByLabelText(S.fields.twoFa)).toBeInTheDocument();
+    expect(await within(dialog).findByText(S.fields.twoFa)).toBeInTheDocument();
   });
 });
