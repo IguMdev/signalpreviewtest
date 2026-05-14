@@ -93,9 +93,12 @@ function RecargaPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
+        <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2 flex-wrap">
           <Sparkles className="size-6 text-primary" />
           Recarga
+          <Badge variant="secondary" className="text-[11px] font-normal animate-pulse">
+            Role para baixo para mais opções
+          </Badge>
         </h1>
         <p className="text-muted-foreground text-sm mt-1">
           Assine planos de salas e bots de engajamento para impulsionar suas operações.
