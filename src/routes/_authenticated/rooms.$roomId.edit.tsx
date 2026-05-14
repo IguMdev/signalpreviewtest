@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useParams } from "@tanstack/react-router";
+import { createFileRoute, Link, useParams, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -8,47 +8,45 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import {
-  ArrowLeft, Settings, Clock, CandlestickChart, MessageSquare, Image as ImageIcon,
-  PlayCircle, BarChart3, Globe2, ShieldAlert, Plus, Trash2,
+  Home, ChevronRight, ExternalLink, Plus, Trash2, Info, X,
 } from "lucide-react";
-import { AssetSelectorDialog } from "@/components/AssetSelectorDialog";
-import { ASSETS_CATALOG } from "@/lib/assets-catalog";
-import { Badge } from "@/components/ui/badge";
+import { ASSETS_CATALOG, type AssetCategory } from "@/lib/assets-catalog";
 
 export const Route = createFileRoute("/_authenticated/rooms/$roomId/edit")({
   component: EditRoomPage,
 });
 
-type Section = "config" | "windows" | "assets" | "templates" | "images" | "session" | "reports" | "timezone" | "stoploss";
-
-const SECTIONS: { key: Section; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
-  { key: "config", label: "Configurações", icon: Settings },
-  { key: "windows", label: "Janelas de Operação", icon: Clock },
-  { key: "assets", label: "Ativos", icon: CandlestickChart },
-  { key: "templates", label: "Templates de Mensagens", icon: MessageSquare },
-  { key: "images", label: "Imagens GAIN/LOSS", icon: ImageIcon },
-  { key: "session", label: "Mensagens de Sessão", icon: PlayCircle },
-  { key: "reports", label: "Relatórios", icon: BarChart3 },
-  { key: "timezone", label: "Fuso horário", icon: Globe2 },
-  { key: "stoploss", label: "Stop Loss", icon: ShieldAlert },
+const TIMEZONES = [
+  { v: "America/Sao_Paulo", l: "São Paulo / Brasília" },
+  { v: "America/Manaus", l: "Manaus" },
+  { v: "America/Bahia", l: "Bahia" },
+  { v: "America/Fortaleza", l: "Fortaleza" },
+  { v: "America/Recife", l: "Recife" },
+  { v: "America/Belem", l: "Belém" },
+  { v: "America/Cuiaba", l: "Cuiabá" },
+  { v: "America/New_York", l: "Nova York" },
+  { v: "America/Los_Angeles", l: "Los Angeles" },
+  { v: "Europe/Lisbon", l: "Lisboa" },
+  { v: "Europe/London", l: "Londres" },
+  { v: "UTC", l: "UTC" },
 ];
 
-const TIMEZONES = [
-  "America/Sao_Paulo","America/Manaus","America/Bahia","America/Fortaleza",
-  "America/Recife","America/Belem","America/Cuiaba","America/New_York",
-  "America/Los_Angeles","Europe/Lisbon","Europe/London","UTC",
+const TIMEFRAMES = ["M1","M2","M3","M5","M15","M30"];
+const WEEKDAYS = [
+  { v: 1, l: "Seg" }, { v: 2, l: "Ter" }, { v: 3, l: "Qua" },
+  { v: 4, l: "Qui" }, { v: 5, l: "Sex" }, { v: 6, l: "Sáb" }, { v: 0, l: "Dom" },
 ];
 
 function EditRoomPage() {
   const { roomId } = useParams({ from: "/_authenticated/rooms/$roomId/edit" });
-  const qc = useQueryClient();
-  const [section, setSection] = useState<Section>("config");
-  const [assetsOpen, setAssetsOpen] = useState(false);
+  const navigate = useNavigate();
 
   const room = useQuery({
     queryKey: ["room", roomId],
@@ -63,180 +61,168 @@ function EditRoomPage() {
     },
   });
 
+  if (room.isLoading) return <p className="text-sm text-muted-foreground p-8">Carregando...</p>;
+  if (!room.data) return <p className="text-sm text-destructive p-8">Sala não encontrada.</p>;
+
+  const r = room.data;
+  const chatId = r.room_chats?.[0]?.chat_id;
+  const accessUrl = r.access_url || (chatId ? `https://t.me/c/${String(chatId).replace(/^-?100/, "")}` : null);
+
   return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-3">
-        <Button asChild variant="ghost" size="sm">
-          <Link to="/rooms"><ArrowLeft className="size-4 mr-1" />Voltar</Link>
+    <div className="space-y-5 pb-24">
+      {/* Breadcrumb */}
+      <nav className="flex items-center gap-1.5 text-sm text-muted-foreground">
+        <Link to="/" className="flex items-center gap-1 hover:text-foreground"><Home className="size-3.5" /> Home</Link>
+        <ChevronRight className="size-3.5" />
+        <Link to="/rooms" className="hover:text-foreground">Salas</Link>
+        <ChevronRight className="size-3.5" />
+        <span className="text-foreground">Editar Sala</span>
+      </nav>
+
+      {/* Title */}
+      <div className="flex items-center gap-3 flex-wrap">
+        <h1 className="text-2xl font-bold tracking-tight">Editar Sala - {r.name}</h1>
+        {accessUrl && (
+          <Button asChild size="sm" className="bg-primary">
+            <a href={accessUrl} target="_blank" rel="noreferrer">
+              <ExternalLink className="size-4 mr-1" />Acessar
+            </a>
+          </Button>
+        )}
+      </div>
+
+      <BaseConfigCard room={r} />
+      <MessagesInfoCard />
+      <WindowsCard roomId={roomId} />
+      <TimezoneCard room={r} />
+      <StopLossCard room={r} />
+      <MarketTipsCard room={r} />
+
+      {/* Sticky footer */}
+      <div className="fixed bottom-0 left-0 right-0 lg:left-[var(--sidebar-width,16rem)] bg-background/95 backdrop-blur border-t border-border p-4 flex justify-end gap-2 z-40">
+        <Button variant="outline" onClick={() => navigate({ to: "/rooms" })}>Cancelar</Button>
+        <Button onClick={() => toast.success("Use os botões 'Salvar' de cada seção para persistir mudanças")}>
+          Salvar
         </Button>
-        <div>
-          <h1 className="text-xl font-bold tracking-tight">{room.data?.name ?? "Sala"}</h1>
-          <p className="text-xs text-muted-foreground">Editar configuração da sala</p>
-        </div>
       </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-[240px_1fr] gap-4">
-        <Card className="p-2 h-fit lg:sticky lg:top-4">
-          <nav className="flex lg:flex-col gap-1 overflow-x-auto">
-            {SECTIONS.map(({ key, label, icon: Icon }) => (
-              <button
-                key={key}
-                onClick={() => key === "assets" ? setAssetsOpen(true) : setSection(key)}
-                className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm text-left whitespace-nowrap transition-colors ${
-                  section === key && key !== "assets"
-                    ? "bg-primary text-primary-foreground"
-                    : "hover:bg-muted text-foreground"
-                }`}
-              >
-                <Icon className="size-4 shrink-0" />
-                {label}
-              </button>
-            ))}
-          </nav>
-        </Card>
-
-        <div className="min-w-0">
-          {section === "config" && room.data && <ConfigSection room={room.data} />}
-          {section === "timezone" && room.data && <TimezoneSection room={room.data} />}
-          {section === "stoploss" && room.data && <StopLossSection room={room.data} />}
-          {section === "windows" && <WindowsSection roomId={roomId} />}
-          {section === "templates" && <TemplatesSection roomId={roomId} />}
-          {section === "images" && <PlaceholderSection title="Imagens GAIN / LOSS" />}
-          {section === "session" && <PlaceholderSection title="Mensagens de Sessão" />}
-          {section === "reports" && <PlaceholderSection title="Relatórios de fim de sessão" />}
-        </div>
-      </div>
-
-      <AssetSelectorDialog
-        roomId={assetsOpen ? roomId : null}
-        roomName={room.data?.name}
-        onClose={() => { setAssetsOpen(false); qc.invalidateQueries({ queryKey: ["room", roomId] }); }}
-      />
     </div>
   );
-
-  function PlaceholderSection({ title }: { title: string }) {
-    return (
-      <Card className="p-8 text-center">
-        <h2 className="text-lg font-semibold mb-2">{title}</h2>
-        <p className="text-sm text-muted-foreground">Esta seção será habilitada em breve.</p>
-      </Card>
-    );
-  }
 }
 
 /* ============================================================ */
-/* Config Section                                                */
+/* Base Config                                                   */
 /* ============================================================ */
 
-type RoomData = {
-  id: string;
-  name: string;
-  description: string | null;
-  broker: string | null;
-  welcome_message: string | null;
-  default_account_id: string | null;
-  timezone: string;
-  stop_loss_enabled: boolean;
-  stop_loss_value: number | null;
-  room_chats: { id: string; chat_id: number; chat_title: string | null }[];
-};
+type RoomData = any;
 
-function ConfigSection({ room }: { room: RoomData }) {
+function BaseConfigCard({ room }: { room: RoomData }) {
   const qc = useQueryClient();
-  const [name, setName] = useState(room.name);
-  const [broker, setBroker] = useState(room.broker ?? "");
-  const [welcome, setWelcome] = useState(room.welcome_message ?? "");
   const [accountId, setAccountId] = useState(room.default_account_id ?? "");
-  const [chatId, setChatId] = useState(String(room.room_chats[0]?.chat_id ?? ""));
-  const [chatTitle, setChatTitle] = useState(room.room_chats[0]?.chat_title ?? "");
-
-  useEffect(() => {
-    setName(room.name);
-    setBroker(room.broker ?? "");
-    setWelcome(room.welcome_message ?? "");
-    setAccountId(room.default_account_id ?? "");
-    setChatId(String(room.room_chats[0]?.chat_id ?? ""));
-    setChatTitle(room.room_chats[0]?.chat_title ?? "");
-  }, [room]);
+  const [premiumId, setPremiumId] = useState(room.premium_account_id ?? "");
+  const [broker, setBroker] = useState(room.broker ?? "");
+  const [chatId, setChatId] = useState(String(room.room_chats?.[0]?.chat_id ?? ""));
 
   const accounts = useQuery({
     queryKey: ["telegram-accounts"],
     queryFn: async () => {
-      const { data } = await supabase.from("telegram_accounts").select("id, label");
+      const { data } = await supabase.from("telegram_accounts").select("id, label, account_type, bot_username, phone");
       return data ?? [];
     },
   });
 
+  const bots = (accounts.data ?? []).filter((a: any) => a.account_type === "bot");
+  const premiums = (accounts.data ?? []).filter((a: any) => a.account_type !== "bot");
+
   const save = useMutation({
     mutationFn: async () => {
       const { error } = await supabase.from("rooms").update({
-        name,
-        broker: broker || null,
-        welcome_message: welcome || null,
         default_account_id: accountId || null,
+        premium_account_id: premiumId || null,
+        broker: broker || null,
       }).eq("id", room.id);
       if (error) throw error;
 
-      const existing = room.room_chats[0];
       if (chatId) {
-        const payload = { chat_id: Number(chatId), chat_title: chatTitle || null };
+        const existing = room.room_chats?.[0];
         if (existing) {
-          const { error: e2 } = await supabase.from("room_chats").update(payload).eq("id", existing.id);
-          if (e2) throw e2;
+          await supabase.from("room_chats").update({ chat_id: Number(chatId) }).eq("id", existing.id);
         } else {
           const { data: u } = await supabase.auth.getUser();
-          const { error: e2 } = await supabase.from("room_chats").insert({ ...payload, room_id: room.id, user_id: u.user!.id });
-          if (e2) throw e2;
+          await supabase.from("room_chats").insert({ chat_id: Number(chatId), room_id: room.id, user_id: u.user!.id });
         }
       }
     },
-    onSuccess: () => {
-      toast.success("Configurações salvas");
-      qc.invalidateQueries({ queryKey: ["room", room.id] });
-    },
+    onSuccess: () => { toast.success("Configurações base salvas"); qc.invalidateQueries({ queryKey: ["room", room.id] }); },
     onError: (e: Error) => toast.error(e.message),
   });
 
   return (
-    <Card className="p-6 space-y-5">
-      <div>
-        <h2 className="text-lg font-semibold">Configurações</h2>
-        <p className="text-xs text-muted-foreground">Dados básicos da sala.</p>
-      </div>
+    <Card className="p-6 space-y-4">
+      <h2 className="text-lg font-semibold">Configurações Base</h2>
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label>Título da sala</Label>
-          <Input value={name} onChange={(e) => setName(e.target.value)} />
-        </div>
-        <div className="space-y-2">
-          <Label>Corretora</Label>
-          <Input value={broker} onChange={(e) => setBroker(e.target.value)} />
-        </div>
-        <div className="space-y-2">
-          <Label>Conta Telegram (Bot)</Label>
+        <div className="space-y-1.5">
+          <Label className="text-xs font-medium">Conta do Telegram (conta do bot)</Label>
           <Select value={accountId} onValueChange={setAccountId}>
             <SelectTrigger><SelectValue placeholder="Escolha um bot" /></SelectTrigger>
             <SelectContent>
-              {accounts.data?.map((a) => (<SelectItem key={a.id} value={a.id}>{a.label}</SelectItem>))}
+              {bots.map((a: any) => (
+                <SelectItem key={a.id} value={a.id}>{a.label} {a.bot_username ? `(@${a.bot_username})` : ""}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
-        <div className="space-y-2">
-          <Label>ID do grupo / canal</Label>
-          <Input value={chatId} onChange={(e) => setChatId(e.target.value)} placeholder="-1001234..." />
+
+        <div className="space-y-1.5">
+          <Label className="text-xs font-medium">Conta Premium</Label>
+          <Select value={premiumId} onValueChange={setPremiumId}>
+            <SelectTrigger><SelectValue placeholder="Escolha uma conta premium" /></SelectTrigger>
+            <SelectContent>
+              {premiums.length === 0 && <SelectItem value="__none" disabled>Nenhuma disponível</SelectItem>}
+              {premiums.map((a: any) => (
+                <SelectItem key={a.id} value={a.id}>{a.label} {a.phone ? `(${a.phone})` : ""}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">
+            Conta premium para envio rápido de mensagens. Será usada em conjunto com bot para botões.
+          </p>
         </div>
-        <div className="space-y-2 md:col-span-2">
-          <Label>Nome do grupo (apelido)</Label>
-          <Input value={chatTitle} onChange={(e) => setChatTitle(e.target.value)} />
+
+        <div className="space-y-1.5">
+          <Label className="text-xs font-medium">Corretora</Label>
+          <div className="relative">
+            <Input value={broker} onChange={(e) => setBroker(e.target.value)} placeholder="ex.: TitaniumBroker (titaniumbroker.io)" />
+            {broker && (
+              <button
+                type="button"
+                onClick={() => setBroker("")}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              ><X className="size-4" /></button>
+            )}
+          </div>
         </div>
-        <div className="space-y-2 md:col-span-2">
-          <Label>Mensagem de boas-vindas</Label>
-          <Textarea value={welcome} onChange={(e) => setWelcome(e.target.value)} rows={4} />
+
+        <div className="space-y-1.5">
+          <Label className="text-xs font-medium">ID do Grupo</Label>
+          <Input value={chatId} onChange={(e) => setChatId(e.target.value)} placeholder="-1001234567890" />
         </div>
       </div>
+
+      <div className="flex gap-3 p-4 rounded-md bg-blue-500/10 border border-blue-500/30">
+        <Info className="size-5 text-blue-400 shrink-0 mt-0.5" />
+        <div className="text-sm space-y-1">
+          <p className="font-semibold text-foreground">💡 Sistema de Envio Híbrido</p>
+          <ul className="list-disc list-inside space-y-0.5 text-muted-foreground">
+            <li><span className="font-medium text-foreground">Conta Premium:</span> Envio rápido de mensagens (sem rate limits)</li>
+            <li><span className="font-medium text-foreground">Bot:</span> Adição de botões inline (contas premium não suportam botões)</li>
+            <li><span className="font-medium text-foreground">Resultado:</span> Velocidade + Funcionalidade completa</li>
+          </ul>
+        </div>
+      </div>
+
       <div className="flex justify-end pt-2 border-t border-border">
-        <Button onClick={() => save.mutate()} disabled={save.isPending}>
+        <Button size="sm" onClick={() => save.mutate()} disabled={save.isPending}>
           {save.isPending ? "Salvando..." : "Salvar seção"}
         </Button>
       </div>
@@ -245,10 +231,329 @@ function ConfigSection({ room }: { room: RoomData }) {
 }
 
 /* ============================================================ */
+/* Messages Info                                                 */
+/* ============================================================ */
+
+function MessagesInfoCard() {
+  return (
+    <Card className="p-6 space-y-3">
+      <h2 className="text-lg font-semibold">Configurações de Mensagens</h2>
+      <div className="p-3 rounded-md bg-muted/40 text-sm space-y-1">
+        <p><span className="font-semibold">Tipos de arquivos suportados:</span></p>
+        <p className="text-muted-foreground">Imagens: JPG, JPEG, PNG, GIF</p>
+        <p className="text-muted-foreground">Stickers: WEBP (sticker estático), TGS (sticker animado), WEBM (sticker de vídeo)</p>
+      </div>
+      <div className="p-3 rounded-md bg-muted/40 text-sm space-y-1">
+        <p><span className="font-semibold">Tags HTML:</span> <code className="text-xs">&lt;b&gt;negrito&lt;/b&gt;, &lt;i&gt;itálico&lt;/i&gt;, &lt;u&gt;sublinhado&lt;/u&gt;, &lt;s&gt;tachado&lt;/s&gt;, &lt;a href="url"&gt;link&lt;/a&gt;</code></p>
+        <p><span className="font-semibold">Macros para Template de Sinal:</span> <code className="text-xs">{`{ATIVO}, {TIMEFRAME}, {DIRECAO}, {ENTRADA}, {ENTRADAGALE1}, {ENTRADAGALE2}`}</code></p>
+      </div>
+    </Card>
+  );
+}
+
+/* ============================================================ */
+/* Windows                                                       */
+/* ============================================================ */
+
+function WindowsCard({ roomId }: { roomId: string }) {
+  const qc = useQueryClient();
+  const list = useQuery({
+    queryKey: ["room_windows", roomId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("room_windows").select("*").eq("room_id", roomId)
+        .order("start_time", { ascending: true });
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const create = useMutation({
+    mutationFn: async () => {
+      const { data: u } = await supabase.auth.getUser();
+      const { error } = await supabase.from("room_windows").insert({
+        room_id: roomId,
+        user_id: u.user!.id,
+        name: `SESSÃO ${new Date().toTimeString().slice(0, 5)}`,
+        start_time: "09:00",
+        end_time: "17:00",
+        weekdays: [1, 2, 3, 4, 5],
+        timeframes: ["M1"],
+        signals_qty: 10,
+        max_losses: 0,
+        martingale: 2,
+        signal_type: "message",
+        use_all_assets: true,
+        asset_filter: [],
+        is_active: true,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => { toast.success("Janela adicionada"); qc.invalidateQueries({ queryKey: ["room_windows", roomId] }); },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  return (
+    <Card className="p-6 space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-semibold">Janelas de Operação</h2>
+        <Button size="sm" onClick={() => create.mutate()} disabled={create.isPending}>
+          <Plus className="size-4 mr-1" />Adicionar Janela
+        </Button>
+      </div>
+
+      {list.isLoading && <p className="text-sm text-muted-foreground">Carregando...</p>}
+      {list.data?.length === 0 && (
+        <div className="text-sm text-muted-foreground text-center py-8 border border-dashed rounded-md">
+          Nenhuma janela cadastrada. Clique em "Adicionar Janela".
+        </div>
+      )}
+
+      <div className="space-y-4">
+        {list.data?.map((w: any) => (
+          <WindowItem key={w.id} window={w} roomId={roomId} />
+        ))}
+      </div>
+    </Card>
+  );
+}
+
+function WindowItem({ window: w, roomId }: { window: any; roomId: string }) {
+  const qc = useQueryClient();
+  const [name, setName] = useState(w.name);
+  const [start, setStart] = useState(w.start_time.slice(0, 5));
+  const [end, setEnd] = useState(w.end_time.slice(0, 5));
+  const [signalsQty, setSignalsQty] = useState(String(w.signals_qty ?? 10));
+  const [maxLosses, setMaxLosses] = useState(String(w.max_losses ?? 0));
+  const [martingale, setMartingale] = useState(String(w.martingale ?? 2));
+  const [signalType, setSignalType] = useState(w.signal_type ?? "message");
+  const [timeframes, setTimeframes] = useState<string[]>(w.timeframes ?? ["M1"]);
+  const [days, setDays] = useState<number[]>(w.weekdays ?? []);
+  const [useAll, setUseAll] = useState(w.use_all_assets ?? true);
+  const [filter, setFilter] = useState<string[]>(w.asset_filter ?? []);
+
+  const save = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.from("room_windows").update({
+        name,
+        start_time: start,
+        end_time: end,
+        signals_qty: parseInt(signalsQty, 10) || 0,
+        max_losses: parseInt(maxLosses, 10) || 0,
+        martingale: parseInt(martingale, 10) || 0,
+        signal_type: signalType,
+        timeframes,
+        weekdays: days,
+        use_all_assets: useAll,
+        asset_filter: filter,
+      }).eq("id", w.id);
+      if (error) throw error;
+    },
+    onSuccess: () => { toast.success("Janela salva"); qc.invalidateQueries({ queryKey: ["room_windows", roomId] }); },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const del = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.from("room_windows").delete().eq("id", w.id);
+      if (error) throw error;
+    },
+    onSuccess: () => { toast.success("Janela removida"); qc.invalidateQueries({ queryKey: ["room_windows", roomId] }); },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  function toggleArr<T>(arr: T[], item: T): T[] {
+    return arr.includes(item) ? arr.filter((x) => x !== item) : [...arr, item];
+  }
+
+  return (
+    <div className="border rounded-md p-4 space-y-4 bg-card/40">
+      {/* Top row: Nome | Início | Fim | Qtd Sinais | Max Losses | Martingale | Tipo de Sinal | trash */}
+      <div className="grid grid-cols-2 md:grid-cols-7 gap-3 items-end">
+        <div className="space-y-1 col-span-2 md:col-span-1">
+          <Label className="text-xs">Nome da Sessão</Label>
+          <Input value={name} onChange={(e) => setName(e.target.value)} className="h-9" />
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs">Início</Label>
+          <Input type="time" value={start} onChange={(e) => setStart(e.target.value)} className="h-9 text-center" />
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs">Fim</Label>
+          <Input type="time" value={end} onChange={(e) => setEnd(e.target.value)} className="h-9 text-center" />
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs">Qtd. Sinais</Label>
+          <Input value={signalsQty} onChange={(e) => setSignalsQty(e.target.value)} className="h-9" inputMode="numeric" />
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs">Max Losses (Stop Loss)</Label>
+          <Input value={maxLosses} onChange={(e) => setMaxLosses(e.target.value)} className="h-9" inputMode="numeric" />
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs">Martingale</Label>
+          <Input value={martingale} onChange={(e) => setMartingale(e.target.value)} className="h-9" inputMode="numeric" />
+        </div>
+        <div className="space-y-1">
+          <div className="flex items-center justify-between">
+            <Label className="text-xs">Tipo de Sinal</Label>
+            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => del.mutate()} disabled={del.isPending}>
+              <Trash2 className="size-3.5 text-destructive" />
+            </Button>
+          </div>
+          <div className="flex items-center gap-3 h-9">
+            <label className="flex items-center gap-1 text-xs cursor-pointer">
+              <input type="radio" checked={signalType === "message"} onChange={() => setSignalType("message")} />
+              Mensagem
+            </label>
+            <label className="flex items-center gap-1 text-xs cursor-pointer">
+              <input type="radio" checked={signalType === "list"} onChange={() => setSignalType("list")} />
+              Lista
+            </label>
+          </div>
+        </div>
+      </div>
+
+      {/* Timeframes */}
+      <div className="space-y-1.5">
+        <Label className="text-xs">Timeframes</Label>
+        <div className="flex flex-wrap gap-3">
+          {TIMEFRAMES.map((tf) => (
+            <label key={tf} className="flex items-center gap-1.5 text-sm cursor-pointer">
+              <Checkbox
+                checked={timeframes.includes(tf)}
+                onCheckedChange={() => setTimeframes((p) => toggleArr(p, tf))}
+              />
+              {tf}
+            </label>
+          ))}
+        </div>
+      </div>
+
+      {/* Weekdays */}
+      <div className="space-y-1.5">
+        <Label className="text-xs">Dias da Semana</Label>
+        <div className="flex flex-wrap gap-3">
+          {WEEKDAYS.map((d) => (
+            <label key={d.v} className="flex items-center gap-1.5 text-sm cursor-pointer">
+              <Checkbox
+                checked={days.includes(d.v)}
+                onCheckedChange={() => setDays((p) => toggleArr(p, d.v).sort())}
+              />
+              {d.l}.
+            </label>
+          ))}
+        </div>
+      </div>
+
+      {/* Use all assets */}
+      <label className="flex items-center gap-2 text-sm cursor-pointer w-fit">
+        <Checkbox checked={useAll} onCheckedChange={(v) => setUseAll(!!v)} />
+        Usar Todos os Ativos
+      </label>
+
+      {!useAll && <WindowAssets selected={filter} setSelected={setFilter} roomId={roomId} windowId={w.id} />}
+
+      <div className="flex justify-end pt-2 border-t border-border">
+        <Button size="sm" onClick={() => save.mutate()} disabled={save.isPending}>
+          {save.isPending ? "Salvando..." : "Salvar janela"}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+/* Asset grid in 4 columns: Forex / Cripto / Ações / OTC */
+function WindowAssets({
+  selected, setSelected, roomId, windowId,
+}: {
+  selected: string[];
+  setSelected: (v: string[]) => void;
+  roomId: string;
+  windowId: string;
+}) {
+  const [search, setSearch] = useState("");
+
+  // load per-asset open/payout from room_assets
+  const assets = useQuery({
+    queryKey: ["room_assets", roomId],
+    queryFn: async () => {
+      const { data } = await supabase.from("room_assets").select("asset_code, payout, is_open").eq("room_id", roomId);
+      const map: Record<string, { payout: number; is_open: boolean }> = {};
+      (data ?? []).forEach((a: any) => { map[a.asset_code] = { payout: Number(a.payout), is_open: a.is_open }; });
+      return map;
+    },
+  });
+
+  function toggle(code: string) {
+    setSelected(selected.includes(code) ? selected.filter((c) => c !== code) : [...selected, code]);
+  }
+
+  return (
+    <div className="space-y-3 border rounded-md p-3 bg-background/40">
+      <div className="flex items-center gap-2 flex-wrap text-xs">
+        <span className="font-medium">Legenda:</span>
+        <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/40 hover:bg-emerald-500/20">Aberto</Badge>
+        <span className="text-muted-foreground">mercado disponível</span>
+        <Badge variant="outline" className="text-muted-foreground">Fechado</Badge>
+        <span className="text-muted-foreground">mercado indisponível</span>
+        <Badge className="bg-emerald-600/30 text-emerald-200 border-emerald-600/40">≥ 70%</Badge>
+        <span className="text-muted-foreground">Payout {"<"} 70%</span>
+      </div>
+
+      <Input
+        placeholder="Buscar ativo..."
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        className="h-8 text-sm"
+      />
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {(Object.keys(ASSETS_CATALOG) as AssetCategory[]).map((cat) => (
+          <div key={cat} className="space-y-1.5">
+            <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{cat}</h4>
+            <div className="space-y-1 max-h-72 overflow-y-auto pr-1">
+              {ASSETS_CATALOG[cat]
+                .filter((a) => a.toLowerCase().includes(search.toLowerCase()))
+                .map((code) => {
+                  const meta = assets.data?.[code];
+                  const checked = selected.includes(code);
+                  return (
+                    <div key={code} className="flex items-center gap-2 text-xs">
+                      <Checkbox checked={checked} onCheckedChange={() => toggle(code)} />
+                      <span className="flex-1 font-mono">{code}</span>
+                      <Badge
+                        variant={meta?.is_open === false ? "outline" : "default"}
+                        className={meta?.is_open === false
+                          ? "h-4 text-[10px] px-1.5"
+                          : "h-4 text-[10px] px-1.5 bg-emerald-500/20 text-emerald-300 border-emerald-500/40 hover:bg-emerald-500/20"}
+                      >
+                        {meta?.is_open === false ? "Fechado" : "Aberto"}
+                      </Badge>
+                      <span className="text-[10px] text-muted-foreground tabular-nums w-10 text-right">
+                        {meta ? `${(meta.payout * 100).toFixed(0)}%` : "—"}
+                      </span>
+                    </div>
+                  );
+                })}
+            </div>
+          </div>
+        ))}
+      </div>
+      <p className="text-xs text-muted-foreground">
+        * Para editar payout/aberto de cada ativo, use o seletor global de ativos da sala.
+      </p>
+      {/* keep windowId referenced to satisfy noUnusedParams */}
+      <input type="hidden" value={windowId} readOnly />
+    </div>
+  );
+}
+
+/* ============================================================ */
 /* Timezone                                                      */
 /* ============================================================ */
 
-function TimezoneSection({ room }: { room: RoomData }) {
+function TimezoneCard({ room }: { room: RoomData }) {
   const qc = useQueryClient();
   const [tz, setTz] = useState(room.timezone);
   const save = useMutation({
@@ -260,22 +565,23 @@ function TimezoneSection({ room }: { room: RoomData }) {
     onError: (e: Error) => toast.error(e.message),
   });
   return (
-    <Card className="p-6 space-y-5">
-      <div>
-        <h2 className="text-lg font-semibold">Fuso horário</h2>
-        <p className="text-xs text-muted-foreground">Define o fuso usado nos horários de envio.</p>
-      </div>
-      <div className="max-w-sm space-y-2">
-        <Label>Timezone</Label>
+    <Card className="p-6 space-y-4">
+      <h2 className="text-lg font-semibold">Fuso Horário</h2>
+      <div className="max-w-md space-y-1.5">
+        <Label className="text-xs">Selecione o Fuso Horário</Label>
         <Select value={tz} onValueChange={setTz}>
           <SelectTrigger><SelectValue /></SelectTrigger>
           <SelectContent>
-            {TIMEZONES.map((t) => (<SelectItem key={t} value={t}>{t}</SelectItem>))}
+            {TIMEZONES.map((t) => (<SelectItem key={t.v} value={t.v}>{t.l}</SelectItem>))}
           </SelectContent>
         </Select>
+        <p className="text-xs text-muted-foreground">
+          Este fuso horário será usado para todos os horários da sala (sinais, sessões e mensagens agendadas).
+          Os offsets UTC variam conforme horário de verão — configure os horários no horário <span className="font-semibold">local</span> do fuso escolhido.
+        </p>
       </div>
       <div className="flex justify-end pt-2 border-t border-border">
-        <Button onClick={() => save.mutate()} disabled={save.isPending}>Salvar seção</Button>
+        <Button size="sm" onClick={() => save.mutate()} disabled={save.isPending}>Salvar seção</Button>
       </div>
     </Card>
   );
@@ -285,375 +591,68 @@ function TimezoneSection({ room }: { room: RoomData }) {
 /* Stop Loss                                                     */
 /* ============================================================ */
 
-function StopLossSection({ room }: { room: RoomData }) {
+function StopLossCard({ room }: { room: RoomData }) {
   const qc = useQueryClient();
-  const [enabled, setEnabled] = useState(room.stop_loss_enabled);
-  const [value, setValue] = useState<string>(room.stop_loss_value !== null ? String(room.stop_loss_value) : "");
+  const [msg, setMsg] = useState(room.stop_loss_message ?? "🔴 *STOP LOSS ATINGIDO* 🔴");
   const save = useMutation({
     mutationFn: async () => {
-      const v = parseFloat(value.replace(",", "."));
-      const { error } = await supabase.from("rooms").update({
-        stop_loss_enabled: enabled,
-        stop_loss_value: isNaN(v) ? null : v,
-      }).eq("id", room.id);
+      const { error } = await supabase.from("rooms").update({ stop_loss_message: msg }).eq("id", room.id);
       if (error) throw error;
     },
-    onSuccess: () => { toast.success("Stop Loss salvo"); qc.invalidateQueries({ queryKey: ["room", room.id] }); },
+    onSuccess: () => { toast.success("Mensagem de Stop Loss salva"); qc.invalidateQueries({ queryKey: ["room", room.id] }); },
     onError: (e: Error) => toast.error(e.message),
   });
   return (
-    <Card className="p-6 space-y-5">
-      <div>
-        <h2 className="text-lg font-semibold">Stop Loss</h2>
-        <p className="text-xs text-muted-foreground">Limite de perdas consecutivas — encerra a sessão automaticamente.</p>
-      </div>
-      <div className="flex items-center justify-between p-3 rounded-md bg-muted/40">
-        <Label className="font-medium">Ativar Stop Loss</Label>
-        <Switch checked={enabled} onCheckedChange={setEnabled} />
-      </div>
-      {enabled && (
-        <div className="max-w-xs space-y-2">
-          <Label>Limite (perdas seguidas)</Label>
-          <Input value={value} onChange={(e) => setValue(e.target.value)} placeholder="3" inputMode="decimal" />
-        </div>
-      )}
-      <div className="flex justify-end pt-2 border-t border-border">
-        <Button onClick={() => save.mutate()} disabled={save.isPending}>Salvar seção</Button>
-      </div>
-    </Card>
-  );
-}
-/* ============================================================ */
-/* Windows Section                                              */
-/* ============================================================ */
-
-const WEEKDAYS = [
-  { v: 0, l: "Dom" }, { v: 1, l: "Seg" }, { v: 2, l: "Ter" },
-  { v: 3, l: "Qua" }, { v: 4, l: "Qui" }, { v: 5, l: "Sex" }, { v: 6, l: "Sáb" },
-];
-
-type Window = {
-  id: string;
-  name: string;
-  start_time: string;
-  end_time: string;
-  weekdays: number[];
-  asset_filter: string[];
-  is_active: boolean;
-};
-
-function WindowsSection({ roomId }: { roomId: string }) {
-  const qc = useQueryClient();
-  const list = useQuery({
-    queryKey: ["room_windows", roomId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("room_windows").select("*").eq("room_id", roomId)
-        .order("start_time", { ascending: true });
-      if (error) throw error;
-      return data as Window[];
-    },
-  });
-
-  const create = useMutation({
-    mutationFn: async () => {
-      const { data: u } = await supabase.auth.getUser();
-      const { error } = await supabase.from("room_windows").insert({
-        room_id: roomId,
-        user_id: u.user!.id,
-        name: "Nova janela",
-        start_time: "09:00",
-        end_time: "17:00",
-        weekdays: [1, 2, 3, 4, 5],
-        asset_filter: [],
-        is_active: true,
-      });
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      toast.success("Janela criada");
-      qc.invalidateQueries({ queryKey: ["room_windows", roomId] });
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
-  return (
-    <Card className="p-6 space-y-4">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h2 className="text-lg font-semibold">Janelas de Operação</h2>
-          <p className="text-xs text-muted-foreground">
-            Defina horários, dias e ativos permitidos para envio de sinais.
-          </p>
-        </div>
-        <Button size="sm" onClick={() => create.mutate()} disabled={create.isPending}>
-          <Plus className="size-4 mr-1" />Nova janela
-        </Button>
-      </div>
-
-      {list.isLoading && <p className="text-sm text-muted-foreground">Carregando...</p>}
-      {list.data?.length === 0 && (
-        <div className="text-sm text-muted-foreground text-center py-6 border border-dashed rounded-md">
-          Nenhuma janela cadastrada.
-        </div>
-      )}
-
-      <div className="space-y-3">
-        {list.data?.map((w) => (
-          <WindowRow key={w.id} window={w} roomId={roomId} />
-        ))}
-      </div>
-    </Card>
-  );
-}
-
-function WindowRow({ window: w, roomId }: { window: Window; roomId: string }) {
-  const qc = useQueryClient();
-  const [name, setName] = useState(w.name);
-  const [start, setStart] = useState(w.start_time.slice(0, 5));
-  const [end, setEnd] = useState(w.end_time.slice(0, 5));
-  const [days, setDays] = useState<number[]>(w.weekdays);
-  const [assets, setAssets] = useState<string[]>(w.asset_filter);
-  const [active, setActive] = useState(w.is_active);
-  const [showAssets, setShowAssets] = useState(false);
-
-  const allAssets = Object.values(ASSETS_CATALOG).flat();
-
-  const save = useMutation({
-    mutationFn: async () => {
-      const { error } = await supabase.from("room_windows").update({
-        name, start_time: start, end_time: end,
-        weekdays: days, asset_filter: assets, is_active: active,
-      }).eq("id", w.id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      toast.success("Janela salva");
-      qc.invalidateQueries({ queryKey: ["room_windows", roomId] });
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
-  const del = useMutation({
-    mutationFn: async () => {
-      const { error } = await supabase.from("room_windows").delete().eq("id", w.id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      toast.success("Janela removida");
-      qc.invalidateQueries({ queryKey: ["room_windows", roomId] });
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
-  function toggleDay(d: number) {
-    setDays((prev) => prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d].sort());
-  }
-  function toggleAsset(a: string) {
-    setAssets((prev) => prev.includes(a) ? prev.filter((x) => x !== a) : [...prev, a]);
-  }
-
-  return (
-    <div className="border rounded-md p-4 space-y-3 bg-card">
-      <div className="flex items-center justify-between gap-2">
-        <Input value={name} onChange={(e) => setName(e.target.value)} className="max-w-xs font-medium" />
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2">
-            <Label className="text-xs">Ativa</Label>
-            <Switch checked={active} onCheckedChange={setActive} />
-          </div>
-          <Button variant="ghost" size="icon" onClick={() => del.mutate()} disabled={del.isPending}>
-            <Trash2 className="size-4 text-destructive" />
-          </Button>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="space-y-1">
-          <Label className="text-xs">Início</Label>
-          <Input type="time" value={start} onChange={(e) => setStart(e.target.value)} />
-        </div>
-        <div className="space-y-1">
-          <Label className="text-xs">Fim</Label>
-          <Input type="time" value={end} onChange={(e) => setEnd(e.target.value)} />
-        </div>
-      </div>
-
-      <div className="space-y-2">
-        <Label className="text-xs">Dias da semana</Label>
-        <div className="flex flex-wrap gap-1">
-          {WEEKDAYS.map((d) => (
-            <button
-              key={d.v}
-              type="button"
-              onClick={() => toggleDay(d.v)}
-              className={`px-3 py-1 text-xs rounded-md border transition-colors ${
-                days.includes(d.v)
-                  ? "bg-primary text-primary-foreground border-primary"
-                  : "bg-background hover:bg-muted"
-              }`}
-            >{d.l}</button>
-          ))}
-        </div>
-      </div>
-
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <Label className="text-xs">Ativos permitidos {assets.length === 0 && <span className="text-muted-foreground">(todos)</span>}</Label>
-          <Button variant="outline" size="sm" onClick={() => setShowAssets((s) => !s)}>
-            {showAssets ? "Fechar" : "Editar filtro"}
-          </Button>
-        </div>
-        {assets.length > 0 && (
-          <div className="flex flex-wrap gap-1">
-            {assets.map((a) => (
-              <Badge key={a} variant="secondary" className="cursor-pointer" onClick={() => toggleAsset(a)}>
-                {a} ×
-              </Badge>
-            ))}
-          </div>
-        )}
-        {showAssets && (
-          <div className="max-h-48 overflow-y-auto border rounded-md p-2 grid grid-cols-3 sm:grid-cols-5 gap-1">
-            {allAssets.map((a) => (
-              <button
-                key={a}
-                type="button"
-                onClick={() => toggleAsset(a)}
-                className={`px-2 py-1 text-xs rounded border ${
-                  assets.includes(a)
-                    ? "bg-primary text-primary-foreground border-primary"
-                    : "bg-background hover:bg-muted"
-                }`}
-              >{a}</button>
-            ))}
-          </div>
-        )}
-      </div>
-
-      <div className="flex justify-end pt-2 border-t border-border">
-        <Button size="sm" onClick={() => save.mutate()} disabled={save.isPending}>
-          {save.isPending ? "Salvando..." : "Salvar janela"}
-        </Button>
-      </div>
-    </div>
-  );
-}
-
-/* ============================================================ */
-/* Templates Section                                            */
-/* ============================================================ */
-
-type TemplateKind = "entry" | "gain" | "loss" | "event";
-const TEMPLATE_DEFS: { kind: TemplateKind; label: string; hint: string }[] = [
-  { kind: "entry", label: "Entrada", hint: "Mensagem enviada quando um sinal é gerado." },
-  { kind: "gain",  label: "GAIN",    hint: "Mensagem enviada quando o sinal resulta em ganho." },
-  { kind: "loss",  label: "LOSS",    hint: "Mensagem enviada quando o sinal resulta em perda." },
-  { kind: "event", label: "Evento",  hint: "Mensagem para eventos especiais (ex: news, mhi)." },
-];
-
-function TemplatesSection({ roomId }: { roomId: string }) {
-  const list = useQuery({
-    queryKey: ["room_templates", roomId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("room_templates").select("*").eq("room_id", roomId);
-      if (error) throw error;
-      return data;
-    },
-  });
-
-  return (
-    <Card className="p-6 space-y-5">
-      <div>
-        <h2 className="text-lg font-semibold">Templates de Mensagens</h2>
+    <Card className="p-6 space-y-3">
+      <h2 className="text-lg font-semibold">Mensagem de Stop Loss</h2>
+      <div className="space-y-1.5">
+        <Label className="text-xs">Mensagem enviada quando o stop loss for atingido</Label>
+        <Textarea value={msg} onChange={(e) => setMsg(e.target.value)} rows={3} />
         <p className="text-xs text-muted-foreground">
-          Use variáveis como {"{ativo}"}, {"{direcao}"}, {"{horario}"}, {"{payout}"}.
+          Mensagem enviada ao grupo quando o stop loss for atingido. Deixe em branco para usar a mensagem padrão.
         </p>
       </div>
-      {list.isLoading && <p className="text-sm text-muted-foreground">Carregando...</p>}
-      {list.data && (
-        <div className="space-y-4">
-          {TEMPLATE_DEFS.map((def) => {
-            const existing = list.data.find((t) => t.kind === def.kind);
-            return (
-              <TemplateRow
-                key={def.kind}
-                roomId={roomId}
-                def={def}
-                existing={existing as { id: string; content: string; parse_mode: string } | undefined}
-              />
-            );
-          })}
-        </div>
-      )}
+      <div className="flex items-center justify-between pt-2 border-t border-border">
+        <Button variant="secondary" size="sm" disabled>📩 Enviar teste</Button>
+        <Button size="sm" onClick={() => save.mutate()} disabled={save.isPending}>Salvar seção</Button>
+      </div>
     </Card>
   );
 }
 
-function TemplateRow({
-  roomId, def, existing,
-}: {
-  roomId: string;
-  def: { kind: TemplateKind; label: string; hint: string };
-  existing?: { id: string; content: string; parse_mode: string };
-}) {
+/* ============================================================ */
+/* Market Tips                                                   */
+/* ============================================================ */
+
+function MarketTipsCard({ room }: { room: RoomData }) {
   const qc = useQueryClient();
-  const [content, setContent] = useState(existing?.content ?? "");
-  const [parseMode, setParseMode] = useState(existing?.parse_mode ?? "HTML");
-
-  useEffect(() => {
-    setContent(existing?.content ?? "");
-    setParseMode(existing?.parse_mode ?? "HTML");
-  }, [existing?.id, existing?.content, existing?.parse_mode]);
-
+  const [enabled, setEnabled] = useState(room.market_tips_enabled ?? false);
   const save = useMutation({
     mutationFn: async () => {
-      const { data: u } = await supabase.auth.getUser();
-      const { error } = await supabase.from("room_templates").upsert({
-        room_id: roomId,
-        user_id: u.user!.id,
-        kind: def.kind,
-        content,
-        parse_mode: parseMode,
-      }, { onConflict: "room_id,kind" });
+      const { error } = await supabase.from("rooms").update({ market_tips_enabled: enabled }).eq("id", room.id);
       if (error) throw error;
     },
-    onSuccess: () => {
-      toast.success(`Template ${def.label} salvo`);
-      qc.invalidateQueries({ queryKey: ["room_templates", roomId] });
-    },
+    onSuccess: () => { toast.success("Dicas de Mercado salvas"); qc.invalidateQueries({ queryKey: ["room", room.id] }); },
     onError: (e: Error) => toast.error(e.message),
   });
-
   return (
-    <div className="border rounded-md p-4 space-y-3 bg-card">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <div className="font-medium text-sm">{def.label}</div>
-          <p className="text-xs text-muted-foreground">{def.hint}</p>
-        </div>
-        <Select value={parseMode} onValueChange={setParseMode}>
-          <SelectTrigger className="w-32 h-8"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="HTML">HTML</SelectItem>
-            <SelectItem value="MarkdownV2">MarkdownV2</SelectItem>
-            <SelectItem value="None">Texto puro</SelectItem>
-          </SelectContent>
-        </Select>
+    <Card className="p-6 space-y-3">
+      <div className="flex items-center gap-2">
+        <h2 className="text-lg font-semibold">📊 Dicas de Mercado</h2>
+        <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/40">Forex / Crypto</Badge>
       </div>
-      <Textarea
-        value={content}
-        onChange={(e) => setContent(e.target.value)}
-        rows={5}
-        placeholder={`Conteúdo do template ${def.label}...`}
-        className="font-mono text-sm"
-      />
-      <div className="flex justify-end">
-        <Button size="sm" onClick={() => save.mutate()} disabled={save.isPending}>
-          {save.isPending ? "Salvando..." : "Salvar template"}
-        </Button>
+      <p className="text-sm text-muted-foreground">
+        Envia automaticamente as <span className="font-semibold text-foreground">últimas notícias e tendências</span> do mercado financeiro
+        para o grupo nos horários definidos. Escolha o <span className="font-semibold text-foreground">idioma</span> abaixo;
+        as fontes RSS seguem o idioma (com fallback para inglês se necessário).
+      </p>
+      <label className="flex items-center gap-2 cursor-pointer w-fit">
+        <Checkbox checked={enabled} onCheckedChange={(v) => setEnabled(!!v)} />
+        <span className="text-sm">Habilitar envio de dicas de mercado</span>
+      </label>
+      <div className="flex justify-end pt-2 border-t border-border">
+        <Button size="sm" onClick={() => save.mutate()} disabled={save.isPending}>Salvar seção</Button>
       </div>
-    </div>
+    </Card>
   );
 }
