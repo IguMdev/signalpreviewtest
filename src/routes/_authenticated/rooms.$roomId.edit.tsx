@@ -873,6 +873,8 @@ function StopLossCard({ room }: { room: RoomData }) {
 function MarketTipsCard({ room }: { room: RoomData }) {
   const qc = useQueryClient();
   const [enabled, setEnabled] = useState(room.market_tips_enabled ?? false);
+  const sendTest = useServerFn(sendRoomTest);
+  const [testing, setTesting] = useState(false);
   const save = useMutation({
     mutationFn: async () => {
       const { error } = await supabase.from("rooms").update({ market_tips_enabled: enabled }).eq("id", room.id);
@@ -881,6 +883,14 @@ function MarketTipsCard({ room }: { room: RoomData }) {
     onSuccess: () => { toast.success("Dicas de Mercado salvas"); qc.invalidateQueries({ queryKey: ["room", room.id] }); },
     onError: (e: Error) => toast.error(e.message),
   });
+  const onTest = async () => {
+    try {
+      setTesting(true);
+      await sendTest({ data: { roomId: room.id, text: "📊 <b>Dica de Mercado (teste)</b>\nEsta é uma prévia das notícias e tendências que serão enviadas automaticamente ao grupo." } });
+      toast.success("Teste enviado");
+    } catch (e: any) { toast.error(e.message); }
+    finally { setTesting(false); }
+  };
   return (
     <Card className="p-6 space-y-3">
       <div className="flex items-center gap-2">
@@ -896,7 +906,10 @@ function MarketTipsCard({ room }: { room: RoomData }) {
         <Checkbox checked={enabled} onCheckedChange={(v) => setEnabled(!!v)} />
         <span className="text-sm">Habilitar envio de dicas de mercado</span>
       </label>
-      <div className="flex justify-end pt-2 border-t border-border">
+      <div className="flex items-center justify-between pt-2 border-t border-border">
+        <Button variant="secondary" size="sm" onClick={onTest} disabled={testing}>
+          📩 {testing ? "Enviando..." : "Enviar teste"}
+        </Button>
         <Button size="sm" onClick={() => save.mutate()} disabled={save.isPending}>Salvar seção</Button>
       </div>
     </Card>
