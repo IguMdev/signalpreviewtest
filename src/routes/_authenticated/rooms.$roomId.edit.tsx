@@ -54,6 +54,15 @@ const WEEKDAYS = [
   { v: 4, l: "Qui" }, { v: 5, l: "Sex" }, { v: 6, l: "Sáb" }, { v: 0, l: "Dom" },
 ];
 
+const SAVE_ALL_EVENT = "rooms-edit:save-all";
+function useSaveAll(fn: () => void) {
+  useEffect(() => {
+    const handler = () => fn();
+    window.addEventListener(SAVE_ALL_EVENT, handler);
+    return () => window.removeEventListener(SAVE_ALL_EVENT, handler);
+  }, [fn]);
+}
+
 function EditRoomPage() {
   const { roomId } = useParams({ from: "/_authenticated/rooms/$roomId/edit" });
   const navigate = useNavigate();
@@ -113,8 +122,11 @@ function EditRoomPage() {
 
       {/* Sticky footer */}
       <div className="fixed bottom-0 left-0 right-0 lg:left-[var(--sidebar-width,16rem)] bg-background/95 backdrop-blur border-t border-border p-4 flex justify-end gap-2 z-40">
-        <Button onClick={() => toast.success("Use os botões 'Salvar' de cada seção para persistir mudanças")}>
-          Salvar
+        <Button onClick={() => {
+          window.dispatchEvent(new CustomEvent(SAVE_ALL_EVENT));
+          toast.success("Salvando todas as seções...");
+        }}>
+          Salvar tudo
         </Button>
         <Button variant="outline" onClick={() => navigate({ to: "/rooms" })}>Cancelar</Button>
       </div>
@@ -168,6 +180,7 @@ function BaseConfigCard({ room }: { room: RoomData }) {
     onSuccess: () => { toast.success("Configurações base salvas"); qc.invalidateQueries({ queryKey: ["room", room.id] }); },
     onError: (e: Error) => toast.error(e.message),
   });
+  useSaveAll(() => save.mutate());
 
   return (
     <Card className="p-6 space-y-4">
@@ -606,6 +619,7 @@ function WindowItem({ window: w, roomId }: { window: any; roomId: string }) {
     onSuccess: () => { toast.success("Janela salva"); qc.invalidateQueries({ queryKey: ["room_windows", roomId] }); },
     onError: (e: Error) => toast.error(e.message),
   });
+  useSaveAll(() => save.mutate());
 
   const del = useMutation({
     mutationFn: async () => {
@@ -935,6 +949,7 @@ function TimezoneCard({ room }: { room: RoomData }) {
     onSuccess: () => { toast.success("Fuso salvo"); qc.invalidateQueries({ queryKey: ["room", room.id] }); },
     onError: (e: Error) => toast.error(e.message),
   });
+  useSaveAll(() => save.mutate());
   return (
     <Card className="p-6 space-y-4">
       <h2 className="text-lg font-semibold">Fuso Horário</h2>
@@ -975,6 +990,7 @@ function StopLossCard({ room }: { room: RoomData }) {
     onSuccess: () => { toast.success("Mensagem de Stop Loss salva"); qc.invalidateQueries({ queryKey: ["room", room.id] }); },
     onError: (e: Error) => toast.error(e.message),
   });
+  useSaveAll(() => save.mutate());
   const onTest = async () => {
     try {
       setTesting(true);
@@ -1018,6 +1034,7 @@ function MarketTipsCard({ room }: { room: RoomData }) {
     onSuccess: () => { toast.success("Dicas de Mercado salvas"); qc.invalidateQueries({ queryKey: ["room", room.id] }); },
     onError: (e: Error) => toast.error(e.message),
   });
+  useSaveAll(() => save.mutate());
   const onTest = async () => {
     try {
       setTesting(true);
@@ -1233,6 +1250,7 @@ function TemplateEditor({
     onSuccess: () => { toast.success("Template salvo"); onChanged(); },
     onError: (e: Error) => toast.error(e.message),
   });
+  useSaveAll(() => saveTpl.mutate());
 
   const addBtn = useMutation({
     mutationFn: async () => {
@@ -1499,6 +1517,7 @@ function SessionMessageEditor({
     onSuccess: () => { toast.success(`${title} salva`); onChanged(); },
     onError: (e: Error) => toast.error(e.message),
   });
+  useSaveAll(() => save.mutate());
 
   const onTest = async () => {
     try {
@@ -1624,6 +1643,7 @@ function ReportsCard({ roomId }: { roomId: string }) {
     onSuccess: () => { toast.success("Relatório salvo"); qc.invalidateQueries({ queryKey: ["room_reports", roomId] }); },
     onError: (e: Error) => toast.error(e.message),
   });
+  useSaveAll(() => save.mutate());
 
   return (
     <Card className="p-6 space-y-4">
