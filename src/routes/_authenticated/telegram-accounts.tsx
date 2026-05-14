@@ -508,6 +508,7 @@ function AccountCard({
   onTest,
   onDelete,
   onEnableTracking,
+  onSyncEmojis,
 }: {
   account: Account;
   onVerify: () => void;
@@ -515,6 +516,7 @@ function AccountCard({
   onTest: () => void;
   onDelete: () => void;
   onEnableTracking: () => void;
+  onSyncEmojis: () => void;
 }) {
   const isPremium = a.account_type === "premium";
 
@@ -630,6 +632,11 @@ function AccountCard({
           <Button size="icon" variant="ghost" className="size-8" onClick={onEnableTracking} title="Ativar rastreamento de membros">
             <Activity className="size-3.5" />
           </Button>
+          {isPremium && (
+            <Button size="icon" variant="ghost" className="size-8" onClick={onSyncEmojis} title="Sincronizar emojis premium">
+              <Sparkles className="size-3.5" />
+            </Button>
+          )}
           <Button size="icon" variant="ghost" className="size-8 text-destructive hover:text-destructive" onClick={onDelete} title="Remover">
             <Trash2 className="size-3.5" />
           </Button>
