@@ -489,6 +489,12 @@ function ScheduleDialog({
     times: string[];
     weekdays: number[];
     weekdayOverrides: Record<string, string[]>;
+    followUps: Array<{
+      delayMinutes: number;
+      content: string | null;
+      imagePath: string | null;
+      imageMime: string | null;
+    }>;
     isPremium: boolean;
     isActive: boolean;
     timezone: string;
