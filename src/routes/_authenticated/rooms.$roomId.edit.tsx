@@ -469,12 +469,13 @@ function WindowItem({ window: w, roomId }: { window: any; roomId: string }) {
 
 /* Asset grid in 4 columns: Forex / Cripto / Ações / OTC */
 function WindowAssets({
-  selected, setSelected, roomId, windowId,
+  selected, setSelected, roomId, windowId, useAll,
 }: {
   selected: string[];
   setSelected: (v: string[]) => void;
   roomId: string;
   windowId: string;
+  useAll: boolean;
 }) {
   const [search, setSearch] = useState("");
 
@@ -524,7 +525,7 @@ function WindowAssets({
                   const checked = selected.includes(code);
                   return (
                     <div key={code} className="flex items-center gap-2 text-xs">
-                      <Checkbox checked={checked} onCheckedChange={() => toggle(code)} />
+                      <Checkbox checked={useAll || checked} disabled={useAll} onCheckedChange={() => toggle(code)} />
                       <span className="flex-1 font-mono">{code}</span>
                       <Badge
                         variant={meta?.is_open === false ? "outline" : "default"}
@@ -545,7 +546,7 @@ function WindowAssets({
         ))}
       </div>
       <p className="text-xs text-muted-foreground">
-        * Para editar payout/aberto de cada ativo, use o seletor global de ativos da sala.
+        * Com "Usar Todos os Ativos" ligado, todos aparecem marcados; desligue para filtrar manualmente.
       </p>
       {/* keep windowId referenced to satisfy noUnusedParams */}
       <input type="hidden" value={windowId} readOnly />
