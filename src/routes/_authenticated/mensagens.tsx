@@ -7,6 +7,7 @@ import {
   upsertSchedule,
   toggleSchedule,
   deleteSchedule,
+  testSchedule,
 } from "@/lib/recurring-schedules.functions";
 import { syncRoomPhoto } from "@/lib/room-photos.functions";
 import { Card } from "@/components/ui/card";
@@ -45,6 +46,7 @@ import {
   RefreshCw,
   ImageIcon,
   Loader2,
+  Send,
 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/mensagens")({
@@ -91,6 +93,7 @@ function MensagensPage() {
   const upsertFn = useServerFn(upsertSchedule);
   const toggleFn = useServerFn(toggleSchedule);
   const delFn = useServerFn(deleteSchedule);
+  const testFn = useServerFn(testSchedule);
   const syncPhotoFn = useServerFn(syncRoomPhoto);
 
   const [search, setSearch] = useState("");
@@ -183,6 +186,17 @@ function MensagensPage() {
     onSuccess: () => {
       toast.success("Foto atualizada");
       qc.invalidateQueries({ queryKey: ["rooms-min"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const testMut = useMutation({
+    mutationFn: async (id: string) => {
+      return await testFn({ data: { id } });
+    },
+    onSuccess: (res) => {
+      if (res.ok) toast.success(`Teste enviado (${res.sent} grupo${res.sent === 1 ? "" : "s"})`);
+      else toast.error(res.error ?? "Falha ao enviar teste");
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -353,6 +367,19 @@ function MensagensPage() {
                           checked={s.is_active}
                           onCheckedChange={(v) => toggleMut.mutate({ id: s.id, isActive: v })}
                         />
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          title="Enviar teste agora"
+                          onClick={() => testMut.mutate(s.id)}
+                          disabled={testMut.isPending && testMut.variables === s.id}
+                        >
+                          {testMut.isPending && testMut.variables === s.id ? (
+                            <Loader2 className="size-4 animate-spin" />
+                          ) : (
+                            <Send className="size-4" />
+                          )}
+                        </Button>
                         <Button size="icon" variant="ghost" onClick={() => setEditing(s)}>
                           <Pencil className="size-4" />
                         </Button>
