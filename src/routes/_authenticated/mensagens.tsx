@@ -210,6 +210,8 @@ function MensagensPage() {
       title: "",
       content: "",
       video_id: null,
+      image_path: null,
+      image_mime: null,
       parse_mode: "HTML",
       times: [],
       weekdays: [],
