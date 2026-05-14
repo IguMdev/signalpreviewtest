@@ -1228,12 +1228,12 @@ function ImageAttachment({
 }: {
   tone: string;
   roomId: string;
-  value: string | null;
-  onChange: (path: string | null) => void;
+  value: { path: string | null; mime?: string | null; ext?: string | null };
+  onChange: (v: { path: string | null; mime: string | null; ext: string | null }) => void;
 }) {
   const [uploading, setUploading] = useState(false);
-  const publicUrl = value
-    ? supabase.storage.from("room-images").getPublicUrl(value).data.publicUrl
+  const publicUrl = value.path
+    ? supabase.storage.from("room-images").getPublicUrl(value.path).data.publicUrl
     : null;
 
   const handleUpload = async (file: File) => {
@@ -1241,13 +1241,13 @@ function ImageAttachment({
       setUploading(true);
       const { data: u } = await supabase.auth.getUser();
       if (!u.user) throw new Error("Não autenticado");
-      const ext = file.name.split(".").pop() || "png";
+      const ext = (file.name.split(".").pop() || "png").toLowerCase();
       const path = `${u.user.id}/${roomId}/templates/${crypto.randomUUID()}.${ext}`;
       const { error } = await supabase.storage
         .from("room-images")
         .upload(path, file, { upsert: true, contentType: file.type });
       if (error) throw error;
-      onChange(path);
+      onChange({ path, mime: file.type || null, ext });
       toast.success("Imagem enviada");
     } catch (e: any) {
       toast.error(e.message);
@@ -1271,7 +1271,7 @@ function ImageAttachment({
           )}
         </div>
         <div className="flex flex-wrap gap-2 justify-end">
-          <Button variant="outline" size="sm" onClick={() => onChange(null)} disabled={!value || uploading}>
+          <Button variant="outline" size="sm" onClick={() => onChange({ path: null, mime: null, ext: null })} disabled={!value.path || uploading}>
             Remover arquivo
           </Button>
           <Button asChild size="sm" variant="secondary" disabled={uploading}>
@@ -1280,7 +1280,7 @@ function ImageAttachment({
               <input
                 type="file"
                 className="sr-only"
-                accept="image/png,image/jpeg,image/gif,image/webp"
+                accept="image/png,image/jpeg,image/gif,image/webp,application/x-tgsticker,video/webm,.tgs"
                 onChange={(e) => {
                   const f = e.target.files?.[0];
                   if (f) handleUpload(f);
