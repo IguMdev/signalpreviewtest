@@ -236,3 +236,179 @@ export const listMyPaymentHistory = createServerFn({ method: "GET" })
     if (error) throw new Error(error.message);
     return data ?? [];
   });
+
+// =====================================================================
+// SMM dispatch helpers
+// =====================================================================
+
+async function placeSmmOrder(opts: {
+  userId: string;
+  subscriptionId: string;
+  serviceId: number;
+  link: string;
+  quantity: number;
+  type: "reaction" | "members";
+  roomId?: string | null;
+}) {
+  const { data: order, error: orderErr } = await supabaseAdmin
+    .from("engagement_orders")
+    .insert({
+      user_id: opts.userId,
+      room_id: opts.roomId ?? null,
+      subscription_id: opts.subscriptionId,
+      type: opts.type,
+      target: opts.link,
+      quantity: opts.quantity,
+      smm_service_id: opts.serviceId,
+    })
+    .select("*")
+    .single();
+  if (orderErr) throw new Error(orderErr.message);
+
+  try {
+    const resp = await callSmmPanel({
+      action: "add",
+      service: opts.serviceId,
+      link: opts.link,
+      quantity: opts.quantity,
+    });
+    if (resp.error || !resp.order) {
+      await supabaseAdmin
+        .from("engagement_orders")
+        .update({ status: "failed", error: resp.error ?? "no order id", raw_response: resp as never })
+        .eq("id", order.id);
+      return { ok: false as const, error: resp.error ?? "no order id" };
+    }
+    await supabaseAdmin
+      .from("engagement_orders")
+      .update({
+        status: "in_progress",
+        smm_order_id: String(resp.order),
+        cost_usd: resp.charge ? Number(resp.charge) : null,
+        raw_response: resp as never,
+      })
+      .eq("id", order.id);
+    return { ok: true as const, smmOrderId: resp.order, orderId: order.id };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    await supabaseAdmin
+      .from("engagement_orders")
+      .update({ status: "failed", error: msg })
+      .eq("id", order.id);
+    return { ok: false as const, error: msg };
+  }
+}
+
+/**
+ * Define o link do canal/grupo de uma assinatura de inscritos e dispara
+ * o pedido completo no painel SMM (entrega única).
+ */
+export const setSubscriptionTarget = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) =>
+    z.object({
+      subscriptionId: z.string().uuid(),
+      targetLink: z.string().url().regex(/^https?:\/\/(t\.me|telegram\.me)\//i, "Use um link público do Telegram"),
+    }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { userId } = context;
+    const { data: sub, error: subErr } = await supabaseAdmin
+      .from("user_engagement_subscriptions")
+      .select("*, plan:engagement_plans(*)")
+      .eq("id", data.subscriptionId)
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (subErr) throw new Error(subErr.message);
+    if (!sub) throw new Error("Assinatura não encontrada.");
+    if ((sub as any).target_link) throw new Error("Esta assinatura já tem um canal definido.");
+    const plan = (sub as any).plan;
+    if (!plan || plan.bot_type !== "inscritos") {
+      throw new Error("Apenas assinaturas de inscritos precisam de canal.");
+    }
+
+    const serviceId = plan.smm_service_id ?? SVC_MEMBERS;
+    const quantity = plan.smm_default_quantity ?? plan.monthly_quota ?? 0;
+    if (!serviceId || !quantity) throw new Error("Plano sem configuração SMM.");
+
+    await supabaseAdmin
+      .from("user_engagement_subscriptions")
+      .update({ target_link: data.targetLink })
+      .eq("id", sub.id);
+
+    const result = await placeSmmOrder({
+      userId,
+      subscriptionId: sub.id,
+      serviceId,
+      link: data.targetLink,
+      quantity,
+      type: "members",
+    });
+    if (!result.ok) {
+      throw new Error(`Falha ao despachar inscritos: ${result.error}`);
+    }
+    await supabaseAdmin
+      .from("user_engagement_subscriptions")
+      .update({ units_used: quantity })
+      .eq("id", sub.id);
+    return { ok: true, smmOrderId: result.smmOrderId };
+  });
+
+/**
+ * Dispara reações automáticas para um sinal recém-enviado.
+ * Usa o username público do chat e o telegram_message_id para montar a URL
+ * `https://t.me/<username>/<message_id>`. Sem-op se o usuário não tem
+ * assinatura ativa de Interações ou se o chat é privado.
+ * Não falha o envio principal — sempre engole erros.
+ */
+export async function triggerSignalReactions(opts: {
+  userId: string;
+  chatId: number;
+  telegramMessageId: number;
+  roomId?: string | null;
+}) {
+  try {
+    const { data: sub } = await supabaseAdmin
+      .from("user_engagement_subscriptions")
+      .select("*, plan:engagement_plans(*)")
+      .eq("user_id", opts.userId)
+      .eq("bot_type", "interacoes")
+      .eq("status", "active")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (!sub || !(sub as any).plan) return;
+    const plan = (sub as any).plan;
+    const qty = plan.smm_default_quantity ?? plan.monthly_quota ?? 0;
+    if (!qty) return;
+
+    const { data: chat } = await supabaseAdmin
+      .from("telegram_chats")
+      .select("username")
+      .eq("chat_id", opts.chatId)
+      .eq("user_id", opts.userId)
+      .maybeSingle();
+    if (!chat?.username) return; // chat privado — JAP precisa link público
+
+    const link = `https://t.me/${chat.username}/${opts.telegramMessageId}`;
+    const serviceId = plan.smm_service_id ?? SVC_REACTIONS;
+
+    const result = await placeSmmOrder({
+      userId: opts.userId,
+      subscriptionId: (sub as any).id,
+      serviceId,
+      link,
+      quantity: qty,
+      type: "reaction",
+      roomId: opts.roomId ?? null,
+    });
+    if (result.ok) {
+      await supabaseAdmin
+        .from("user_engagement_subscriptions")
+        .update({ units_used: ((sub as any).units_used ?? 0) + qty })
+        .eq("id", (sub as any).id);
+    }
+  } catch (e) {
+    console.error("[triggerSignalReactions] failed:", e);
+  }
+}
