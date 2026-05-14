@@ -512,6 +512,10 @@ function ScheduleDialog({
   const [weekdays, setWeekdays] = useState<number[]>([]);
   const [weekdayOverrides, setWeekdayOverrides] = useState<Record<string, string[]>>({});
   const [overrideInputs, setOverrideInputs] = useState<Record<string, string>>({});
+  const [followUps, setFollowUps] = useState<
+    Array<{ delayMinutes: number; content: string; imagePath: string; imageMime: string }>
+  >([]);
+  const [followUpUploading, setFollowUpUploading] = useState<number | null>(null);
   const [isPremium, setIsPremium] = useState(false);
   const [isActive, setIsActive] = useState(true);
   const [newTime, setNewTime] = useState("");
@@ -531,6 +535,14 @@ function ScheduleDialog({
       setWeekdays(editing.weekdays);
       setWeekdayOverrides(editing.weekday_overrides ?? {});
       setOverrideInputs({});
+      setFollowUps(
+        (editing.follow_ups ?? []).map((f) => ({
+          delayMinutes: f.delay_minutes,
+          content: f.content ?? "",
+          imagePath: f.image_path ?? "",
+          imageMime: f.image_mime ?? "",
+        })),
+      );
       setIsPremium(editing.is_premium);
       setIsActive(editing.is_active);
       setNewTime("");
@@ -935,6 +947,12 @@ function ScheduleDialog({
                 times,
                 weekdays,
                 weekdayOverrides,
+                followUps: followUps.map((f) => ({
+                  delayMinutes: f.delayMinutes,
+                  content: f.content || null,
+                  imagePath: f.imagePath || null,
+                  imageMime: f.imageMime || null,
+                })),
                 isPremium,
                 isActive,
                 timezone: "America/Sao_Paulo",
