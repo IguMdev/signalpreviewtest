@@ -13,6 +13,7 @@ import { Route as SignupRouteImport } from './routes/signup'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
+import { Route as AuthenticatedVideosRouteImport } from './routes/_authenticated/videos'
 import { Route as AuthenticatedTelegramAccountsRouteImport } from './routes/_authenticated/telegram-accounts'
 import { Route as AuthenticatedRoomsRouteImport } from './routes/_authenticated/rooms'
 import { Route as AuthenticatedRecargaRouteImport } from './routes/_authenticated/recarga'
@@ -38,6 +39,11 @@ const AuthenticatedRoute = AuthenticatedRouteImport.update({
 const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedVideosRoute = AuthenticatedVideosRouteImport.update({
+  id: '/videos',
+  path: '/videos',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedTelegramAccountsRoute =
@@ -89,6 +95,7 @@ export interface FileRoutesByFullPath {
   '/recarga': typeof AuthenticatedRecargaRoute
   '/rooms': typeof AuthenticatedRoomsRoute
   '/telegram-accounts': typeof AuthenticatedTelegramAccountsRoute
+  '/videos': typeof AuthenticatedVideosRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
@@ -100,6 +107,7 @@ export interface FileRoutesByTo {
   '/recarga': typeof AuthenticatedRecargaRoute
   '/rooms': typeof AuthenticatedRoomsRoute
   '/telegram-accounts': typeof AuthenticatedTelegramAccountsRoute
+  '/videos': typeof AuthenticatedVideosRoute
   '/': typeof AuthenticatedIndexRoute
 }
 export interface FileRoutesById {
@@ -114,6 +122,7 @@ export interface FileRoutesById {
   '/_authenticated/recarga': typeof AuthenticatedRecargaRoute
   '/_authenticated/rooms': typeof AuthenticatedRoomsRoute
   '/_authenticated/telegram-accounts': typeof AuthenticatedTelegramAccountsRoute
+  '/_authenticated/videos': typeof AuthenticatedVideosRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
 }
 export interface FileRouteTypes {
@@ -129,6 +138,7 @@ export interface FileRouteTypes {
     | '/recarga'
     | '/rooms'
     | '/telegram-accounts'
+    | '/videos'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/login'
@@ -140,6 +150,7 @@ export interface FileRouteTypes {
     | '/recarga'
     | '/rooms'
     | '/telegram-accounts'
+    | '/videos'
     | '/'
   id:
     | '__root__'
@@ -153,6 +164,7 @@ export interface FileRouteTypes {
     | '/_authenticated/recarga'
     | '/_authenticated/rooms'
     | '/_authenticated/telegram-accounts'
+    | '/_authenticated/videos'
     | '/_authenticated/'
   fileRoutesById: FileRoutesById
 }
@@ -190,6 +202,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof AuthenticatedIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/videos': {
+      id: '/_authenticated/videos'
+      path: '/videos'
+      fullPath: '/videos'
+      preLoaderRoute: typeof AuthenticatedVideosRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/telegram-accounts': {
@@ -252,6 +271,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedRecargaRoute: typeof AuthenticatedRecargaRoute
   AuthenticatedRoomsRoute: typeof AuthenticatedRoomsRoute
   AuthenticatedTelegramAccountsRoute: typeof AuthenticatedTelegramAccountsRoute
+  AuthenticatedVideosRoute: typeof AuthenticatedVideosRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
 }
 
@@ -263,6 +283,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedRecargaRoute: AuthenticatedRecargaRoute,
   AuthenticatedRoomsRoute: AuthenticatedRoomsRoute,
   AuthenticatedTelegramAccountsRoute: AuthenticatedTelegramAccountsRoute,
+  AuthenticatedVideosRoute: AuthenticatedVideosRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
 }
 
@@ -278,3 +299,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
