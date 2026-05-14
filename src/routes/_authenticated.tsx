@@ -16,6 +16,7 @@ import {
   Moon,
   Sun,
   Video,
+  UserPlus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -30,6 +31,7 @@ const navItems = [
   { to: "/telegram-accounts", label: "Contas Telegram", icon: Send },
   { to: "/premium-emojis", label: "Emojis Premium", icon: Sparkles },
   { to: "/rooms", label: "Salas", icon: Users },
+  { to: "/membros", label: "Membros", icon: UserPlus },
   { to: "/mensagens", label: "Agendamentos", icon: CalendarClock },
   { to: "/videos", label: "Vídeos redondos", icon: Video },
   { to: "/recarga", label: "Recarga", icon: Wallet },
