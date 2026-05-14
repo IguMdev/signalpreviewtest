@@ -89,11 +89,6 @@ function TelegramAccountsPage() {
   const [loadingPremium, setLoadingPremium] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
 
-  // Cooldown ticker para reenvio de código.
-  if (typeof window !== "undefined") {
-    // noop placeholder so the next useEffect block exists in build time
-  }
-
   const createMut = useMutation({
     mutationFn: async () => {
       const { error } = await supabase.from("telegram_accounts").insert({
@@ -310,18 +305,24 @@ function TelegramAccountsPage() {
             {accountType === "premium" && premiumStep === "form" && (
               <>
                 <div className="rounded-xl border border-primary/30 bg-primary/10 p-4 text-sm space-y-2">
-                  <p className="font-semibold">Como conectar sua conta Telegram:</p>
-                  <p className="font-medium">📱 Passo a passo:</p>
+                  <p className="font-semibold">{S.steps.title}</p>
+                  <p className="font-medium">📱 {S.steps.subtitle}</p>
                   <ol className="list-decimal pl-5 space-y-1 text-muted-foreground">
-                    <li>Acesse <a href="https://my.telegram.org" target="_blank" rel="noreferrer" className="underline">my.telegram.org</a> e faça login</li>
+                    <li>
+                      Acesse{" "}
+                      <a href="https://my.telegram.org" target="_blank" rel="noreferrer" className="underline">
+                        my.telegram.org
+                      </a>{" "}
+                      e faça login
+                    </li>
                     <li>Vá em "API Development Tools" e crie uma aplicação</li>
-                    <li>Copie o <b>API ID</b> e <b>API Hash</b></li>
+                    <li>Copie o <b>API ID</b> e o <b>API Hash</b></li>
                     <li>Preencha todos os campos abaixo</li>
-                    <li>Clique em "Solicitar Código" — ele chega no <b>app do Telegram</b> (não por SMS)</li>
-                    <li>Digite o código recebido no app e clique em "Conectar"</li>
+                    <li>Clique em "{S.buttons.requestCode}" — ele chega no <b>app do Telegram</b> (não por SMS)</li>
+                    <li>Digite o código recebido no app e clique em "{S.buttons.connect}"</li>
                   </ol>
                   <div className="rounded-md bg-primary/20 px-3 py-2 text-xs">
-                    💡 <b>Dica:</b> As credenciais API são necessárias para conectar sua conta pessoal.
+                    💡 <b>Dica:</b> {S.steps.tip}
                   </div>
                 </div>
                 <div className="grid sm:grid-cols-2 gap-4">
@@ -354,14 +355,12 @@ function TelegramAccountsPage() {
                 <div className="rounded-xl border border-primary/30 bg-primary/10 p-4 text-sm flex items-start gap-3">
                   <KeyRound className="size-5 mt-0.5" />
                   <div>
-                    <p className="font-semibold">Digite o código recebido no app do Telegram</p>
-                    <p className="text-muted-foreground text-xs mt-1">
-                      Abra o app do Telegram e veja a conversa oficial "Telegram". O código não é enviado por SMS e expira em ~5 minutos.
-                    </p>
+                    <p className="font-semibold">{S.codeStep.heading}</p>
+                    <p className="text-muted-foreground text-xs mt-1">{S.codeStep.subheading}</p>
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label>Código</Label>
+                  <Label>{S.fields.code}</Label>
                   <Input
                     value={telegramCode}
                     onChange={(e) => setTelegramCode(e.target.value.replace(/\D/g, ""))}
@@ -369,11 +368,25 @@ function TelegramAccountsPage() {
                     inputMode="numeric"
                     maxLength={6}
                     autoFocus
+                    aria-label={S.fields.code}
                   />
+                </div>
+                <div className="flex justify-end">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleResendCode}
+                    disabled={resendCooldown > 0 || loadingPremium}
+                  >
+                    {resendCooldown > 0
+                      ? S.buttons.resendIn(resendCooldown)
+                      : S.buttons.resend}
+                  </Button>
                 </div>
                 {needs2fa && (
                   <div className="space-y-2">
-                    <Label>Senha 2FA (verificação em duas etapas)</Label>
+                    <Label>{S.fields.twoFa}</Label>
                     <Input type="password" value={twoFa} onChange={(e) => setTwoFa(e.target.value)} />
                   </div>
                 )}
@@ -382,7 +395,7 @@ function TelegramAccountsPage() {
             </div>
             <DialogFooter>
             <Button variant="ghost" onClick={() => { setOpenNew(false); resetDialog(); }}>
-              Cancelar
+              {S.buttons.cancel}
             </Button>
             {accountType === "bot" && (
               <Button
@@ -394,12 +407,12 @@ function TelegramAccountsPage() {
             )}
             {accountType === "premium" && premiumStep === "form" && (
               <Button onClick={handleRequestCode} disabled={loadingPremium}>
-                {loadingPremium ? "Enviando..." : "Solicitar Código"}
+                {loadingPremium ? S.buttons.sendingCode : S.buttons.requestCode}
               </Button>
             )}
             {accountType === "premium" && premiumStep === "code" && (
               <Button onClick={handleConfirmCode} disabled={loadingPremium || !telegramCode}>
-                {loadingPremium ? "Conectando..." : "Conectar"}
+                {loadingPremium ? S.buttons.connecting : S.buttons.connect}
               </Button>
             )}
             </DialogFooter>
