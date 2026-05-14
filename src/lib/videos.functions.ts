@@ -4,13 +4,16 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 async function sendVideoNoteToChat(opts: {
-  botToken: string;
+  botToken: string | null | undefined;
   chatId: number | string;
   fileBytes: ArrayBuffer;
   filename: string;
   mimeType: string;
   duration?: number | null;
 }) {
+  if (!opts.botToken) {
+    return { ok: false, description: "Conta sem bot_token" } as { ok: boolean; result?: { message_id: number }; description?: string };
+  }
   const form = new FormData();
   form.append("chat_id", String(opts.chatId));
   if (opts.duration) form.append("duration", String(opts.duration));
@@ -100,7 +103,7 @@ export const deleteVideo = createServerFn({ method: "POST" })
 
 // Helper used by the scheduler dispatcher (admin context)
 export async function dispatchVideoNote(opts: {
-  botToken: string;
+  botToken: string | null | undefined;
   storagePath: string;
   chatId: number;
   duration?: number | null;
