@@ -911,6 +911,75 @@ export type Database = {
           },
         ]
       }
+      signal_events: {
+        Row: {
+          asset_category: string | null
+          asset_code: string
+          close_price: number | null
+          created_at: string
+          direction: string
+          entry_at: string
+          entry_price: number | null
+          expires_at: string
+          gale_level: number
+          id: string
+          last_error: string | null
+          max_gales: number
+          result_message_ids: Json
+          room_id: string
+          signal_message_ids: Json
+          status: Database["public"]["Enums"]["signal_event_status"]
+          timeframe: string
+          updated_at: string
+          user_id: string
+          window_id: string
+        }
+        Insert: {
+          asset_category?: string | null
+          asset_code: string
+          close_price?: number | null
+          created_at?: string
+          direction: string
+          entry_at: string
+          entry_price?: number | null
+          expires_at: string
+          gale_level?: number
+          id?: string
+          last_error?: string | null
+          max_gales?: number
+          result_message_ids?: Json
+          room_id: string
+          signal_message_ids?: Json
+          status?: Database["public"]["Enums"]["signal_event_status"]
+          timeframe?: string
+          updated_at?: string
+          user_id: string
+          window_id: string
+        }
+        Update: {
+          asset_category?: string | null
+          asset_code?: string
+          close_price?: number | null
+          created_at?: string
+          direction?: string
+          entry_at?: string
+          entry_price?: number | null
+          expires_at?: string
+          gale_level?: number
+          id?: string
+          last_error?: string | null
+          max_gales?: number
+          result_message_ids?: Json
+          room_id?: string
+          signal_message_ids?: Json
+          status?: Database["public"]["Enums"]["signal_event_status"]
+          timeframe?: string
+          updated_at?: string
+          user_id?: string
+          window_id?: string
+        }
+        Relationships: []
+      }
       telegram_accounts: {
         Row: {
           account_type: Database["public"]["Enums"]["account_type"]
@@ -1223,6 +1292,14 @@ export type Database = {
       message_status: "pending" | "sending" | "sent" | "failed" | "cancelled"
       room_image_kind: "gain" | "loss"
       session_msg_kind: "open" | "close"
+      signal_event_status:
+        | "scheduled"
+        | "sent"
+        | "win"
+        | "win_g1"
+        | "win_g2"
+        | "loss"
+        | "error"
       template_kind:
         | "entry"
         | "gain"
@@ -1383,6 +1460,15 @@ export const Constants = {
       message_status: ["pending", "sending", "sent", "failed", "cancelled"],
       room_image_kind: ["gain", "loss"],
       session_msg_kind: ["open", "close"],
+      signal_event_status: [
+        "scheduled",
+        "sent",
+        "win",
+        "win_g1",
+        "win_g2",
+        "loss",
+        "error",
+      ],
       template_kind: [
         "entry",
         "gain",
