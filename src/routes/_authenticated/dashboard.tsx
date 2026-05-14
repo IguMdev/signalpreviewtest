@@ -134,6 +134,19 @@ function DashboardPage() {
     const inTab = tab === "group" ? t !== "channel" : t === "channel";
     return inTab && (selectedId === "all" || chatId === selectedId);
   });
+  const perChatById = useMemo(
+    () => new Map(visiblePerChat.map((c) => [String(c.chat_id), c])),
+    [visiblePerChat],
+  );
+  const visibleChatActivity = visibleChats.map((chat) => {
+    const stats = perChatById.get(String(chat.chatId));
+    return {
+      chat_id: chat.chatId,
+      chat_title: stats?.chat_title || chat.chatTitle || chat.roomName || null,
+      joins: stats?.joins ?? 0,
+      leaves: stats?.leaves ?? 0,
+    };
+  });
   const visibleRecent = (statsQ.data?.recent ?? []).filter((e) => {
     const chatId = String(e.chat_id);
     const t = typeByChatId.get(chatId) ?? "unknown";
