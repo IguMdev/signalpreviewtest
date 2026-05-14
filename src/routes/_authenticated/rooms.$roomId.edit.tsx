@@ -54,6 +54,15 @@ const WEEKDAYS = [
   { v: 4, l: "Qui" }, { v: 5, l: "Sex" }, { v: 6, l: "Sáb" }, { v: 0, l: "Dom" },
 ];
 
+const SAVE_ALL_EVENT = "rooms-edit:save-all";
+function useSaveAll(fn: () => void) {
+  useEffect(() => {
+    const handler = () => fn();
+    window.addEventListener(SAVE_ALL_EVENT, handler);
+    return () => window.removeEventListener(SAVE_ALL_EVENT, handler);
+  }, [fn]);
+}
+
 function EditRoomPage() {
   const { roomId } = useParams({ from: "/_authenticated/rooms/$roomId/edit" });
   const navigate = useNavigate();
