@@ -14,10 +14,13 @@ import {
   DoorOpen, Sparkles, ExternalLink, Crown,
   Users, Heart, MessageCircle, Forward,
   History, CheckCircle2, Clock, XCircle, AlertCircle,
-  Send,
+  Send, RefreshCw, Loader2, Activity,
 } from "lucide-react";
 import { toast } from "sonner";
-import { listEngagementPlans, getMySubscriptions, listMyPaymentHistory, setSubscriptionTarget } from "@/lib/engagement.functions";
+import {
+  listEngagementPlans, getMySubscriptions, listMyPaymentHistory,
+  setSubscriptionTarget, listMyEngagementOrders, retryEngagementOrder,
+} from "@/lib/engagement.functions";
 import { useAuth } from "@/lib/auth-context";
 
 export const Route = createFileRoute("/_authenticated/recarga")({
@@ -66,6 +69,7 @@ function RecargaPage() {
   const fetchPlans = useServerFn(listEngagementPlans);
   const fetchSubs = useServerFn(getMySubscriptions);
   const fetchHistory = useServerFn(listMyPaymentHistory);
+  const fetchOrders = useServerFn(listMyEngagementOrders);
 
   const plansQ = useQuery({ queryKey: ["engagement-plans"], queryFn: () => fetchPlans() });
   const subsQ = useQuery({
@@ -77,6 +81,12 @@ function RecargaPage() {
     queryKey: ["payment-history", user?.id],
     queryFn: () => fetchHistory(),
     enabled: !!user,
+  });
+  const ordersQ = useQuery({
+    queryKey: ["smm-orders", user?.id],
+    queryFn: () => fetchOrders(),
+    enabled: !!user,
+    refetchInterval: 30000,
   });
 
   const subs = (subsQ.data ?? []) as any[];
@@ -372,6 +382,12 @@ function RecargaPage() {
       <PaymentHistorySection
         rows={(historyQ.data ?? []) as any[]}
         isLoading={historyQ.isLoading}
+      />
+
+      {/* SMM Orders */}
+      <SmmOrdersSection
+        rows={(ordersQ.data ?? []) as any[]}
+        isLoading={ordersQ.isLoading}
       />
     </div>
   );
