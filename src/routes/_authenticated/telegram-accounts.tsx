@@ -5,6 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
 import { verifyAccount, sendTestMessage, refreshChats } from "@/lib/accounts.functions";
+import { enableMemberTracking } from "@/lib/telegram-tracking.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -36,6 +37,7 @@ import {
   Check,
   Users as UsersIcon,
   UserCircle,
+  Activity,
 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/telegram-accounts")({
@@ -48,6 +50,7 @@ function TelegramAccountsPage() {
   const verify = useServerFn(verifyAccount);
   const sendTest = useServerFn(sendTestMessage);
   const refresh = useServerFn(refreshChats);
+  const enableTrack = useServerFn(enableMemberTracking);
 
   const accounts = useQuery({
     queryKey: ["telegram-accounts"],
@@ -246,6 +249,14 @@ function TelegramAccountsPage() {
               onDelete={() => {
                 if (confirm("Remover esta conta?")) deleteMut.mutate(a.id);
               }}
+              onEnableTracking={async () => {
+                try {
+                  await enableTrack({ data: { accountId: a.id } });
+                  toast.success("Rastreamento de membros ativado. Adicione o bot como admin do grupo.");
+                } catch (e) {
+                  toast.error(e instanceof Error ? e.message : "Falha");
+                }
+              }}
             />
           ))}
         </div>
@@ -310,12 +321,14 @@ function AccountCard({
   onRefresh,
   onTest,
   onDelete,
+  onEnableTracking,
 }: {
   account: Account;
   onVerify: () => void;
   onRefresh: () => void;
   onTest: () => void;
   onDelete: () => void;
+  onEnableTracking: () => void;
 }) {
   const isPremium = a.account_type === "premium";
 
@@ -427,6 +440,9 @@ function AccountCard({
           </Button>
           <Button size="icon" variant="ghost" className="size-8" onClick={onTest} title="Enviar teste">
             <MessageSquare className="size-3.5" />
+          </Button>
+          <Button size="icon" variant="ghost" className="size-8" onClick={onEnableTracking} title="Ativar rastreamento de membros">
+            <Activity className="size-3.5" />
           </Button>
           <Button size="icon" variant="ghost" className="size-8 text-destructive hover:text-destructive" onClick={onDelete} title="Remover">
             <Trash2 className="size-3.5" />
