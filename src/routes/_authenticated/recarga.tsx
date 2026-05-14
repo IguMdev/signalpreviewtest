@@ -386,6 +386,53 @@ const STATUS_META: Record<string, { label: string; variant: "default" | "seconda
   expired:  { label: "Expirado",             variant: "outline",   icon: XCircle },
 };
 
+function ChooseChannelCard({ subscriptionId }: { subscriptionId: string }) {
+  const setTarget = useServerFn(setSubscriptionTarget);
+  const qc = useQueryClient();
+  const [link, setLink] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  async function submit() {
+    if (!/^https?:\/\/(t\.me|telegram\.me)\//i.test(link)) {
+      toast.error("Use um link público do Telegram (https://t.me/...)");
+      return;
+    }
+    setLoading(true);
+    try {
+      await setTarget({ data: { subscriptionId, targetLink: link.trim() } });
+      toast.success("Pedido despachado para o painel!");
+      qc.invalidateQueries({ queryKey: ["engagement-subs"] });
+    } catch (e: any) {
+      toast.error(e?.message ?? "Falha ao despachar");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <Card className="border-primary/40 bg-primary/5">
+      <CardContent className="py-3 space-y-2">
+        <div className="text-xs font-medium">Escolha o canal/grupo para receber os inscritos</div>
+        <p className="text-[11px] text-muted-foreground">
+          Cole o link público (ex: https://t.me/seucanal). A entrega é automática e única.
+        </p>
+        <div className="flex gap-2">
+          <Input
+            placeholder="https://t.me/seucanal"
+            value={link}
+            onChange={(e) => setLink(e.target.value)}
+            disabled={loading}
+          />
+          <Button size="sm" onClick={submit} disabled={loading || !link}>
+            <Send className="size-3 mr-1" />
+            {loading ? "Enviando…" : "Entregar"}
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 function PaymentHistorySection({ rows, isLoading }: { rows: any[]; isLoading: boolean }) {
   return (
     <section className="space-y-3">
