@@ -633,6 +633,7 @@ export type Database = {
           content: string
           created_at: string
           id: string
+          image_path: string | null
           kind: Database["public"]["Enums"]["template_kind"]
           parse_mode: string
           room_id: string
@@ -643,6 +644,7 @@ export type Database = {
           content?: string
           created_at?: string
           id?: string
+          image_path?: string | null
           kind: Database["public"]["Enums"]["template_kind"]
           parse_mode?: string
           room_id: string
@@ -653,6 +655,7 @@ export type Database = {
           content?: string
           created_at?: string
           id?: string
+          image_path?: string | null
           kind?: Database["public"]["Enums"]["template_kind"]
           parse_mode?: string
           room_id?: string

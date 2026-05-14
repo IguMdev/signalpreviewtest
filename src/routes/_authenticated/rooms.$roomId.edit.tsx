@@ -26,6 +26,7 @@ import {
   upsertRoomEngagementSettings,
   getMySubscriptions,
 } from "@/lib/engagement.functions";
+import { sendRoomTest } from "@/lib/accounts.functions";
 
 export const Route = createFileRoute("/_authenticated/rooms/$roomId/edit")({
   component: EditRoomPage,
@@ -829,6 +830,8 @@ function TimezoneCard({ room }: { room: RoomData }) {
 function StopLossCard({ room }: { room: RoomData }) {
   const qc = useQueryClient();
   const [msg, setMsg] = useState(room.stop_loss_message ?? "🔴 *STOP LOSS ATINGIDO* 🔴");
+  const sendTest = useServerFn(sendRoomTest);
+  const [testing, setTesting] = useState(false);
   const save = useMutation({
     mutationFn: async () => {
       const { error } = await supabase.from("rooms").update({ stop_loss_message: msg }).eq("id", room.id);
@@ -837,6 +840,14 @@ function StopLossCard({ room }: { room: RoomData }) {
     onSuccess: () => { toast.success("Mensagem de Stop Loss salva"); qc.invalidateQueries({ queryKey: ["room", room.id] }); },
     onError: (e: Error) => toast.error(e.message),
   });
+  const onTest = async () => {
+    try {
+      setTesting(true);
+      await sendTest({ data: { roomId: room.id, text: msg } });
+      toast.success("Teste enviado");
+    } catch (e: any) { toast.error(e.message); }
+    finally { setTesting(false); }
+  };
   return (
     <Card className="p-6 space-y-3">
       <h2 className="text-lg font-semibold">Mensagem de Stop Loss</h2>
@@ -848,7 +859,7 @@ function StopLossCard({ room }: { room: RoomData }) {
         </p>
       </div>
       <div className="flex items-center justify-between pt-2 border-t border-border">
-        <Button variant="secondary" size="sm" disabled>📩 Enviar teste</Button>
+        <Button variant="secondary" size="sm" onClick={onTest} disabled={testing}>📩 {testing ? "Enviando..." : "Enviar teste"}</Button>
         <Button size="sm" onClick={() => save.mutate()} disabled={save.isPending}>Salvar seção</Button>
       </div>
     </Card>
@@ -1042,23 +1053,27 @@ function TemplateEditor({
   rows?: number;
 }) {
   const [content, setContent] = useState<string>(existing?.content ?? "");
+  const [imagePath, setImagePath] = useState<string | null>(existing?.image_path ?? null);
   const [newLabel, setNewLabel] = useState("");
   const [newUrl, setNewUrl] = useState("");
+  const sendTest = useServerFn(sendRoomTest);
+  const [testing, setTesting] = useState(false);
 
   useEffect(() => {
     setContent(existing?.content ?? "");
-  }, [existing?.id, existing?.content]);
+    setImagePath(existing?.image_path ?? null);
+  }, [existing?.id, existing?.content, existing?.image_path]);
 
   const saveTpl = useMutation({
     mutationFn: async () => {
       const { data: u } = await supabase.auth.getUser();
       if (existing) {
         const { error } = await supabase.from("room_templates")
-          .update({ content }).eq("id", existing.id);
+          .update({ content, image_path: imagePath }).eq("id", existing.id);
         if (error) throw error;
       } else {
         const { error } = await supabase.from("room_templates").insert({
-          room_id: roomId, user_id: u.user!.id, kind, content, parse_mode: "HTML",
+          room_id: roomId, user_id: u.user!.id, kind, content, parse_mode: "HTML", image_path: imagePath,
         });
         if (error) throw error;
       }
@@ -1090,6 +1105,15 @@ function TemplateEditor({
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const onTest = async () => {
+    try {
+      setTesting(true);
+      await sendTest({ data: { roomId, text: content, imagePath: imagePath ?? undefined } });
+      toast.success("Teste enviado");
+    } catch (e: any) { toast.error(e.message); }
+    finally { setTesting(false); }
+  };
+
   return (
     <div className="border rounded-md p-4 space-y-4 bg-card/40">
       {(title || helper) && (
@@ -1109,7 +1133,14 @@ function TemplateEditor({
         />
       </div>
 
-      {showImageTools && <ImageAttachmentMock tone={imageTone} />}
+      {showImageTools && (
+        <ImageAttachment
+          tone={imageTone}
+          roomId={roomId}
+          value={imagePath}
+          onChange={setImagePath}
+        />
+      )}
 
       {showButtonManager && <div className="space-y-2">
         <Label className="text-xs">Botões inline (opcional)</Label>
@@ -1141,10 +1172,16 @@ function TemplateEditor({
             <>
               <Button variant="secondary" size="sm" disabled><Smile className="size-4 mr-1" />Emojis</Button>
               <Button variant="outline" size="sm" onClick={() => setContent(placeholder)}><RotateCcw className="size-4 mr-1" />Restaurar</Button>
-              <Button variant="secondary" size="sm" disabled><Send className="size-4 mr-1" />Enviar teste</Button>
+              <Button variant="secondary" size="sm" onClick={onTest} disabled={testing}>
+                <Send className="size-4 mr-1" />{testing ? "Enviando..." : "Enviar teste"}
+              </Button>
             </>
           )}
-          {actionMode === "test" && <Button variant="secondary" size="sm" disabled><Send className="size-4 mr-1" />Enviar teste</Button>}
+          {actionMode === "test" && (
+            <Button variant="secondary" size="sm" onClick={onTest} disabled={testing}>
+              <Send className="size-4 mr-1" />{testing ? "Enviando..." : "Enviar teste"}
+            </Button>
+          )}
         </div>
         <Button size="sm" onClick={() => saveTpl.mutate()} disabled={saveTpl.isPending}>
           {saveTpl.isPending ? "Salvando..." : "Salvar template"}
@@ -1154,27 +1191,69 @@ function TemplateEditor({
   );
 }
 
-function ImageAttachmentMock({ tone }: { tone: string }) {
-  const [fileName, setFileName] = useState("");
+function ImageAttachment({
+  tone, roomId, value, onChange,
+}: {
+  tone: string;
+  roomId: string;
+  value: string | null;
+  onChange: (path: string | null) => void;
+}) {
+  const [uploading, setUploading] = useState(false);
+  const publicUrl = value
+    ? supabase.storage.from("room-images").getPublicUrl(value).data.publicUrl
+    : null;
+
+  const handleUpload = async (file: File) => {
+    try {
+      setUploading(true);
+      const { data: u } = await supabase.auth.getUser();
+      if (!u.user) throw new Error("Não autenticado");
+      const ext = file.name.split(".").pop() || "png";
+      const path = `${u.user.id}/${roomId}/templates/${crypto.randomUUID()}.${ext}`;
+      const { error } = await supabase.storage
+        .from("room-images")
+        .upload(path, file, { upsert: true, contentType: file.type });
+      if (error) throw error;
+      onChange(path);
+      toast.success("Imagem enviada");
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setUploading(false);
+    }
+  };
+
   return (
     <div className="space-y-2">
       <Label className="text-xs">Imagem</Label>
       <div className="rounded-md border border-dashed bg-background/50 p-3 space-y-3">
-        <div className="h-24 rounded-md bg-muted/50 flex flex-col items-center justify-center text-muted-foreground">
-          <ImageIcon className="size-6 mb-1" />
-          <span className="text-xs font-semibold">Preview {tone}</span>
-          {fileName && <span className="text-[11px] mt-1 max-w-full truncate px-2">{fileName}</span>}
+        <div className="min-h-24 rounded-md bg-muted/50 flex flex-col items-center justify-center text-muted-foreground overflow-hidden">
+          {publicUrl ? (
+            <img src={publicUrl} alt={`Preview ${tone}`} className="max-h-48 w-auto object-contain" />
+          ) : (
+            <>
+              <ImageIcon className="size-6 mb-1" />
+              <span className="text-xs font-semibold">Preview {tone}</span>
+            </>
+          )}
         </div>
         <div className="flex flex-wrap gap-2 justify-end">
-          <Button variant="outline" size="sm" onClick={() => setFileName("")} disabled={!fileName}>Remover arquivo</Button>
-          <Button asChild size="sm" variant="secondary">
+          <Button variant="outline" size="sm" onClick={() => onChange(null)} disabled={!value || uploading}>
+            Remover arquivo
+          </Button>
+          <Button asChild size="sm" variant="secondary" disabled={uploading}>
             <label className="cursor-pointer">
-              <Upload className="size-4 mr-1" />Escolher arquivo
+              <Upload className="size-4 mr-1" />{uploading ? "Enviando..." : "Escolher arquivo"}
               <input
                 type="file"
                 className="sr-only"
-                accept="image/png,image/jpeg,image/gif,image/webp,.tgs,.webm"
-                onChange={(e) => setFileName(e.target.files?.[0]?.name ?? "")}
+                accept="image/png,image/jpeg,image/gif,image/webp"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) handleUpload(f);
+                  e.target.value = "";
+                }}
               />
             </label>
           </Button>
@@ -1229,12 +1308,16 @@ function SessionMessageEditor({
   const [content, setContent] = useState<string>(existing?.content ?? "");
   const [enabled, setEnabled] = useState<boolean>(existing?.enabled ?? true);
   const [lead, setLead] = useState<string>(String(existing?.lead_minutes ?? 5));
+  const [imagePath, setImagePath] = useState<string | null>(existing?.image_path ?? null);
+  const sendTest = useServerFn(sendRoomTest);
+  const [testing, setTesting] = useState(false);
 
   useEffect(() => {
     setContent(existing?.content ?? "");
     setEnabled(existing?.enabled ?? true);
     setLead(String(existing?.lead_minutes ?? 5));
-  }, [existing?.id, existing?.content, existing?.enabled, existing?.lead_minutes]);
+    setImagePath(existing?.image_path ?? null);
+  }, [existing?.id, existing?.content, existing?.enabled, existing?.lead_minutes, existing?.image_path]);
 
   const save = useMutation({
     mutationFn: async () => {
@@ -1243,6 +1326,7 @@ function SessionMessageEditor({
         content,
         enabled,
         lead_minutes: parseInt(lead, 10) || 0,
+        image_path: imagePath,
       };
       if (existing) {
         const { error } = await supabase.from("room_session_messages").update(payload).eq("id", existing.id);
@@ -1257,6 +1341,15 @@ function SessionMessageEditor({
     onSuccess: () => { toast.success(`${title} salva`); onChanged(); },
     onError: (e: Error) => toast.error(e.message),
   });
+
+  const onTest = async () => {
+    try {
+      setTesting(true);
+      await sendTest({ data: { roomId, text: content, imagePath: imagePath ?? undefined } });
+      toast.success("Teste enviado");
+    } catch (e: any) { toast.error(e.message); }
+    finally { setTesting(false); }
+  };
 
   return (
     <div className="border rounded-md p-4 space-y-3 bg-card/40">
@@ -1278,9 +1371,16 @@ function SessionMessageEditor({
             ? "🚀 SESSÃO COMEÇA EM {MINUTOS} MIN!\nPrepare-se para os sinais!"
             : "🏁 SESSÃO ENCERRADA\nObrigado por operar conosco!"} />
       </div>
-      <ImageAttachmentMock tone={kind === "open" ? "INÍCIO" : "TÉRMINO"} />
+      <ImageAttachment
+        tone={kind === "open" ? "INÍCIO" : "TÉRMINO"}
+        roomId={roomId}
+        value={imagePath}
+        onChange={setImagePath}
+      />
       <div className="flex items-center justify-between gap-3 pt-2 border-t border-border">
-        <Button variant="secondary" size="sm" disabled><Send className="size-4 mr-1" />Enviar teste</Button>
+        <Button variant="secondary" size="sm" onClick={onTest} disabled={testing}>
+          <Send className="size-4 mr-1" />{testing ? "Enviando..." : "Enviar teste"}
+        </Button>
         <Button size="sm" onClick={() => save.mutate()} disabled={save.isPending}>
           {save.isPending ? "Salvando..." : "Salvar"}
         </Button>
@@ -1309,6 +1409,7 @@ function ReportsCard({ roomId }: { roomId: string }) {
   const [delay, setDelay] = useState<string>("1");
   const [tpl, setTpl] = useState<string>("");
   const [includeStats, setIncludeStats] = useState<boolean>(true);
+  const [imagePath, setImagePath] = useState<string | null>(null);
 
   useEffect(() => {
     if (!report.data) return;
@@ -1316,7 +1417,8 @@ function ReportsCard({ roomId }: { roomId: string }) {
     setDelay(String(report.data.delay_minutes ?? 1));
     setTpl(report.data.template ?? "");
     setIncludeStats(report.data.include_stats ?? true);
-  }, [report.data?.id, report.data?.enabled, report.data?.delay_minutes, report.data?.template, report.data?.include_stats]);
+    setImagePath(report.data.image_path ?? null);
+  }, [report.data?.id, report.data?.enabled, report.data?.delay_minutes, report.data?.template, report.data?.include_stats, report.data?.image_path]);
 
   const save = useMutation({
     mutationFn: async () => {
@@ -1326,6 +1428,7 @@ function ReportsCard({ roomId }: { roomId: string }) {
         delay_minutes: parseInt(delay, 10) || 0,
         template: tpl,
         include_stats: includeStats,
+        image_path: imagePath,
       };
       if (report.data) {
         const { error } = await supabase.from("room_reports").update(payload).eq("id", report.data.id);
@@ -1369,7 +1472,12 @@ function ReportsCard({ roomId }: { roomId: string }) {
         <Textarea value={tpl} onChange={(e) => setTpl(e.target.value)} rows={6} className="font-mono text-sm"
           placeholder={"📊 RELATÓRIO {SESSAO_NOME}\n✅ Wins: {TOTAL_WINS}\n🔴 Losses: {TOTAL_LOSSES}\n📈 Operações: {TOTAL_OPERACOES}\n🎯 Win rate: {WIN_RATE}%"} />
       </div>
-      <ImageAttachmentMock tone="RELATÓRIO" />
+      <ImageAttachment
+        tone="RELATÓRIO"
+        roomId={roomId}
+        value={imagePath}
+        onChange={setImagePath}
+      />
       <div className="flex justify-end pt-2 border-t border-border">
         <Button size="sm" onClick={() => save.mutate()} disabled={save.isPending}>
           {save.isPending ? "Salvando..." : "Salvar seção"}

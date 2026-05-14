@@ -104,3 +104,63 @@ export const refreshChats = createServerFn({ method: "POST" })
     }
     return { ok: true, count: rows.length };
   });
+
+export const sendRoomTest = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) =>
+    z
+      .object({
+        roomId: z.string().uuid(),
+        text: z.string().max(4000).optional(),
+        imagePath: z.string().optional(),
+        imageBucket: z.string().optional(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    const { data: room, error: roomErr } = await supabase
+      .from("rooms")
+      .select("id, default_account_id")
+      .eq("id", data.roomId)
+      .maybeSingle();
+    if (roomErr || !room) throw new Error("Sala não encontrada");
+    if (!room.default_account_id) throw new Error("Selecione um bot padrão para a sala antes de enviar testes.");
+
+    const { data: chat } = await supabase
+      .from("room_chats")
+      .select("chat_id")
+      .eq("room_id", room.id)
+      .limit(1)
+      .maybeSingle();
+    if (!chat) throw new Error("Vincule pelo menos um chat do Telegram à sala antes de enviar testes.");
+
+    const { data: acc } = await supabase
+      .from("telegram_accounts")
+      .select("bot_token")
+      .eq("id", room.default_account_id)
+      .maybeSingle();
+    if (!acc) throw new Error("Bot da sala não encontrado");
+
+    const text = data.text?.trim() || "";
+    let r;
+    if (data.imagePath) {
+      const bucket = data.imageBucket || "room-images";
+      const { data: pub } = supabase.storage.from(bucket).getPublicUrl(data.imagePath);
+      r = await callTelegram<{ message_id: number }>(acc.bot_token, "sendPhoto", {
+        chat_id: chat.chat_id,
+        photo: pub.publicUrl,
+        caption: text || undefined,
+        parse_mode: "HTML",
+      });
+    } else {
+      if (!text) throw new Error("Mensagem vazia");
+      r = await callTelegram<{ message_id: number }>(acc.bot_token, "sendMessage", {
+        chat_id: chat.chat_id,
+        text,
+        parse_mode: "HTML",
+      });
+    }
+    if (!r.ok) throw new Error(r.description ?? "Falha ao enviar");
+    return { ok: true, messageId: r.result?.message_id };
+  });
