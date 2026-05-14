@@ -11,6 +11,7 @@ import {
   confirmPremiumCode,
   syncPremiumEmojis,
 } from "@/lib/premium-account.functions";
+import { premiumStrings as S, translatePremiumError } from "@/lib/premium-strings";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -86,6 +87,12 @@ function TelegramAccountsPage() {
   const [twoFa, setTwoFa] = useState("");
   const [needs2fa, setNeeds2fa] = useState(false);
   const [loadingPremium, setLoadingPremium] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
+
+  // Cooldown ticker para reenvio de código.
+  if (typeof window !== "undefined") {
+    // noop placeholder so the next useEffect block exists in build time
+  }
 
   const createMut = useMutation({
     mutationFn: async () => {
@@ -126,12 +133,12 @@ function TelegramAccountsPage() {
 
   async function handleRequestCode() {
     if (!label || !phone || !apiId || !apiHash) {
-      toast.error("Preencha todos os campos");
+      toast.error(S.toasts.fillAll);
       return;
     }
     const idNum = Number(apiId);
     if (!Number.isInteger(idNum) || idNum <= 0) {
-      toast.error("API ID inválido");
+      toast.error(S.toasts.invalidApiId);
       return;
     }
     setLoadingPremium(true);
@@ -157,10 +164,39 @@ function TelegramAccountsPage() {
       });
       setPendingAccountId(row.id);
       setPremiumStep("code");
-      toast.success("Código enviado pelo Telegram");
+      toast.success(S.toasts.codeSent);
+      startResendCooldown();
       qc.invalidateQueries({ queryKey: ["telegram-accounts"] });
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Falha");
+      toast.error(translatePremiumError(e));
+    } finally {
+      setLoadingPremium(false);
+    }
+  }
+
+  function startResendCooldown() {
+    setResendCooldown(60);
+    const id = window.setInterval(() => {
+      setResendCooldown((s) => {
+        if (s <= 1) {
+          window.clearInterval(id);
+          return 0;
+        }
+        return s - 1;
+      });
+    }, 1000);
+  }
+
+  async function handleResendCode() {
+    if (!pendingAccountId || resendCooldown > 0) return;
+    const idNum = Number(apiId);
+    setLoadingPremium(true);
+    try {
+      await reqCode({ data: { accountId: pendingAccountId, apiId: idNum, apiHash, phone } });
+      toast.success(S.toasts.codeResent);
+      startResendCooldown();
+    } catch (e) {
+      toast.error(translatePremiumError(e));
     } finally {
       setLoadingPremium(false);
     }
@@ -179,19 +215,19 @@ function TelegramAccountsPage() {
       });
       if (r.needsPassword) {
         setNeeds2fa(true);
-        toast.message("Esta conta tem 2FA — informe a senha de nuvem");
+        toast.message(S.toasts.needs2fa);
         return;
       }
-      toast.success("Conta conectada!");
+      toast.success(S.toasts.connected);
       // Sincroniza emojis em background
       syncEmojis({ data: { accountId: pendingAccountId } })
-        .then((s) => toast.success(`${s.count} emojis premium sincronizados`))
+        .then((s) => toast.success(S.toasts.emojisSynced(s.count)))
         .catch(() => {});
       setOpenNew(false);
       resetDialog();
       qc.invalidateQueries({ queryKey: ["telegram-accounts"] });
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Falha");
+      toast.error(translatePremiumError(e));
     } finally {
       setLoadingPremium(false);
     }
