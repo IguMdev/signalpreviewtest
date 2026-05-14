@@ -248,6 +248,8 @@ function EngagementCard({ roomId }: { roomId: string }) {
   const fetchSettings = useServerFn(getRoomEngagementSettings);
   const fetchSubs = useServerFn(getMySubscriptions);
   const saveSettings = useServerFn(upsertRoomEngagementSettings);
+  const sendTest = useServerFn(sendRoomTest);
+  const [testingWelcome, setTestingWelcome] = useState(false);
 
   const { data: settings } = useQuery({
     queryKey: ["room-eng-settings", roomId],
@@ -425,6 +427,23 @@ function EngagementCard({ roomId }: { roomId: string }) {
             <p className="text-xs text-muted-foreground">
               Suporta HTML básico: &lt;b&gt;, &lt;i&gt;, &lt;a&gt;.
             </p>
+            <div className="flex justify-end">
+              <Button
+                variant="secondary"
+                size="sm"
+                disabled={!hasWelcome || testingWelcome}
+                onClick={async () => {
+                  try {
+                    setTestingWelcome(true);
+                    await sendTest({ data: { roomId, text: welcomeMessage } });
+                    toast.success("Teste enviado");
+                  } catch (e: any) { toast.error(e.message); }
+                  finally { setTestingWelcome(false); }
+                }}
+              >
+                📩 {testingWelcome ? "Enviando..." : "Enviar teste"}
+              </Button>
+            </div>
           </div>
         </div>
 
@@ -873,6 +892,8 @@ function StopLossCard({ room }: { room: RoomData }) {
 function MarketTipsCard({ room }: { room: RoomData }) {
   const qc = useQueryClient();
   const [enabled, setEnabled] = useState(room.market_tips_enabled ?? false);
+  const sendTest = useServerFn(sendRoomTest);
+  const [testing, setTesting] = useState(false);
   const save = useMutation({
     mutationFn: async () => {
       const { error } = await supabase.from("rooms").update({ market_tips_enabled: enabled }).eq("id", room.id);
@@ -881,6 +902,14 @@ function MarketTipsCard({ room }: { room: RoomData }) {
     onSuccess: () => { toast.success("Dicas de Mercado salvas"); qc.invalidateQueries({ queryKey: ["room", room.id] }); },
     onError: (e: Error) => toast.error(e.message),
   });
+  const onTest = async () => {
+    try {
+      setTesting(true);
+      await sendTest({ data: { roomId: room.id, text: "📊 <b>Dica de Mercado (teste)</b>\nEsta é uma prévia das notícias e tendências que serão enviadas automaticamente ao grupo." } });
+      toast.success("Teste enviado");
+    } catch (e: any) { toast.error(e.message); }
+    finally { setTesting(false); }
+  };
   return (
     <Card className="p-6 space-y-3">
       <div className="flex items-center gap-2">
@@ -896,7 +925,10 @@ function MarketTipsCard({ room }: { room: RoomData }) {
         <Checkbox checked={enabled} onCheckedChange={(v) => setEnabled(!!v)} />
         <span className="text-sm">Habilitar envio de dicas de mercado</span>
       </label>
-      <div className="flex justify-end pt-2 border-t border-border">
+      <div className="flex items-center justify-between pt-2 border-t border-border">
+        <Button variant="secondary" size="sm" onClick={onTest} disabled={testing}>
+          📩 {testing ? "Enviando..." : "Enviar teste"}
+        </Button>
         <Button size="sm" onClick={() => save.mutate()} disabled={save.isPending}>Salvar seção</Button>
       </div>
     </Card>
@@ -1395,6 +1427,8 @@ function SessionMessageEditor({
 
 function ReportsCard({ roomId }: { roomId: string }) {
   const qc = useQueryClient();
+  const sendTest = useServerFn(sendRoomTest);
+  const [testing, setTesting] = useState(false);
   const report = useQuery({
     queryKey: ["room_reports", roomId],
     queryFn: async () => {
@@ -1404,6 +1438,21 @@ function ReportsCard({ roomId }: { roomId: string }) {
       return data;
     },
   });
+
+  const onTest = async () => {
+    try {
+      setTesting(true);
+      const sample = (tpl || "📊 RELATÓRIO {SESSAO_NOME}\n✅ Wins: {TOTAL_WINS}\n🔴 Losses: {TOTAL_LOSSES}\n📈 Operações: {TOTAL_OPERACOES}\n🎯 Win rate: {WIN_RATE}%")
+        .replaceAll("{SESSAO_NOME}", "Sessão Teste")
+        .replaceAll("{TOTAL_WINS}", "7")
+        .replaceAll("{TOTAL_LOSSES}", "3")
+        .replaceAll("{TOTAL_OPERACOES}", "10")
+        .replaceAll("{WIN_RATE}", "70");
+      await sendTest({ data: { roomId, text: sample, imagePath: imagePath ?? undefined } });
+      toast.success("Teste enviado");
+    } catch (e: any) { toast.error(e.message); }
+    finally { setTesting(false); }
+  };
 
   const [enabled, setEnabled] = useState<boolean>(false);
   const [delay, setDelay] = useState<string>("1");
@@ -1478,7 +1527,10 @@ function ReportsCard({ roomId }: { roomId: string }) {
         value={imagePath}
         onChange={setImagePath}
       />
-      <div className="flex justify-end pt-2 border-t border-border">
+      <div className="flex items-center justify-between pt-2 border-t border-border">
+        <Button variant="secondary" size="sm" onClick={onTest} disabled={testing}>
+          📩 {testing ? "Enviando..." : "Enviar teste"}
+        </Button>
         <Button size="sm" onClick={() => save.mutate()} disabled={save.isPending}>
           {save.isPending ? "Salvando..." : "Salvar seção"}
         </Button>
