@@ -8,10 +8,13 @@ export type TelegramResponse<T> = {
 };
 
 export async function callTelegram<T>(
-  token: string,
+  token: string | null | undefined,
   method: string,
   body?: Record<string, unknown>,
 ): Promise<TelegramResponse<T>> {
+  if (!token) {
+    return { ok: false, description: "Conta sem bot_token (use uma conta do tipo Bot)" };
+  }
   const res = await fetch(`${API_BASE}/bot${token}/${method}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
