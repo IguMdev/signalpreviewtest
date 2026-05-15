@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { PremiumEmojiPicker } from "@/components/PremiumEmojiPicker";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
@@ -430,6 +431,9 @@ function EngagementCard({ roomId }: { roomId: string }) {
           {!hasWelcome && <p className="text-xs text-muted-foreground">Requer plano BotBoasVindas ativo.</p>}
           <div className="space-y-1.5">
             <Label className="text-xs">Mensagem de boas-vindas</Label>
+            <div className="flex justify-end -mb-1">
+              <PremiumEmojiPicker value={welcomeMessage} onChange={setWelcomeMessage} />
+            </div>
             <Textarea
               value={welcomeMessage}
               onChange={(e) => setWelcomeMessage(e.target.value)}
@@ -1004,6 +1008,9 @@ function StopLossCard({ room }: { room: RoomData }) {
       <h2 className="text-lg font-semibold">Mensagem de Stop Loss</h2>
       <div className="space-y-1.5">
         <Label className="text-xs">Mensagem enviada quando o stop loss for atingido</Label>
+        <div className="flex justify-end -mb-1">
+          <PremiumEmojiPicker value={msg} onChange={setMsg} />
+        </div>
         <Textarea value={msg} onChange={(e) => setMsg(e.target.value)} rows={3} />
         <p className="text-xs text-muted-foreground">
           Mensagem enviada ao grupo quando o stop loss for atingido. Deixe em branco para usar a mensagem padrão.
@@ -1303,6 +1310,9 @@ function TemplateEditor({
       )}
       <div className="space-y-1.5">
         <Label className="text-xs">Conteúdo da mensagem</Label>
+        <div className="flex justify-end -mb-1">
+          <PremiumEmojiPicker value={content} onChange={setContent} />
+        </div>
         <Textarea
           value={content}
           onChange={(e) => setContent(e.target.value)}
@@ -1559,6 +1569,9 @@ function SessionMessageEditor({
       </div>
       <div className="space-y-1.5">
         <Label className="text-xs">Conteúdo</Label>
+        <div className="flex justify-end -mb-1">
+          <PremiumEmojiPicker value={content} onChange={setContent} />
+        </div>
         <Textarea value={content} onChange={(e) => setContent(e.target.value)} rows={5} className="font-mono text-sm"
           placeholder={kind === "open"
             ? "🚀 SESSÃO COMEÇA EM {MINUTOS} MIN!\nPrepare-se para os sinais!"
@@ -1687,6 +1700,9 @@ function ReportsCard({ roomId }: { roomId: string }) {
       </div>
       <div className="space-y-1.5">
         <Label className="text-xs">Template do relatório</Label>
+        <div className="flex justify-end -mb-1">
+          <PremiumEmojiPicker value={tpl} onChange={setTpl} />
+        </div>
         <Textarea value={tpl} onChange={(e) => setTpl(e.target.value)} rows={6} className="font-mono text-sm"
           placeholder={"📊 RELATÓRIO {SESSAO_NOME}\n✅ Wins: {TOTAL_WINS}\n🔴 Losses: {TOTAL_LOSSES}\n📈 Operações: {TOTAL_OPERACOES}\n🎯 Win rate: {WIN_RATE}%"} />
       </div>
