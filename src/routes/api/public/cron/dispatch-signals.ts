@@ -66,7 +66,9 @@ type SignalEvent = {
 };
 
 function asMessageIds(value: unknown): Record<string, number> {
-  return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, number>) : {};
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, number>)
+    : {};
 }
 
 async function buildReplyMarkup(userId: string, buttons: TemplateButton[], kind: string) {
