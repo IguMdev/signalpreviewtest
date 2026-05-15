@@ -438,9 +438,14 @@ export const testMessage = createServerFn({ method: "POST" })
             })
           : { applied: false as const, reason: "skip" };
       if (premium.applied) {
-        r = premium.ok
-          ? { ok: true, result: { message_id: premium.messageId ?? undefined } }
-          : { ok: false, description: premium.error };
+        r = await withCompanionButton(
+          premium.ok
+            ? { ok: true, result: { message_id: premium.messageId ?? undefined } }
+            : { ok: false, description: premium.error },
+          acc.bot_token,
+          c.chat_id,
+          replyMarkup,
+        );
       } else if (data.imagePath) {
         const { data: pub } = supabaseAdmin.storage
           .from("room-images")
@@ -455,9 +460,14 @@ export const testMessage = createServerFn({ method: "POST" })
             buttonRows,
           });
           if (premiumPhoto.applied) {
-            r = premiumPhoto.ok
-              ? { ok: true, result: { message_id: premiumPhoto.messageId ?? undefined } }
-              : { ok: false, description: premiumPhoto.error };
+            r = await withCompanionButton(
+              premiumPhoto.ok
+                ? { ok: true, result: { message_id: premiumPhoto.messageId ?? undefined } }
+                : { ok: false, description: premiumPhoto.error },
+              acc.bot_token,
+              c.chat_id,
+              replyMarkup,
+            );
           } else {
             r = await callTelegram<{ message_id: number }>(acc.bot_token, "sendPhoto", {
               chat_id: c.chat_id,
@@ -497,9 +507,14 @@ export const testMessage = createServerFn({ method: "POST" })
                 buttonRows,
               });
               if (pv.applied) {
-                r = pv.ok
-                  ? { ok: true, result: { message_id: pv.messageId ?? undefined } }
-                  : { ok: false, description: pv.error };
+                r = await withCompanionButton(
+                  pv.ok
+                    ? { ok: true, result: { message_id: pv.messageId ?? undefined } }
+                    : { ok: false, description: pv.error },
+                  acc.bot_token,
+                  c.chat_id,
+                  replyMarkup,
+                );
                 premiumVideoOk = true;
               }
             }
