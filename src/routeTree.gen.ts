@@ -24,6 +24,7 @@ import { Route as AuthenticatedMembrosRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedRoomsIndexRouteImport } from './routes/_authenticated/rooms.index'
 import { Route as AuthenticatedIntegracoesMetaRouteImport } from './routes/_authenticated/integracoes.meta'
+import { Route as AuthenticatedBotsBoasvindasRouteImport } from './routes/_authenticated/bots.boasvindas'
 import { Route as ApiPublicKirvanoWebhookRouteImport } from './routes/api/public/kirvano/webhook'
 import { Route as ApiPublicCronDispatchSignalsRouteImport } from './routes/api/public/cron/dispatch-signals'
 import { Route as ApiPublicCronDispatchRecurringRouteImport } from './routes/api/public/cron/dispatch-recurring'
@@ -107,6 +108,12 @@ const AuthenticatedIntegracoesMetaRoute =
     path: '/integracoes/meta',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedBotsBoasvindasRoute =
+  AuthenticatedBotsBoasvindasRouteImport.update({
+    id: '/bots/boasvindas',
+    path: '/bots/boasvindas',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const ApiPublicKirvanoWebhookRoute = ApiPublicKirvanoWebhookRouteImport.update({
   id: '/api/public/kirvano/webhook',
   path: '/api/public/kirvano/webhook',
@@ -150,6 +157,7 @@ export interface FileRoutesByFullPath {
   '/telegram-accounts': typeof AuthenticatedTelegramAccountsRoute
   '/tutorial': typeof AuthenticatedTutorialRoute
   '/videos': typeof AuthenticatedVideosRoute
+  '/bots/boasvindas': typeof AuthenticatedBotsBoasvindasRoute
   '/integracoes/meta': typeof AuthenticatedIntegracoesMetaRoute
   '/rooms/': typeof AuthenticatedRoomsIndexRoute
   '/rooms/$roomId/edit': typeof AuthenticatedRoomsRoomIdEditRoute
@@ -171,6 +179,7 @@ export interface FileRoutesByTo {
   '/tutorial': typeof AuthenticatedTutorialRoute
   '/videos': typeof AuthenticatedVideosRoute
   '/': typeof AuthenticatedIndexRoute
+  '/bots/boasvindas': typeof AuthenticatedBotsBoasvindasRoute
   '/integracoes/meta': typeof AuthenticatedIntegracoesMetaRoute
   '/rooms': typeof AuthenticatedRoomsIndexRoute
   '/rooms/$roomId/edit': typeof AuthenticatedRoomsRoomIdEditRoute
@@ -194,6 +203,7 @@ export interface FileRoutesById {
   '/_authenticated/tutorial': typeof AuthenticatedTutorialRoute
   '/_authenticated/videos': typeof AuthenticatedVideosRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
+  '/_authenticated/bots/boasvindas': typeof AuthenticatedBotsBoasvindasRoute
   '/_authenticated/integracoes/meta': typeof AuthenticatedIntegracoesMetaRoute
   '/_authenticated/rooms/': typeof AuthenticatedRoomsIndexRoute
   '/_authenticated/rooms/$roomId/edit': typeof AuthenticatedRoomsRoomIdEditRoute
@@ -217,6 +227,7 @@ export interface FileRouteTypes {
     | '/telegram-accounts'
     | '/tutorial'
     | '/videos'
+    | '/bots/boasvindas'
     | '/integracoes/meta'
     | '/rooms/'
     | '/rooms/$roomId/edit'
@@ -238,6 +249,7 @@ export interface FileRouteTypes {
     | '/tutorial'
     | '/videos'
     | '/'
+    | '/bots/boasvindas'
     | '/integracoes/meta'
     | '/rooms'
     | '/rooms/$roomId/edit'
@@ -260,6 +272,7 @@ export interface FileRouteTypes {
     | '/_authenticated/tutorial'
     | '/_authenticated/videos'
     | '/_authenticated/'
+    | '/_authenticated/bots/boasvindas'
     | '/_authenticated/integracoes/meta'
     | '/_authenticated/rooms/'
     | '/_authenticated/rooms/$roomId/edit'
@@ -386,6 +399,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedIntegracoesMetaRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/bots/boasvindas': {
+      id: '/_authenticated/bots/boasvindas'
+      path: '/bots/boasvindas'
+      fullPath: '/bots/boasvindas'
+      preLoaderRoute: typeof AuthenticatedBotsBoasvindasRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/api/public/kirvano/webhook': {
       id: '/api/public/kirvano/webhook'
       path: '/api/public/kirvano/webhook'
@@ -435,6 +455,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedTutorialRoute: typeof AuthenticatedTutorialRoute
   AuthenticatedVideosRoute: typeof AuthenticatedVideosRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
+  AuthenticatedBotsBoasvindasRoute: typeof AuthenticatedBotsBoasvindasRoute
   AuthenticatedIntegracoesMetaRoute: typeof AuthenticatedIntegracoesMetaRoute
   AuthenticatedRoomsIndexRoute: typeof AuthenticatedRoomsIndexRoute
   AuthenticatedRoomsRoomIdEditRoute: typeof AuthenticatedRoomsRoomIdEditRoute
@@ -451,6 +472,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedTutorialRoute: AuthenticatedTutorialRoute,
   AuthenticatedVideosRoute: AuthenticatedVideosRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
+  AuthenticatedBotsBoasvindasRoute: AuthenticatedBotsBoasvindasRoute,
   AuthenticatedIntegracoesMetaRoute: AuthenticatedIntegracoesMetaRoute,
   AuthenticatedRoomsIndexRoute: AuthenticatedRoomsIndexRoute,
   AuthenticatedRoomsRoomIdEditRoute: AuthenticatedRoomsRoomIdEditRoute,
@@ -473,3 +495,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
