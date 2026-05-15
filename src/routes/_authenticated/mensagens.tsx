@@ -255,6 +255,17 @@ function MensagensPage() {
     });
   };
 
+  const openDuplicate = (s: Schedule) => {
+    setPresetRoomId(s.room_id);
+    setEditing({
+      ...s,
+      id: "",
+      title: `${s.title} (cópia)`,
+      is_active: true,
+      last_sent_at: null,
+    });
+  };
+
   return (
     <div className="space-y-6">
       <div>
