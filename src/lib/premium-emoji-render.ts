@@ -1,4 +1,4 @@
-// Helpers para tokens de emoji premium nos formatos {NOME} e {EMOJI:NOME}.
+// Helpers para tokens de emoji premium no formato {NOME}.
 // Sem dependências de runtime — pode rodar em qualquer ambiente.
 
 export function hasEmojiTokens(s: string | null | undefined): boolean {
@@ -19,7 +19,7 @@ export type EmojiLookup = Map<
 >;
 
 /**
- * Substitui {NOME}/{EMOJI:NOME} pelo `preview_char` (ou ⭐ como fallback)
+ * Substitui {NOME} pelo `preview_char` (ou ⭐ como fallback)
  * e devolve as entities `MessageEntityCustomEmoji` com offsets em UTF-16
  * (compatível com a API do Telegram / GramJS).
  */
@@ -31,7 +31,7 @@ export function renderEmojiTokens(
     Array.from(lookup.entries()).map(([name, value]) => [name.trim().toUpperCase(), value]),
   );
   const entities: RenderedEntity[] = [];
-  const re = /\{(?:EMOJI:)?([^}]+)\}/g;
+  const re = /\{([A-Za-z0-9_\-]+)\}/g;
   let out = "";
   let last = 0;
   let m: RegExpExecArray | null;
