@@ -39,6 +39,57 @@ function logPremiumFallback(
   });
 }
 
+/**
+ * Traduz erros crus do MTProto para mensagens claras em PT-BR.
+ * Retorna `{ message, reason }` — `reason` é um código curto p/ o frontend.
+ */
+function translateMtprotoError(raw: string): { message: string; reason: string } {
+  const r = (raw || "").toUpperCase();
+  if (r.includes("CHAT_ADMIN_REQUIRED")) {
+    return {
+      reason: "chat-admin-required",
+      message:
+        "A conta Premium precisa ser admin desse canal/grupo (com permissão de postar) para enviar emojis animados.",
+    };
+  }
+  if (r.includes("CHAT_WRITE_FORBIDDEN") || r.includes("CHANNEL_PRIVATE")) {
+    return {
+      reason: "chat-write-forbidden",
+      message:
+        "A conta Premium não tem permissão para escrever nesse chat. Adicione-a ao canal/grupo (como admin, se for canal).",
+    };
+  }
+  if (r.includes("USER_BANNED_IN_CHANNEL") || r.includes("USER_KICKED")) {
+    return {
+      reason: "user-banned",
+      message: "A conta Premium foi banida ou removida desse chat.",
+    };
+  }
+  if (r.includes("PEER_ID_INVALID")) {
+    return {
+      reason: "peer-invalid",
+      message:
+        "A conta Premium ainda não conhece esse chat. Entre no canal/grupo com a conta Premium pelo menos uma vez.",
+    };
+  }
+  if (r.includes("SLOWMODE_WAIT")) {
+    return { reason: "slowmode", message: "O chat está em modo lento. Aguarde antes de enviar novamente." };
+  }
+  if (r.includes("FLOOD_WAIT")) {
+    return { reason: "flood-wait", message: "Telegram pediu para aguardar antes de enviar (flood wait)." };
+  }
+  if (r.includes("AUTH_KEY") || r.includes("SESSION_REVOKED") || r.includes("SESSION_EXPIRED")) {
+    return {
+      reason: "session-invalid",
+      message: "A sessão da conta Premium expirou. Reconecte a conta Telegram Premium.",
+    };
+  }
+  if (r.includes("MEDIA_EMPTY") || r.includes("PHOTO_INVALID")) {
+    return { reason: "media-invalid", message: "A imagem enviada é inválida ou não pôde ser baixada pelo Telegram." };
+  }
+  return { reason: "client-send-threw", message: raw };
+}
+
 async function getUserEmojiLookup(userId: string): Promise<EmojiLookup> {
   const { data: emojiRows } = await supabaseAdmin
     .from("premium_emojis")
