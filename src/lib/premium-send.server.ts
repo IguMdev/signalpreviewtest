@@ -206,7 +206,7 @@ export async function sendTextWithPremiumEmojis(opts: {
           { where: "sendText.allowPlain", userId: opts.userId, accountId: opts.accountId, chatId: opts.chatId, text: opts.text, entitiesCount: 0 },
           "no-active-premium-account",
         );
-        return { applied: true, ok: false, error: "Conecte a conta Telegram Premium novamente." };
+        return { applied: true, ok: false, error: "Conecte a conta Telegram Premium novamente.", reason: "no-active-premium-account" };
       }
       const { client } = await connectAndAssertPremium({
         tg_api_id: acc.tg_api_id as number,
@@ -226,7 +226,7 @@ export async function sendTextWithPremiumEmojis(opts: {
           "client.sendMessage threw",
           { error },
         );
-        return { applied: true, ok: false, error };
+        return { applied: true, ok: false, error, reason: "client-send-threw" };
       } finally {
         await client.disconnect().catch(() => {});
       }
@@ -248,7 +248,7 @@ export async function sendTextWithPremiumEmojis(opts: {
       { lookupSize: lookup.size },
     );
     if (opts.strict) {
-      return { applied: true, ok: false, error: "Nenhum emoji premium salvo corresponde aos tokens da mensagem." };
+      return { applied: true, ok: false, error: "Nenhum emoji premium salvo corresponde aos tokens da mensagem.", reason: "no-known-emojis" };
     }
     return { applied: false, reason: "no-known-emojis" };
   }
@@ -260,7 +260,7 @@ export async function sendTextWithPremiumEmojis(opts: {
       "no-premium-account",
     );
     if (opts.strict) {
-      return { applied: true, ok: false, error: "Conecte uma conta Telegram Premium ativa para enviar emojis premium animados." };
+      return { applied: true, ok: false, error: "Conecte uma conta Telegram Premium ativa para enviar emojis premium animados.", reason: "no-premium-account" };
     }
     return { applied: false, reason: "no-premium-account" };
   }
@@ -284,6 +284,7 @@ export async function sendTextWithPremiumEmojis(opts: {
       ok: false,
       error:
         "A conta Telegram conectada não tem assinatura Premium ativa. Sem Premium o Telegram remove os emojis animados antes de entregar a mensagem.",
+      reason: "account-not-premium",
     };
   }
 
@@ -321,6 +322,7 @@ export async function sendTextWithPremiumEmojis(opts: {
       applied: true,
       ok: false,
       error,
+      reason: "client-send-threw",
     };
   } finally {
     await client.disconnect().catch(() => {});
@@ -349,7 +351,7 @@ export async function sendPhotoWithPremiumEmojiCaption(opts: {
       { lookupSize: lookup.size },
     );
     if (opts.strict) {
-      return { applied: true, ok: false, error: "Nenhum emoji premium salvo corresponde aos tokens da legenda." };
+      return { applied: true, ok: false, error: "Nenhum emoji premium salvo corresponde aos tokens da legenda.", reason: "no-known-emojis" };
     }
     return { applied: false, reason: "no-known-emojis" };
   }
@@ -361,7 +363,7 @@ export async function sendPhotoWithPremiumEmojiCaption(opts: {
       "no-premium-account",
     );
     if (opts.strict) {
-      return { applied: true, ok: false, error: "Conecte uma conta Telegram Premium ativa para enviar emojis premium animados." };
+      return { applied: true, ok: false, error: "Conecte uma conta Telegram Premium ativa para enviar emojis premium animados.", reason: "no-premium-account" };
     }
     return { applied: false, reason: "no-premium-account" };
   }
@@ -385,6 +387,7 @@ export async function sendPhotoWithPremiumEmojiCaption(opts: {
       ok: false,
       error:
         "A conta Telegram conectada não tem assinatura Premium ativa. Sem Premium o Telegram remove os emojis animados da legenda antes de entregar.",
+      reason: "account-not-premium",
     };
   }
 
@@ -423,6 +426,7 @@ export async function sendPhotoWithPremiumEmojiCaption(opts: {
       applied: true,
       ok: false,
       error,
+      reason: "client-send-threw",
     };
   } finally {
     await client.disconnect().catch(() => {});
