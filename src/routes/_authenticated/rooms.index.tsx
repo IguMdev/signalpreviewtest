@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { PremiumEmojiPicker } from "@/components/PremiumEmojiPicker";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -238,6 +239,9 @@ function RoomsPage() {
               </div>
               <div className="space-y-2">
                 <Label>Mensagem de boas-vindas</Label>
+                <div className="flex justify-end -mb-1">
+                  <PremiumEmojiPicker value={welcome} onChange={setWelcome} />
+                </div>
                 <Textarea value={welcome} onChange={(e) => setWelcome(e.target.value)} rows={3} placeholder="Mensagem enviada ao iniciar a sessão" />
               </div>
             </div>
