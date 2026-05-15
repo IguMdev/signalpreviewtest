@@ -115,9 +115,14 @@ async function sendOne(
       strict: true,
     });
     if (premium.applied) {
-      return premium.ok
-        ? { ok: true, result: { message_id: premium.messageId ?? undefined } }
-        : { ok: false, description: premium.error };
+      return await withCompanionButton(
+        premium.ok
+          ? { ok: true, result: { message_id: premium.messageId ?? undefined } }
+          : { ok: false, description: premium.error },
+        botToken,
+        chatId,
+        msg.reply_markup,
+      );
     }
   }
   if (msg.image_path) {
@@ -131,9 +136,14 @@ async function sendOne(
         strict: true,
       });
       if (premiumPhoto.applied) {
-        return premiumPhoto.ok
-          ? { ok: true, result: { message_id: premiumPhoto.messageId ?? undefined } }
-          : { ok: false, description: premiumPhoto.error };
+        return await withCompanionButton(
+          premiumPhoto.ok
+            ? { ok: true, result: { message_id: premiumPhoto.messageId ?? undefined } }
+            : { ok: false, description: premiumPhoto.error },
+          botToken,
+          chatId,
+          msg.reply_markup,
+        );
       }
     }
     return await callTelegram<{ message_id: number }>(botToken, "sendPhoto", {
