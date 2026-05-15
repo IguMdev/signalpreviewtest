@@ -39,6 +39,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
+import { PremiumEmojiPicker } from "@/components/PremiumEmojiPicker";
 
 export type QuickTemplate = {
   id: string;
@@ -250,7 +251,7 @@ function QuickTemplateDialog({
       const uid = u.user?.id;
       if (!uid) throw new Error("Sessão expirada");
       const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
-      const path = `quick/${uid}/${Date.now()}.${ext}`;
+      const path = `${uid}/quick/${Date.now()}.${ext}`;
       const { error } = await supabase.storage
         .from("room-images")
         .upload(path, file, { contentType: file.type, upsert: false });
@@ -322,6 +323,9 @@ function QuickTemplateDialog({
 
           <div>
             <Label>Conteúdo (HTML)</Label>
+            <div className="flex justify-end -mb-1">
+              <PremiumEmojiPicker value={content} onChange={setContent} />
+            </div>
             <Textarea
               value={content}
               onChange={(e) => setContent(e.target.value)}
@@ -446,7 +450,7 @@ function QuickSendDialog({
       const uid = u.user?.id;
       if (!uid) throw new Error("Sessão expirada");
       const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
-      const path = `quick/${uid}/${Date.now()}.${ext}`;
+      const path = `${uid}/quick/${Date.now()}.${ext}`;
       const { error } = await supabase.storage
         .from("room-images")
         .upload(path, file, { contentType: file.type, upsert: false });
@@ -558,6 +562,9 @@ function QuickSendDialog({
 
           <div>
             <Label>Conteúdo</Label>
+            <div className="flex justify-end -mb-1">
+              <PremiumEmojiPicker value={content} onChange={setContent} />
+            </div>
             <Textarea
               value={content}
               onChange={(e) => setContent(e.target.value)}
