@@ -301,8 +301,12 @@ function PremiumEmojisPage() {
                 key={item.custom_emoji_id}
                 className="rounded-lg border border-border bg-muted/20 p-5 flex flex-col items-center gap-3"
               >
-                <Zap className="size-7 text-amber-400" />
-                <div className="text-xs text-muted-foreground">
+                {item.preview_char ? (
+                  <div className="text-4xl leading-none">{item.preview_char}</div>
+                ) : (
+                  <Zap className="size-7 text-amber-400" />
+                )}
+                <div className="text-xs text-muted-foreground break-all text-center">
                   ID: {item.custom_emoji_id}
                 </div>
                 <Input
