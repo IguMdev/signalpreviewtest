@@ -75,12 +75,31 @@ function EncaminhadorPage() {
       <Card>
         <CardHeader><CardTitle className="text-base">Sala</CardTitle></CardHeader>
         <CardContent>
-          <Select value={roomId} onValueChange={setRoomId}>
-            <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-            <SelectContent>
-              {(roomsQ.data ?? []).map((r) => <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>)}
-            </SelectContent>
-          </Select>
+          <div className="flex items-center gap-3">
+            {selectedRoom?.photo_url && !roomPhotoError ? (
+              <img
+                src={selectedRoom.photo_url}
+                alt={selectedRoom.name}
+                className="size-14 rounded-md object-cover border border-border/60 shrink-0"
+                onError={() => setRoomPhotoError(true)}
+              />
+            ) : (
+              <div className="size-14 rounded-md border border-border/60 bg-muted shrink-0 flex items-center justify-center">
+                <ImageIcon className="size-6 text-muted-foreground" />
+              </div>
+            )}
+            <div className="flex-1 min-w-0">
+              {selectedRoom && (
+                <p className="text-sm font-medium truncate mb-1">{selectedRoom.name}</p>
+              )}
+              <Select value={roomId} onValueChange={setRoomId}>
+                <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                <SelectContent>
+                  {(roomsQ.data ?? []).map((r) => <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
         </CardContent>
       </Card>
 
