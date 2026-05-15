@@ -18,6 +18,8 @@ export type EmojiLookup = Map<
   { custom_emoji_id: string; preview_char: string | null }
 >;
 
+const TOKEN_RE = /\{([^{}\n]{1,80})\}/g;
+
 /**
  * Substitui {NOME} pelo `preview_char` (ou ⭐ como fallback)
  * e devolve as entities `MessageEntityCustomEmoji` com offsets em UTF-16
@@ -31,7 +33,7 @@ export function renderEmojiTokens(
     Array.from(lookup.entries()).map(([name, value]) => [name.trim().toUpperCase(), value]),
   );
   const entities: RenderedEntity[] = [];
-  const re = /\{([A-Za-z0-9_\-]+)\}/g;
+  const re = new RegExp(TOKEN_RE);
   let out = "";
   let last = 0;
   let m: RegExpExecArray | null;
@@ -74,7 +76,7 @@ export function renderEmojiTokensToHtml(
     Array.from(lookup.entries()).map(([name, value]) => [name.trim().toUpperCase(), value]),
   );
   let replaced = false;
-  const out = text.replace(/\{([A-Za-z0-9_\-]+)\}/g, (token, rawName: string) => {
+  const out = text.replace(TOKEN_RE, (token, rawName: string) => {
     const name = rawName.trim();
     const found = lookup.get(name) ?? normalizedLookup.get(name.toUpperCase());
     if (!found) return token;
