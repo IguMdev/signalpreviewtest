@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
-import { syncPremiumEmojis } from "@/lib/premium-account.functions";
+import { getPremiumEmojiThumbs, syncPremiumEmojis } from "@/lib/premium-account.functions";
 import {
   getCachedEmojis,
   putCachedEmojis,
@@ -141,6 +141,7 @@ function PremiumEmojisPage() {
     new Map(),
   );
   const syncEmojis = useServerFn(syncPremiumEmojis);
+  const fetchThumbs = useServerFn(getPremiumEmojiThumbs);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -176,8 +177,35 @@ function PremiumEmojisPage() {
   useEffect(() => {
     if (!list.data?.length) return;
     const ids = list.data.map((e) => e.custom_emoji_id);
-    getCachedEmojis(ids).then(setSavedThumbs);
-  }, [list.data]);
+    getCachedEmojis(ids).then(async (cached) => {
+      setSavedThumbs(cached);
+      const missing = ids.filter((id) => !cached.get(id)?.thumb_data_url);
+      if (!missing.length) return;
+      const fresh = await fetchThumbs({ data: { ids: missing } }).catch(() => null);
+      if (!fresh?.ok || !fresh.items.length) return;
+      await putCachedEmojis(
+        fresh.items.map((it) => ({
+          custom_emoji_id: it.custom_emoji_id,
+          preview_char: list.data.find((e) => e.custom_emoji_id === it.custom_emoji_id)?.preview_char ?? null,
+          thumb_data_url: it.thumb_data_url,
+          thumb_mime: it.thumb_mime,
+        })),
+      );
+      setSavedThumbs(
+        new Map([
+          ...cached,
+          ...fresh.items.map((it) => [
+            it.custom_emoji_id,
+            {
+              ...it,
+              preview_char: list.data.find((e) => e.custom_emoji_id === it.custom_emoji_id)?.preview_char ?? null,
+              cached_at: Date.now(),
+            } as CachedEmoji,
+          ] as const),
+        ]),
+      );
+    });
+  }, [list.data, fetchThumbs]);
 
   const updateMut = useMutation({
     mutationFn: async () => {
