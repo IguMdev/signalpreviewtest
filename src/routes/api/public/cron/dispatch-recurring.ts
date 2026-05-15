@@ -187,6 +187,7 @@ async function sendOne(
     text: msg.content ?? "",
     parse_mode: msg.parse_mode,
     reply_markup: msg.reply_markup,
+    link_preview_options: { is_disabled: true },
   });
 }
 
@@ -268,11 +269,7 @@ export const Route = createFileRoute("/api/public/cron/dispatch-recurring")({
             video = v ?? null;
           }
           const isNormalVideo = video && video.kind === "normal";
-          const renderedBtnText = await renderButtonTextForUser(s.user_id, s.button_text);
-          const replyMarkup =
-            renderedBtnText && s.button_url
-              ? { inline_keyboard: [[{ text: renderedBtnText, url: s.button_url }]] }
-              : undefined;
+          const replyMarkup = undefined;
 
           let okAny = false;
           for (const c of chats) {
@@ -357,6 +354,7 @@ export const Route = createFileRoute("/api/public/cron/dispatch-recurring")({
                       text: s.content ?? "",
                       parse_mode: s.parse_mode,
                       reply_markup: replyMarkup,
+                      link_preview_options: { is_disabled: true },
                     });
             await supabaseAdmin.from("message_logs").insert({
               user_id: s.user_id,
@@ -493,11 +491,7 @@ export const Route = createFileRoute("/api/public/cron/dispatch-recurring")({
                 .maybeSingle()
             : { data: null };
           const isPremium = Boolean(parentSchedule?.is_premium);
-          const pRenderedBtnText = await renderButtonTextForUser(p.user_id, p.button_text);
-          const pReplyMarkup =
-            pRenderedBtnText && p.button_url
-              ? { inline_keyboard: [[{ text: pRenderedBtnText, url: p.button_url }]] }
-              : undefined;
+          const pReplyMarkup = undefined;
           const pIsNormalVideo = video && video.kind === "normal";
           for (const c of chats) {
             const r = video
