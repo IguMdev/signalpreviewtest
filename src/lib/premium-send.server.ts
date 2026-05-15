@@ -417,6 +417,94 @@ export async function sendTextWithPremiumEmojis(opts: {
   }
 }
 
+export async function sendVideoWithPremiumEmojiCaption(opts: {
+  userId: string;
+  accountId?: string;
+  chatId: number | string;
+  videoBytes: ArrayBuffer;
+  filename: string;
+  mimeType: string;
+  duration?: number | null;
+  caption: string | null | undefined;
+  replyToMessageId?: number;
+  strict?: boolean;
+  buttonRows?: PremiumButtonRow[];
+}): Promise<PremiumSendResult> {
+  if (!opts.caption || !hasEmojiTokens(opts.caption)) {
+    return { applied: false, reason: "no-tokens" };
+  }
+
+  const lookup = await getUserEmojiLookup(opts.userId);
+  const rendered = renderEmojiTokens(opts.caption, lookup);
+  if (!rendered.entities.length) {
+    if (opts.strict) {
+      return { applied: true, ok: false, error: "Nenhum emoji premium salvo corresponde aos tokens da legenda.", reason: "no-known-emojis" };
+    }
+    return { applied: false, reason: "no-known-emojis" };
+  }
+
+  const acc = await getActivePremiumAccount(opts.userId, opts.accountId);
+  if (!acc) {
+    if (opts.strict) {
+      return { applied: true, ok: false, error: "Conecte uma conta Telegram Premium ativa para enviar emojis premium animados.", reason: "no-premium-account" };
+    }
+    return { applied: false, reason: "no-premium-account" };
+  }
+
+  const { Api } = await import("telegram");
+  const { CustomFile } = await import("telegram/client/uploads");
+
+  const { client, isPremium } = await connectAndAssertPremium({
+    tg_api_id: acc.tg_api_id as number,
+    tg_api_hash: acc.tg_api_hash as string,
+    tg_session: acc.tg_session as string,
+  });
+  if (!isPremium) {
+    await client.disconnect().catch(() => {});
+    return {
+      applied: true,
+      ok: false,
+      error:
+        "A conta Telegram conectada não tem assinatura Premium ativa. Sem Premium o Telegram remove os emojis animados da legenda antes de entregar.",
+      reason: "account-not-premium",
+    };
+  }
+
+  try {
+    const formatted = await renderTelegramHtmlWithPremiumEmojis(opts.caption, lookup);
+    const target = resolveTelegramTarget(opts.chatId);
+    const buttons = await buildInlineMarkup(opts.buttonRows);
+    const buf = Buffer.from(opts.videoBytes);
+    const file = new CustomFile(opts.filename, buf.length, "", buf);
+    const attributes = [
+      new Api.DocumentAttributeVideo({
+        duration: Math.max(1, Math.round(opts.duration ?? 1)),
+        w: 0,
+        h: 0,
+        supportsStreaming: true,
+      }),
+      new Api.DocumentAttributeFilename({ fileName: opts.filename }),
+    ];
+    const msg = await client.sendFile(target as never, {
+      file: file as never,
+      caption: formatted.text,
+      formattingEntities: formatted.entities as never,
+      attributes: attributes as never,
+      mimeType: opts.mimeType || "video/mp4",
+      supportsStreaming: true,
+      replyTo: opts.replyToMessageId,
+      ...(buttons ? { buttons: buttons as never } : {}),
+    });
+    return { applied: true, ok: true, messageId: Number(msg.id) };
+  } catch (e) {
+    const raw = e instanceof Error ? e.message : String(e);
+    const { message: error, reason } = translateMtprotoError(raw);
+    return { applied: true, ok: false, error, reason };
+  } finally {
+    await client.disconnect().catch(() => {});
+  }
+}
+
 export async function sendPhotoWithPremiumEmojiCaption(opts: {
   userId: string;
   accountId?: string;
