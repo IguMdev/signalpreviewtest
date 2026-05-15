@@ -2,34 +2,15 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
-function userbot() {
-  const url = process.env.USERBOT_API_URL;
-  const token = process.env.USERBOT_TOKEN;
-  if (!url || !token) {
-    throw new Error(
-      "Serviço de userbot não configurado. Configure os secrets USERBOT_API_URL e USERBOT_TOKEN.",
-    );
-  }
-  if (!/^https?:\/\//i.test(url)) {
-    throw new Error(
-      `USERBOT_API_URL inválido ("${url}"). Deve começar com https:// (ex: https://userbot.seudominio.com).`,
-    );
-  }
-  return { url: url.replace(/\/$/, ""), token };
-}
-
-async function call<T>(path: string, body: Record<string, unknown>): Promise<T> {
-  const { url, token } = userbot();
-  const res = await fetch(`${url}${path}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "X-Auth-Token": token },
-    body: JSON.stringify(body),
+async function makeClient(apiId: number, apiHash: string, session = "") {
+  const { TelegramClient } = await import("telegram");
+  const { StringSession } = await import("telegram/sessions");
+  const client = new TelegramClient(new StringSession(session), apiId, apiHash, {
+    connectionRetries: 2,
+    useWSS: true,
   });
-  const json = (await res.json().catch(() => ({}))) as Record<string, unknown>;
-  if (!res.ok) {
-    throw new Error((json.error as string) || `Userbot ${res.status}`);
-  }
-  return json as T;
+  await client.connect();
+  return client;
 }
 
 export const requestPremiumCode = createServerFn({ method: "POST" })
@@ -46,18 +27,24 @@ export const requestPremiumCode = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabase } = context;
-    const r = await call<{ phoneCodeHash: string }>("/auth/send-code", {
-      apiId: data.apiId,
-      apiHash: data.apiHash,
-      phone: data.phone,
-    });
+    const client = await makeClient(data.apiId, data.apiHash);
+    let phoneCodeHash: string;
+    try {
+      const r = await client.sendCode(
+        { apiId: data.apiId, apiHash: data.apiHash },
+        data.phone,
+      );
+      phoneCodeHash = r.phoneCodeHash;
+    } finally {
+      await client.disconnect().catch(() => {});
+    }
     const { error } = await supabase
       .from("telegram_accounts")
       .update({
         tg_api_id: data.apiId,
         tg_api_hash: data.apiHash,
         phone: data.phone,
-        tg_phone_code_hash: r.phoneCodeHash,
+        tg_phone_code_hash: phoneCodeHash,
         status: "unknown",
         last_error: null,
       })
@@ -88,30 +75,30 @@ export const confirmPremiumCode = createServerFn({ method: "POST" })
     if (!acc.tg_api_id || !acc.tg_api_hash || !acc.phone || !acc.tg_phone_code_hash) {
       throw new Error("Solicite o código novamente.");
     }
+    const client = await makeClient(acc.tg_api_id as number, acc.tg_api_hash as string);
     try {
-      const r = await call<{
-        sessionString: string;
-        userId: number;
-        firstName?: string;
-        username?: string;
-      }>("/auth/sign-in", {
-        apiId: acc.tg_api_id,
-        apiHash: acc.tg_api_hash,
-        phone: acc.phone,
-        phoneCodeHash: acc.tg_phone_code_hash,
-        code: data.code,
-        password: data.password,
-      });
+      const me = (await client.signInUser(
+        { apiId: acc.tg_api_id as number, apiHash: acc.tg_api_hash as string },
+        {
+          phoneNumber: acc.phone as string,
+          phoneCode: async () => data.code,
+          password: data.password ? async () => data.password! : undefined,
+          onError: (err) => {
+            throw err;
+          },
+        },
+      )) as { firstName?: string; username?: string };
+      const sessionString = (client.session.save() as unknown as string) ?? "";
       await supabase
         .from("telegram_accounts")
         .update({
-          tg_session: r.sessionString,
+          tg_session: sessionString,
           tg_phone_code_hash: null,
           status: "ok",
           last_check_at: new Date().toISOString(),
           last_error: null,
-          bot_first_name: r.firstName ?? null,
-          bot_username: r.username ?? null,
+          bot_first_name: me?.firstName ?? null,
+          bot_username: me?.username ?? null,
         })
         .eq("id", data.accountId);
       return { ok: true, needsPassword: false as const };
@@ -125,6 +112,8 @@ export const confirmPremiumCode = createServerFn({ method: "POST" })
         .update({ status: "error", last_error: msg })
         .eq("id", data.accountId);
       throw e;
+    } finally {
+      await client.disconnect().catch(() => {});
     }
   });
 
@@ -140,17 +129,34 @@ export const syncPremiumEmojis = createServerFn({ method: "POST" })
       .maybeSingle();
     if (error || !acc) throw new Error("Conta não encontrada");
     if (!acc.tg_session) throw new Error("Conecte a conta premium primeiro.");
-    const list = await call<Array<{ id: string; emoji?: string; setName?: string }>>(
-      "/emojis/list",
-      { apiId: acc.tg_api_id, apiHash: acc.tg_api_hash, sessionString: acc.tg_session },
+    const { Api } = await import("telegram");
+    const client = await makeClient(
+      acc.tg_api_id as number,
+      acc.tg_api_hash as string,
+      acc.tg_session as string,
     );
-    if (list.length === 0) return { ok: true, count: 0 };
-    const rows = list.map((e) => ({
-      user_id: userId,
-      custom_emoji_id: e.id,
-      name: e.setName || e.emoji || e.id,
-      preview_char: e.emoji ?? null,
-    }));
+    const rows: Array<{
+      user_id: string;
+      custom_emoji_id: string;
+      name: string;
+      preview_char: string | null;
+    }> = [];
+    try {
+      const stickers = (await client.invoke(
+        new Api.messages.GetEmojiStickers({ hash: 0 as unknown as bigint }),
+      )) as unknown as { sets?: Array<{ set: { id: bigint; shortName: string } }> };
+      for (const s of stickers.sets ?? []) {
+        rows.push({
+          user_id: userId,
+          custom_emoji_id: String(s.set.id),
+          name: s.set.shortName,
+          preview_char: null,
+        });
+      }
+    } finally {
+      await client.disconnect().catch(() => {});
+    }
+    if (rows.length === 0) return { ok: true, count: 0 };
     // upsert por (user_id, custom_emoji_id) — sem unique, fazemos delete+insert simples
     await supabase.from("premium_emojis").delete().eq("user_id", userId);
     const { error: insErr } = await supabase.from("premium_emojis").insert(rows);
@@ -178,12 +184,15 @@ export const sendPremiumMessage = createServerFn({ method: "POST" })
       .maybeSingle();
     if (error || !acc) throw new Error("Conta não encontrada");
     if (!acc.tg_session) throw new Error("Conecte a conta premium primeiro.");
-    const r = await call<{ messageId: number }>("/messages/send", {
-      apiId: acc.tg_api_id,
-      apiHash: acc.tg_api_hash,
-      sessionString: acc.tg_session,
-      chatId: data.chatId,
-      text: data.text,
-    });
-    return { ok: true, messageId: r.messageId };
+    const client = await makeClient(
+      acc.tg_api_id as number,
+      acc.tg_api_hash as string,
+      acc.tg_session as string,
+    );
+    try {
+      const msg = await client.sendMessage(data.chatId, { message: data.text });
+      return { ok: true, messageId: Number(msg.id) };
+    } finally {
+      await client.disconnect().catch(() => {});
+    }
   });
