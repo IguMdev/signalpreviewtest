@@ -188,11 +188,12 @@ export const testSchedule = createServerFn({ method: "POST" })
           });
       await supabaseAdmin.from("message_logs").insert({
         user_id: userId,
+        account_id: accountId,
         chat_id: c.chat_id,
         ok: r.ok,
         telegram_message_id: r.result?.message_id ?? null,
         error: r.ok ? null : r.description ?? "erro",
-      });
+      } as never);
       if (r.ok) sent++;
       else {
         failed++;
