@@ -234,9 +234,10 @@ export const testSchedule = createServerFn({ method: "POST" })
         description: "no-op",
       };
       const sAny = s as unknown as { button_text: string | null; button_url: string | null };
+      const renderedBtnText = await renderButtonTextForUser(s.user_id, sAny.button_text);
       const replyMarkup =
-        sAny.button_text && sAny.button_url
-          ? { inline_keyboard: [[{ text: sAny.button_text, url: sAny.button_url }]] }
+        renderedBtnText && sAny.button_url
+          ? { inline_keyboard: [[{ text: renderedBtnText, url: sAny.button_url }]] }
           : undefined;
       const isNormalVideo = video && video.kind === "normal";
       const premium =
