@@ -41,13 +41,58 @@ export function insertAtCursor(
   });
 }
 
-export function PremiumEmojiMedia({ cached, fallback, className = "size-7" }: { cached?: CachedEmoji; fallback: string | null; className?: string }) {
+async function decodeTgsDataUrl(dataUrl: string) {
+  const base64 = dataUrl.split(",")[1] ?? "";
+  const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
+  const win = window as typeof window & { DecompressionStream?: typeof DecompressionStream };
+  if (!win.DecompressionStream) return null;
+  const stream = new Blob([bytes]).stream().pipeThrough(new win.DecompressionStream("gzip"));
+  return JSON.parse(await new Response(stream).text()) as object;
+}
+
+function TgsEmojiMedia({ src, className, animate }: { src: string; className: string; animate: boolean }) {
+  const ref = useRef<HTMLDivElement | null>(null);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    if (!ref.current) return;
+    let destroyed = false;
+    let animation: { destroy: () => void; goToAndStop: (value: number, isFrame?: boolean) => void } | null = null;
+    decodeTgsDataUrl(src)
+      .then(async (animationData) => {
+        if (!animationData || destroyed || !ref.current) return setFailed(true);
+        const lottie = await import("lottie-web");
+        if (destroyed || !ref.current) return;
+        animation = lottie.default.loadAnimation({
+          container: ref.current,
+          renderer: "svg",
+          loop: animate,
+          autoplay: animate,
+          animationData,
+        });
+        if (!animate) animation.goToAndStop(0, true);
+      })
+      .catch(() => setFailed(true));
+    return () => {
+      destroyed = true;
+      animation?.destroy();
+    };
+  }, [src, animate]);
+
+  if (failed) return null;
+  return <div ref={ref} className={`${className} [&_svg]:!block`} />;
+}
+
+export function PremiumEmojiMedia({ cached, fallback, className = "size-7", animate = false }: { cached?: CachedEmoji; fallback: string | null; className?: string; animate?: boolean }) {
   if (cached?.thumb_data_url) {
     if (cached.thumb_mime === "video/webm") {
-      return <video src={cached.thumb_data_url} muted playsInline preload="metadata" className={`${className} object-contain`} onLoadedMetadata={(e) => { e.currentTarget.currentTime = 0; e.currentTarget.pause(); }} />;
+      return <video src={cached.thumb_data_url} autoPlay={animate} loop={animate} muted playsInline preload="metadata" className={`${className} object-contain`} onLoadedMetadata={(e) => { if (!animate) { e.currentTarget.currentTime = 0; e.currentTarget.pause(); } }} />;
     }
     if (cached.thumb_mime?.startsWith("image/")) {
       return <img src={cached.thumb_data_url} alt="" className={`${className} object-contain`} />;
+    }
+    if (cached.thumb_mime === "application/x-tgsticker") {
+      return <TgsEmojiMedia src={cached.thumb_data_url} className={className} animate={animate} />;
     }
   }
   return <span className="text-xl leading-none">{fallback ?? "✨"}</span>;
