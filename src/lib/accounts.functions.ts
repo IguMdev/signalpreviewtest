@@ -263,14 +263,13 @@ export const sendRoomTest = createServerFn({ method: "POST" })
           }
         }
       } else {
-        const premiumPhoto = replyMarkup
-          ? { applied: false as const, reason: "inline-buttons" }
-          : await sendPhotoWithPremiumEmojiCaption({
-              userId,
-              chatId: chat.chat_id,
-              photoUrl: pub.publicUrl,
-              caption: text,
-            });
+        const premiumPhoto = await sendPhotoWithPremiumEmojiCaption({
+          userId,
+          chatId: chat.chat_id,
+          photoUrl: pub.publicUrl,
+          caption: text,
+          buttonRows: buttonRows.length ? buttonRows : undefined,
+        });
         r = premiumPhoto.applied
           ? premiumPhoto.ok
             ? { ok: true, result: { message_id: premiumPhoto.messageId ?? undefined } }
@@ -285,9 +284,12 @@ export const sendRoomTest = createServerFn({ method: "POST" })
       }
     } else {
       if (!text) throw new Error("Mensagem vazia");
-      const premium = replyMarkup
-        ? { applied: false as const, reason: "inline-buttons" }
-        : await sendTextWithPremiumEmojis({ userId, chatId: chat.chat_id, text });
+      const premium = await sendTextWithPremiumEmojis({
+        userId,
+        chatId: chat.chat_id,
+        text,
+        buttonRows: buttonRows.length ? buttonRows : undefined,
+      });
       if (premium.applied) {
         if (!premium.ok) throw new Error(premium.error);
         r = { ok: true, result: { message_id: premium.messageId ?? undefined } };
