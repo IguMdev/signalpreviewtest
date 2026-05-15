@@ -8,6 +8,7 @@ import {
   toggleSchedule,
   deleteSchedule,
   testSchedule,
+  testMessage,
 } from "@/lib/recurring-schedules.functions";
 import { syncRoomPhoto } from "@/lib/room-photos.functions";
 import { QuickTemplatesBar } from "@/components/QuickTemplatesBar";
@@ -526,8 +527,8 @@ function ScheduleDialog({
   }) => void;
 }) {
   const [title, setTitle] = useState("");
-  const testFn = useServerFn(testSchedule);
-  const [testing, setTesting] = useState(false);
+  const testMsgFn = useServerFn(testMessage);
+  const [testingPart, setTestingPart] = useState<string | null>(null);
   const [roomId, setRoomId] = useState("");
   const [accountId, setAccountId] = useState<string>("");
   const [content, setContent] = useState("");
@@ -637,6 +638,47 @@ function ScheduleDialog({
   };
 
   const canSave = title.trim() && roomId && times.length > 0 && weekdays.length > 0;
+
+  async function runPartTest(
+    key: string,
+    payload: {
+      content: string;
+      videoId: string;
+      imagePath: string;
+      imageMime: string;
+      buttonText: string;
+      buttonUrl: string;
+    },
+  ) {
+    if (!roomId) {
+      toast.error("Selecione uma sala antes de testar");
+      return;
+    }
+    setTestingPart(key);
+    try {
+      const res = await testMsgFn({
+        data: {
+          roomId,
+          accountId: accountId || null,
+          content: payload.content || null,
+          videoId: payload.videoId || null,
+          imagePath: payload.videoId ? null : payload.imagePath || null,
+          imageMime: payload.videoId ? null : payload.imageMime || null,
+          parseMode: "HTML",
+          isPremium,
+          buttonText: payload.buttonText?.trim() || null,
+          buttonUrl: payload.buttonUrl?.trim() || null,
+        },
+      });
+      if (res.ok)
+        toast.success(`Teste enviado (${res.sent} grupo${res.sent === 1 ? "" : "s"})`);
+      else toast.error(res.error ?? "Falha ao enviar teste");
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setTestingPart(null);
+    }
+  }
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
@@ -837,6 +879,31 @@ function ScheduleDialog({
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+              <div className="flex justify-end pt-1">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={testingPart === "main" || !roomId}
+                  onClick={() =>
+                    runPartTest("main", {
+                      content,
+                      videoId,
+                      imagePath,
+                      imageMime,
+                      buttonText,
+                      buttonUrl,
+                    })
+                  }
+                >
+                  {testingPart === "main" ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <Send className="size-4" />
+                  )}
+                  Testar esta mensagem
+                </Button>
               </div>
             </Card>
 
@@ -1072,6 +1139,31 @@ function ScheduleDialog({
                             </SelectContent>
                           </Select>
                         </div>
+                        <div className="flex justify-end">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            disabled={testingPart === `fu-${idx}` || !roomId}
+                            onClick={() =>
+                              runPartTest(`fu-${idx}`, {
+                                content: f.content,
+                                videoId: f.videoId,
+                                imagePath: f.imagePath,
+                                imageMime: f.imageMime,
+                                buttonText: f.buttonText,
+                                buttonUrl: f.buttonUrl,
+                              })
+                            }
+                          >
+                            {testingPart === `fu-${idx}` ? (
+                              <Loader2 className="size-4 animate-spin" />
+                            ) : (
+                              <Send className="size-4" />
+                            )}
+                            Testar esta mensagem
+                          </Button>
+                        </div>
                       </div>
                     );
                   })}
@@ -1244,29 +1336,6 @@ function ScheduleDialog({
           </div>
         </div>
         <DialogFooter className="gap-2 sm:gap-2">
-          {editing?.id && (
-            <Button
-              type="button"
-              variant="outline"
-              disabled={testing}
-              onClick={async () => {
-                setTesting(true);
-                try {
-                  const res = await testFn({ data: { id: editing.id } });
-                  if (res.ok)
-                    toast.success(`Teste enviado (${res.sent} grupo${res.sent === 1 ? "" : "s"})`);
-                  else toast.error(res.error ?? "Falha ao enviar teste");
-                } catch (e) {
-                  toast.error((e as Error).message);
-                } finally {
-                  setTesting(false);
-                }
-              }}
-            >
-              {testing ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
-              Testar agora
-            </Button>
-          )}
           <Button
             disabled={!canSave}
             onClick={() =>
