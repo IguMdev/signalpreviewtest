@@ -823,7 +823,7 @@ function ScheduleDialog({
                   onClick={() =>
                     setFollowUps([
                       ...followUps,
-                      { delayValue: 1, delayUnit: "minutes", content: "", imagePath: "", imageMime: "", videoId: "" },
+                      { delayValue: 1, delayUnit: "minutes", content: "", imagePath: "", imageMime: "", videoId: "", buttonText: "", buttonUrl: "" },
                     ])
                   }
                 >
