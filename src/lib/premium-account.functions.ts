@@ -299,54 +299,7 @@ export const syncPremiumEmojis = createServerFn({ method: "POST" })
       }
       if (items.length) {
         try {
-          const { strippedPhotoToJpg } = await import("telegram/Utils");
-          const docs = (await client.invoke(
-            new Api.messages.GetCustomEmojiDocuments({
-              documentId: items.map((i) => bigInt(i.custom_emoji_id) as never),
-            }),
-          )) as unknown as Array<{
-            id?: { toString(): string };
-            mimeType?: string;
-            size?: number | { toJSNumber(): number };
-            thumbs?: Array<{ className?: string; type?: string; bytes?: Uint8Array }>;
-          }>;
-          for (const doc of docs ?? []) {
-            const id = doc.id ? String(doc.id) : null;
-            if (!id) continue;
-            const target = items.find((i) => i.custom_emoji_id === id);
-            if (!target) continue;
-
-            // Baixa o documento INTEIRO do custom emoji (WEBP / WebM / TGS).
-            // Documentos de custom emoji são pequenos (<100KB), seguro inlinar.
-            const fullBytes = (await client
-              .downloadMedia(doc as never)
-              .catch(() => null)) as Buffer | null;
-            if (fullBytes?.length) {
-              const detected = mediaDataUrl(fullBytes);
-              if (detected) {
-                target.thumb_data_url = detected.url;
-                target.thumb_mime = detected.mime;
-              }
-            }
-
-            // Fallback: thumb estático embutido (PhotoStrippedSize/PhotoSize).
-            if (!target.thumb_data_url) {
-              const downloadableThumbs = (doc.thumbs ?? []).filter(
-                (t) => t.className !== "PhotoPathSize",
-              );
-              const embedded = downloadableThumbs.find((t) => t.bytes && t.bytes.length > 0);
-              if (embedded?.bytes) {
-                const raw = Buffer.from(embedded.bytes);
-                const normalized =
-                  embedded.className === "PhotoStrippedSize" ? strippedPhotoToJpg(raw) : raw;
-                const detected = mediaDataUrl(normalized);
-                if (detected) {
-                  target.thumb_data_url = detected.url;
-                  target.thumb_mime = detected.mime;
-                }
-              }
-            }
-          }
+          await hydrateEmojiDocuments(client, items);
         } catch {
           // se falhar, segue sem thumb
         }
@@ -362,6 +315,32 @@ export const syncPremiumEmojis = createServerFn({ method: "POST" })
     const known = new Set((existing ?? []).map((r) => r.custom_emoji_id));
     const fresh = items.filter((i) => !known.has(i.custom_emoji_id));
     return { ok: true, items: fresh, count: fresh.length };
+  });
+
+export const getPremiumEmojiThumbs = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) =>
+    z.object({ ids: z.array(z.string().min(1)).min(1).max(100) }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    const { data: acc, error } = await supabase
+      .from("telegram_accounts")
+      .select("tg_api_id, tg_api_hash, tg_session")
+      .eq("account_type", "premium")
+      .eq("is_active", true)
+      .not("tg_session", "is", null)
+      .limit(1)
+      .maybeSingle();
+    if (error || !acc?.tg_session || !acc.tg_api_id || !acc.tg_api_hash) return { ok: false, items: [] };
+    const client = await makeClient(acc.tg_api_id as number, acc.tg_api_hash as string, acc.tg_session as string);
+    const items = data.ids.map((id) => ({ custom_emoji_id: id, thumb_data_url: null as string | null, thumb_mime: null as string | null }));
+    try {
+      await hydrateEmojiDocuments(client, items);
+      return { ok: true, items };
+    } finally {
+      await client.disconnect().catch(() => {});
+    }
   });
 
 export const sendPremiumMessage = createServerFn({ method: "POST" })
