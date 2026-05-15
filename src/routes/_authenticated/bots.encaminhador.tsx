@@ -41,6 +41,7 @@ function EncaminhadorPage() {
   const [enabled, setEnabled] = useState(false);
   const [source, setSource] = useState<string>("");
   const [targets, setTargets] = useState<number[]>([]);
+  const [allowedTypes, setAllowedTypes] = useState<string[]>([]);
 
   useEffect(() => {
     const c = cfgQ.data;
@@ -48,6 +49,7 @@ function EncaminhadorPage() {
     setEnabled(c.forwarder_enabled ?? false);
     setSource(c.forwarder_source_chat_id ? String(c.forwarder_source_chat_id) : "");
     setTargets((c.forwarder_target_chat_ids ?? []) as number[]);
+    setAllowedTypes(((c as any).forwarder_allowed_types ?? []) as string[]);
   }, [cfgQ.data]);
 
   const save = useMutation({
@@ -57,6 +59,7 @@ function EncaminhadorPage() {
         enabled,
         sourceChatId: source ? Number(source) : null,
         targetChatIds: targets,
+        allowedTypes,
       },
     }),
     onSuccess: () => { toast.success("Salvo"); qc.invalidateQueries({ queryKey: ["fwd-cfg", roomId] }); },
@@ -134,6 +137,37 @@ function EncaminhadorPage() {
                         setTargets((prev) => v ? [...prev, c.chat_id] : prev.filter((x) => x !== c.chat_id));
                       }} />
                       <span>{c.title ?? c.username ?? c.chat_id}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Tipos de mensagem permitidos</Label>
+              <p className="text-xs text-muted-foreground">Marque o que pode ser encaminhado. Tudo que estiver desmarcado será ignorado.</p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 border rounded-md p-3">
+                {[
+                  { id: "text", label: "Texto" },
+                  { id: "photo", label: "Foto" },
+                  { id: "video", label: "Vídeo" },
+                  { id: "video_note", label: "Vídeo redondo" },
+                  { id: "animation", label: "GIF / Animação" },
+                  { id: "document", label: "Documento" },
+                  { id: "audio", label: "Áudio (música)" },
+                  { id: "voice", label: "Mensagem de voz" },
+                  { id: "sticker", label: "Sticker" },
+                  { id: "poll", label: "Enquete" },
+                  { id: "location", label: "Localização" },
+                  { id: "contact", label: "Contato" },
+                ].map((t) => {
+                  const checked = allowedTypes.includes(t.id);
+                  return (
+                    <label key={t.id} className="flex items-center gap-2 text-sm">
+                      <Checkbox checked={checked} onCheckedChange={(v) => {
+                        setAllowedTypes((prev) => v ? [...prev, t.id] : prev.filter((x) => x !== t.id));
+                      }} />
+                      <span>{t.label}</span>
                     </label>
                   );
                 })}
