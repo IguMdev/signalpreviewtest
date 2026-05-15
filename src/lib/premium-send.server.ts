@@ -9,7 +9,7 @@ import {
 
 export type PremiumSendResult =
   | { applied: true; ok: true; messageId: number | null }
-  | { applied: true; ok: false; error: string }
+  | { applied: true; ok: false; error: string; reason: string }
   | { applied: false; reason: string };
 
 function logPremiumFallback(
