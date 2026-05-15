@@ -239,6 +239,24 @@ async function normalizeCustomEmojiAlts(
   return { text, entities: normalizedEntities };
 }
 
+async function renderTelegramHtmlWithPremiumEmojis(text: string, lookup: EmojiLookup) {
+  const { HTMLParser } = await import("telegram/extensions/html");
+  const { Api } = await import("telegram");
+  const { default: bigInt } = await import("big-integer");
+  const html = renderEmojiTokensToHtml(text, lookup).text;
+  const [parsedText, rawEntities] = HTMLParser.parse(html) as [string, Array<{ className?: string; offset: number; length: number; documentId?: unknown }>];
+  const entities = (rawEntities ?? []).map((entity) =>
+    entity.className === "MessageEntityCustomEmoji"
+      ? new Api.MessageEntityCustomEmoji({
+          offset: entity.offset,
+          length: entity.length,
+          documentId: bigInt(String(entity.documentId)) as never,
+        })
+      : entity,
+  );
+  return { text: parsedText, entities };
+}
+
 export async function getPremiumAccountConnectionStatus(userId: string, accountId: string) {
   const acc = await getActivePremiumAccount(userId, accountId);
   if (!acc) return { ok: false as const, error: "Conecte a conta Telegram Premium novamente." };
@@ -286,8 +304,10 @@ export async function sendTextWithPremiumEmojis(opts: {
       });
       try {
         const buttons = await buildInlineMarkup(opts.buttonRows);
+        const formatted = await renderTelegramHtmlWithPremiumEmojis(opts.text, new Map());
         const msg = await client.sendMessage(resolveTelegramTarget(opts.chatId) as never, {
-          message: opts.text,
+          message: formatted.text,
+          formattingEntities: formatted.entities as never,
           replyTo: opts.replyToMessageId,
           ...(buttons ? { buttons: buttons as never } : {}),
         });
