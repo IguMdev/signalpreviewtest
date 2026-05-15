@@ -85,9 +85,9 @@ function MembrosPage() {
   const totalLeaves = visiblePerChat.reduce((s, c) => s + c.leaves, 0);
 
   const cards = [
-    { label: "Entradas (30d)", value: totalJoins, icon: UserPlus, color: "text-emerald-500" },
-    { label: "Saídas (30d)", value: totalLeaves, icon: UserMinus, color: "text-rose-500" },
-    { label: "Saldo (30d)", value: totalJoins - totalLeaves, icon: TrendingUp, color: "text-primary" },
+    { label: "Entradas no período", value: totalJoins, icon: UserPlus, color: "text-emerald-500" },
+    { label: "Saídas no período", value: totalLeaves, icon: UserMinus, color: "text-rose-500" },
+    { label: "Saldo no período", value: totalJoins - totalLeaves, icon: TrendingUp, color: "text-primary" },
     { label: "Membros atuais", value: totalMembers, icon: Users, color: "text-foreground" },
   ];
 
@@ -168,7 +168,7 @@ function MembrosPage() {
       </div>
 
       <Card className="p-6">
-        <h2 className="font-semibold mb-4">Últimos 30 dias</h2>
+        <h2 className="font-semibold mb-4">Entradas e saídas por dia</h2>
         {!data?.daily.length ? (
           <p className="text-sm text-muted-foreground py-8 text-center">Sem eventos ainda.</p>
         ) : (
