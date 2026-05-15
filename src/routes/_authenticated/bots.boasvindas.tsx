@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { MessageCircle, Plus, Trash2, ArrowUp, ArrowDown } from "lucide-react";
 import { toast } from "sonner";
 import { getWelcomeBotConfig, upsertWelcomeBotConfig } from "@/lib/engagement.functions";
+import { PremiumEmojiPicker } from "@/components/PremiumEmojiPicker";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 function publicUrl(bucket: string, path: string) {
@@ -40,6 +41,11 @@ function BoasVindasPage() {
     queryFn: async () => (await supabase.from("videos").select("id, title, kind, storage_path").order("created_at", { ascending: false })).data ?? [],
   });
 
+  const premiumAccountsQ = useQuery({
+    queryKey: ["premium-accounts-pick"],
+    queryFn: async () => (await supabase.from("telegram_accounts").select("id, label, status").eq("account_type", "premium").eq("is_active", true).order("label")).data ?? [],
+  });
+
   const [roomId, setRoomId] = useState<string>("");
   useEffect(() => { if (!roomId && roomsQ.data?.[0]?.id) setRoomId(roomsQ.data[0].id); }, [roomsQ.data, roomId]);
 
@@ -53,8 +59,9 @@ function BoasVindasPage() {
   const [message, setMessage] = useState("Seja bem-vindo(a), {name}! 🎉");
   const [imagePath, setImagePath] = useState<string>("");
   const [videoId, setVideoId] = useState<string>("");
-  const [btnText, setBtnText] = useState("");
-  const [btnUrl, setBtnUrl] = useState("");
+  const [premiumEnabled, setPremiumEnabled] = useState(false);
+  const [premiumAccountId, setPremiumAccountId] = useState<string>("");
+  const messageRef = useRef<HTMLTextAreaElement | null>(null);
 
   useEffect(() => {
     const c = cfgQ.data;
@@ -63,8 +70,8 @@ function BoasVindasPage() {
     setMessage(c.welcome_message ?? "Seja bem-vindo(a), {name}! 🎉");
     setImagePath(c.welcome_image_path ?? "");
     setVideoId(c.welcome_video_id ?? "");
-    setBtnText(c.welcome_button_text ?? "");
-    setBtnUrl(c.welcome_button_url ?? "");
+    setPremiumEnabled((c as any).welcome_premium_enabled ?? false);
+    setPremiumAccountId((c as any).welcome_premium_account_id ?? "");
   }, [cfgQ.data]);
 
   async function uploadImage(file: File) {
@@ -84,8 +91,8 @@ function BoasVindasPage() {
         message: message || null,
         imagePath: imagePath || null,
         videoId: videoId || null,
-        buttonText: btnText || null,
-        buttonUrl: btnUrl || null,
+        premiumEnabled,
+        premiumAccountId: premiumAccountId || null,
       },
     }),
     onSuccess: () => { toast.success("Salvo"); qc.invalidateQueries({ queryKey: ["welcome-cfg", roomId] }); },
@@ -123,8 +130,11 @@ function BoasVindasPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-1.5">
-              <Label>Mensagem (use <code>{"{name}"}</code> para mencionar o membro)</Label>
-              <Textarea value={message} onChange={(e) => setMessage(e.target.value)} rows={5} maxLength={4000} />
+              <div className="flex items-center justify-between">
+                <Label>Mensagem (use <code>{"{name}"}</code> para mencionar o membro)</Label>
+                <PremiumEmojiPicker value={message} onChange={setMessage} targetRef={messageRef} />
+              </div>
+              <Textarea ref={messageRef} value={message} onChange={(e) => setMessage(e.target.value)} rows={5} maxLength={4000} />
             </div>
 
             <div className="space-y-1.5">
@@ -144,15 +154,31 @@ function BoasVindasPage() {
               </Select>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label>Texto do botão (opcional)</Label>
-                <Input value={btnText} onChange={(e) => setBtnText(e.target.value)} maxLength={100} />
+            <div className="rounded-lg border border-border/60 p-3 space-y-3 bg-muted/20">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="text-sm">Enviar via conta Premium (emojis animados)</Label>
+                  <p className="text-[11px] text-muted-foreground">Necessário para que os emojis premium <code>{"{NOME}"}</code> sejam renderizados.</p>
+                </div>
+                <Switch checked={premiumEnabled} onCheckedChange={setPremiumEnabled} />
               </div>
-              <div className="space-y-1.5">
-                <Label>URL do botão</Label>
-                <Input value={btnUrl} onChange={(e) => setBtnUrl(e.target.value)} placeholder="https://..." />
-              </div>
+              {premiumEnabled && (
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Conta Premium</Label>
+                  <Select value={premiumAccountId || "none"} onValueChange={(v) => setPremiumAccountId(v === "none" ? "" : v)}>
+                    <SelectTrigger><SelectValue placeholder="Selecione uma conta premium" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Selecione...</SelectItem>
+                      {(premiumAccountsQ.data ?? []).map((a: any) => (
+                        <SelectItem key={a.id} value={a.id}>{a.label} {a.status !== "ok" ? `(${a.status})` : ""}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {(premiumAccountsQ.data ?? []).length === 0 && (
+                    <p className="text-[11px] text-amber-500">Nenhuma conta Premium conectada. Conecte uma em "Contas Telegram".</p>
+                  )}
+                </div>
+              )}
             </div>
 
             <Button onClick={() => save.mutate()} disabled={save.isPending}>{save.isPending ? "Salvando..." : "Salvar"}</Button>
@@ -190,23 +216,13 @@ function BoasVindasPage() {
                   }),
                 }}
               />
-              {btnText && btnUrl && (
-                <a
-                  href={btnUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="block text-center text-sm font-medium rounded-lg bg-primary text-primary-foreground py-2"
-                >
-                  {btnText}
-                </a>
-              )}
             </div>
             <p className="text-xs text-muted-foreground mt-2">Aproximação visual — o Telegram pode renderizar com pequenas diferenças.</p>
           </CardContent>
         </Card>
       )}
 
-      {roomId && <ExtrasSection roomId={roomId} videos={videosQ.data ?? []} />}
+      {roomId && <ExtrasSection roomId={roomId} videos={videosQ.data ?? []} premiumAccounts={premiumAccountsQ.data ?? []} />}
     </div>
   );
 }
@@ -219,13 +235,13 @@ type ExtraRow = {
   content: string | null;
   image_path: string | null;
   video_id: string | null;
-  button_text: string | null;
-  button_url: string | null;
+  premium_enabled: boolean;
+  premium_account_id: string | null;
   delay_seconds: number;
   parse_mode: string;
 };
 
-function ExtrasSection({ roomId, videos }: { roomId: string; videos: any[] }) {
+function ExtrasSection({ roomId, videos, premiumAccounts }: { roomId: string; videos: any[]; premiumAccounts: any[] }) {
   const qc = useQueryClient();
   const listQ = useQuery({
     queryKey: ["welcome-extras", roomId],
@@ -294,6 +310,7 @@ function ExtrasSection({ roomId, videos }: { roomId: string; videos: any[] }) {
             index={i}
             total={(listQ.data ?? []).length}
             videos={videos}
+            premiumAccounts={premiumAccounts}
             roomId={roomId}
             onChanged={() => qc.invalidateQueries({ queryKey: ["welcome-extras", roomId] })}
             onRemove={() => removeExtra(row.id)}
@@ -307,12 +324,13 @@ function ExtrasSection({ roomId, videos }: { roomId: string; videos: any[] }) {
 }
 
 function ExtraEditor({
-  row, index, total, videos, roomId, onChanged, onRemove, onMoveUp, onMoveDown,
+  row, index, total, videos, premiumAccounts, roomId, onChanged, onRemove, onMoveUp, onMoveDown,
 }: {
   row: ExtraRow;
   index: number;
   total: number;
   videos: any[];
+  premiumAccounts: any[];
   roomId: string;
   onChanged: () => void;
   onRemove: () => void;
@@ -322,10 +340,11 @@ function ExtraEditor({
   const [content, setContent] = useState(row.content ?? "");
   const [imagePath, setImagePath] = useState(row.image_path ?? "");
   const [videoId, setVideoId] = useState(row.video_id ?? "");
-  const [btnText, setBtnText] = useState(row.button_text ?? "");
-  const [btnUrl, setBtnUrl] = useState(row.button_url ?? "");
+  const [premiumEnabled, setPremiumEnabled] = useState(row.premium_enabled ?? false);
+  const [premiumAccountId, setPremiumAccountId] = useState(row.premium_account_id ?? "");
   const [delay, setDelay] = useState(row.delay_seconds ?? 2);
   const [saving, setSaving] = useState(false);
+  const contentRef = useRef<HTMLTextAreaElement | null>(null);
 
   async function uploadImage(file: File) {
     const ext = file.name.split(".").pop() ?? "jpg";
@@ -342,8 +361,8 @@ function ExtraEditor({
       content: content || null,
       image_path: imagePath || null,
       video_id: videoId || null,
-      button_text: btnText || null,
-      button_url: btnUrl || null,
+      premium_enabled: premiumEnabled,
+      premium_account_id: premiumAccountId || null,
       delay_seconds: Math.max(0, Math.min(300, Number(delay) || 0)),
     }).eq("id", row.id);
     setSaving(false);
@@ -364,8 +383,11 @@ function ExtraEditor({
       </div>
       <div className="grid grid-cols-[1fr_140px] gap-3 items-end">
         <div className="space-y-1.5">
-          <Label>Texto</Label>
-          <Textarea value={content} onChange={(e) => setContent(e.target.value)} rows={3} maxLength={4000} />
+          <div className="flex items-center justify-between">
+            <Label>Texto</Label>
+            <PremiumEmojiPicker value={content} onChange={setContent} targetRef={contentRef} />
+          </div>
+          <Textarea ref={contentRef} value={content} onChange={(e) => setContent(e.target.value)} rows={3} maxLength={4000} />
         </div>
         <div className="space-y-1.5">
           <Label>Esperar (s)</Label>
@@ -389,15 +411,22 @@ function ExtraEditor({
           </Select>
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-3">
-        <div className="space-y-1.5">
-          <Label>Texto do botão</Label>
-          <Input value={btnText} onChange={(e) => setBtnText(e.target.value)} maxLength={100} />
+      <div className="rounded-lg border border-border/60 p-3 space-y-3 bg-background/50">
+        <div className="flex items-center justify-between">
+          <Label className="text-sm">Enviar via conta Premium</Label>
+          <Switch checked={premiumEnabled} onCheckedChange={setPremiumEnabled} />
         </div>
-        <div className="space-y-1.5">
-          <Label>URL do botão</Label>
-          <Input value={btnUrl} onChange={(e) => setBtnUrl(e.target.value)} placeholder="https://..." />
-        </div>
+        {premiumEnabled && (
+          <Select value={premiumAccountId || "none"} onValueChange={(v) => setPremiumAccountId(v === "none" ? "" : v)}>
+            <SelectTrigger><SelectValue placeholder="Selecione uma conta premium" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">Selecione...</SelectItem>
+              {premiumAccounts.map((a: any) => (
+                <SelectItem key={a.id} value={a.id}>{a.label} {a.status !== "ok" ? `(${a.status})` : ""}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
       </div>
       <Button size="sm" onClick={save} disabled={saving}>{saving ? "Salvando..." : "Salvar mensagem"}</Button>
     </div>
