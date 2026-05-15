@@ -303,6 +303,8 @@ export type Database = {
       recurring_pending_followups: {
         Row: {
           account_id: string | null
+          button_text: string | null
+          button_url: string | null
           content: string | null
           created_at: string
           id: string
@@ -320,6 +322,8 @@ export type Database = {
         }
         Insert: {
           account_id?: string | null
+          button_text?: string | null
+          button_url?: string | null
           content?: string | null
           created_at?: string
           id?: string
@@ -337,6 +341,8 @@ export type Database = {
         }
         Update: {
           account_id?: string | null
+          button_text?: string | null
+          button_url?: string | null
           content?: string | null
           created_at?: string
           id?: string
@@ -365,6 +371,8 @@ export type Database = {
       recurring_schedules: {
         Row: {
           account_id: string | null
+          button_text: string | null
+          button_url: string | null
           content: string | null
           created_at: string
           follow_ups: Json
@@ -388,6 +396,8 @@ export type Database = {
         }
         Insert: {
           account_id?: string | null
+          button_text?: string | null
+          button_url?: string | null
           content?: string | null
           created_at?: string
           follow_ups?: Json
@@ -411,6 +421,8 @@ export type Database = {
         }
         Update: {
           account_id?: string | null
+          button_text?: string | null
+          button_url?: string | null
           content?: string | null
           created_at?: string
           follow_ups?: Json
