@@ -205,7 +205,7 @@ function AuthenticatedLayout() {
                   <Plug className="size-4" />
                   Conexões
                 </span>
-                <ChevronDown className="size-4 transition-transform ui-open:rotate-180" />
+                <ChevronDown className="size-4 transition-transform data-[state=open]:rotate-180" />
               </button>
             </CollapsibleTrigger>
             <CollapsibleContent className="space-y-1 pl-2">
