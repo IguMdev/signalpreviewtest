@@ -428,7 +428,17 @@ function QuickSendDialog({
   const [roomId, setRoomId] = useState<string>(tpl.default_room_id ?? "");
   const [accountId, setAccountId] = useState<string>(tpl.default_account_id ?? "");
   const [submitting, setSubmitting] = useState(false);
-  const [premium, setPremium] = useState(false);
+  const premiumKey = `qst:premium:${tpl.id}`;
+  const [premium, setPremiumState] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return window.localStorage.getItem(premiumKey) === "1";
+  });
+  const setPremium = (v: boolean) => {
+    setPremiumState(v);
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(premiumKey, v ? "1" : "0");
+    }
+  };
   const [imagePath, setImagePath] = useState<string | null>(tpl.image_path);
   const [uploading, setUploading] = useState(false);
   const removed = imagePath === null && tpl.image_path !== null;
