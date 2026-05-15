@@ -3,6 +3,7 @@ import { createHash, timingSafeEqual } from "crypto";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { sendMetaEvent } from "@/lib/meta-capi.server";
 import { callTelegram } from "@/lib/telegram.server";
+import { sendTextWithPremiumEmojis, sendPhotoWithPremiumEmojiCaption } from "@/lib/premium-send.server";
 
 function safeEqual(a: string, b: string): boolean {
   const left = Buffer.from(a);
@@ -74,27 +75,23 @@ async function logBot(entry: {
   }
 }
 
-function buildInlineButton(text: string | null | undefined, url: string | null | undefined) {
-  if (!text || !url) return undefined;
-  return { inline_keyboard: [[{ text, url }]] };
-}
-
 function renderTemplate(tpl: string, vars: Record<string, string>) {
   return tpl.replace(/\{(\w+)\}/g, (_, k) => vars[k] ?? "");
 }
 
 async function sendWelcomeBlock(opts: {
+  userId: string;
   botToken: string;
   chatId: number;
   text: string;
   parseMode: string;
-  buttonText: string | null | undefined;
-  buttonUrl: string | null | undefined;
   imagePath: string | null | undefined;
   videoId: string | null | undefined;
+  premiumEnabled?: boolean | null;
+  premiumAccountId?: string | null;
 }): Promise<{ ok: boolean; description?: string; mediaKind: "video_note" | "video" | "photo" | "text" }> {
-  const reply_markup = buildInlineButton(opts.buttonText, opts.buttonUrl);
   const parse_mode = opts.parseMode || "HTML";
+  const usePremium = !!opts.premiumEnabled && !!opts.premiumAccountId;
 
   if (opts.videoId) {
     const { data: vid } = await supabaseAdmin
@@ -107,9 +104,14 @@ async function sendWelcomeBlock(opts: {
       else { body.video = url; body.caption = opts.text; body.parse_mode = parse_mode; }
       const resp = await callTelegram(opts.botToken, method, body);
       if (method === "sendVideoNote") {
-        await callTelegram(opts.botToken, "sendMessage", { chat_id: opts.chatId, text: opts.text, parse_mode, reply_markup });
-      } else if (reply_markup) {
-        await callTelegram(opts.botToken, "sendMessage", { chat_id: opts.chatId, text: "\u2063", reply_markup });
+        if (usePremium) {
+          await sendTextWithPremiumEmojis({
+            userId: opts.userId, accountId: opts.premiumAccountId!, chatId: opts.chatId,
+            text: opts.text, allowPlain: true,
+          }).catch(() => callTelegram(opts.botToken, "sendMessage", { chat_id: opts.chatId, text: opts.text, parse_mode }));
+        } else {
+          await callTelegram(opts.botToken, "sendMessage", { chat_id: opts.chatId, text: opts.text, parse_mode });
+        }
       }
       return { ok: !!resp?.ok, description: resp?.description, mediaKind: method === "sendVideoNote" ? "video_note" : "video" };
     }
@@ -117,14 +119,30 @@ async function sendWelcomeBlock(opts: {
 
   if (opts.imagePath) {
     const url = publicUrl("room-images", opts.imagePath);
+    if (usePremium) {
+      const r = await sendPhotoWithPremiumEmojiCaption({
+        userId: opts.userId, accountId: opts.premiumAccountId!, chatId: opts.chatId,
+        photoUrl: url, caption: opts.text, strict: false,
+      }).catch((e) => ({ applied: true, ok: false, error: e instanceof Error ? e.message : String(e) } as const));
+      if (r.applied && r.ok) return { ok: true, mediaKind: "photo" };
+      // fall back to bot api
+    }
     const resp = await callTelegram(opts.botToken, "sendPhoto", {
-      chat_id: opts.chatId, photo: url, caption: opts.text, parse_mode, reply_markup,
+      chat_id: opts.chatId, photo: url, caption: opts.text, parse_mode,
     });
     return { ok: !!resp?.ok, description: resp?.description, mediaKind: "photo" };
   }
 
+  if (usePremium) {
+    const r = await sendTextWithPremiumEmojis({
+      userId: opts.userId, accountId: opts.premiumAccountId!, chatId: opts.chatId,
+      text: opts.text, allowPlain: true,
+    }).catch((e) => ({ applied: true, ok: false, error: e instanceof Error ? e.message : String(e) } as const));
+    if (r.applied && r.ok) return { ok: true, mediaKind: "text" };
+    // fall back to bot api
+  }
   const resp = await callTelegram(opts.botToken, "sendMessage", {
-    chat_id: opts.chatId, text: opts.text, parse_mode, reply_markup,
+    chat_id: opts.chatId, text: opts.text, parse_mode,
     disable_web_page_preview: true,
   });
   return { ok: !!resp?.ok, description: resp?.description, mediaKind: "text" };
@@ -172,7 +190,7 @@ async function runWelcomeBot(opts: {
 
   const { data: cfg } = await supabaseAdmin
     .from("room_engagement_settings")
-    .select("welcome_bot_enabled, welcome_message, welcome_image_path, welcome_image_mime, welcome_video_id, welcome_parse_mode, welcome_button_text, welcome_button_url")
+    .select("welcome_bot_enabled, welcome_message, welcome_image_path, welcome_image_mime, welcome_video_id, welcome_parse_mode, welcome_premium_enabled, welcome_premium_account_id")
     .eq("room_id", rc.room_id)
     .maybeSingle();
   if (!cfg?.welcome_bot_enabled) {
@@ -191,19 +209,18 @@ async function runWelcomeBot(opts: {
     username: opts.user.username ?? "",
   });
 
-  const reply_markup = buildInlineButton(cfg.welcome_button_text, cfg.welcome_button_url);
   const parse_mode = cfg.welcome_parse_mode ?? "HTML";
-  void reply_markup;
 
   const first = await sendWelcomeBlock({
+    userId: opts.userId,
     botToken: opts.botToken,
     chatId: opts.chatId,
     text,
     parseMode: parse_mode,
-    buttonText: cfg.welcome_button_text,
-    buttonUrl: cfg.welcome_button_url,
     imagePath: cfg.welcome_image_path,
     videoId: cfg.welcome_video_id,
+    premiumEnabled: (cfg as any).welcome_premium_enabled,
+    premiumAccountId: (cfg as any).welcome_premium_account_id,
   });
   await logBot({
     userId: opts.userId, accountId: opts.accountId, roomId: rc.room_id, botType: "boasvindas",
@@ -228,14 +245,15 @@ async function runWelcomeBot(opts: {
       name: mention, first_name: firstName, username: opts.user.username ?? "",
     });
     const r = await sendWelcomeBlock({
+      userId: opts.userId,
       botToken: opts.botToken,
       chatId: opts.chatId,
       text: body,
       parseMode: ex.parse_mode || "HTML",
-      buttonText: ex.button_text,
-      buttonUrl: ex.button_url,
       imagePath: ex.image_path,
       videoId: ex.video_id,
+      premiumEnabled: ex.premium_enabled,
+      premiumAccountId: ex.premium_account_id,
     });
     await logBot({
       userId: opts.userId, accountId: opts.accountId, roomId: rc.room_id, botType: "boasvindas",
