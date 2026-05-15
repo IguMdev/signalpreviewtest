@@ -100,11 +100,12 @@ export const sendVideoNoteNow = createServerFn({ method: "POST" })
       });
       await supabaseAdmin.from("message_logs").insert({
         user_id: userId,
+        account_id: data.accountId,
         chat_id: typeof chatId === "string" ? Number(chatId) : chatId,
         ok: r.ok,
         telegram_message_id: r.result?.message_id ?? null,
         error: r.ok ? null : r.description ?? "erro",
-      });
+      } as never);
       results.push({ chatId, ok: r.ok, error: r.ok ? undefined : r.description });
     }
     return { results };

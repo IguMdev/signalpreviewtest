@@ -104,11 +104,12 @@ export const dispatchDue = createServerFn({ method: "POST" }).handler(async () =
       await supabaseAdmin.from("message_logs").insert({
         scheduled_message_id: msg.id,
         user_id: msg.user_id,
+        account_id: msg.account_id ?? null,
         chat_id: c.chat_id,
         ok: r.ok,
         telegram_message_id: r.result?.message_id ?? null,
         error: r.ok ? null : r.description ?? "erro",
-      });
+      } as never);
       if (r.ok) anyOk = true;
       else lastErr = r.description ?? "erro";
       if (r.ok && r.result?.message_id) {

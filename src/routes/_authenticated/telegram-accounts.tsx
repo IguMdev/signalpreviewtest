@@ -563,14 +563,15 @@ function AccountCard({
     queryFn: async () => {
       const start = new Date();
       start.setHours(0, 0, 0, 0);
-      const { count } = await supabase
-        .from("scheduled_messages")
-        .select("id", { count: "exact", head: true })
+      const { count } = await (supabase
+        .from("message_logs")
+        .select("id", { count: "exact", head: true }) as any)
         .eq("account_id", a.id)
-        .eq("status", "sent")
-        .gte("sent_at", start.toISOString());
+        .eq("ok", true)
+        .gte("created_at", start.toISOString());
       return count ?? 0;
     },
+    refetchInterval: 30_000,
   });
 
   const used = today.data ?? 0;
