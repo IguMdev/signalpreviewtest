@@ -1187,7 +1187,12 @@ function ScheduleDialog({
                 weekdays,
                 weekdayOverrides,
                 followUps: followUps.map((f) => ({
-                  delayMinutes: f.delayMinutes,
+                  delayMinutes:
+                    f.delayUnit === "seconds"
+                      ? Math.max(1, Math.ceil(f.delayValue / 60))
+                      : f.delayValue,
+                  delaySeconds:
+                    f.delayUnit === "seconds" ? f.delayValue : null,
                   content: f.content || null,
                   imagePath: f.imagePath || null,
                   imageMime: f.imageMime || null,
