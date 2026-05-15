@@ -109,20 +109,16 @@ async function sendToRoom(opts: {
 }): Promise<Record<string, number>> {
   const out: Record<string, number> = {};
   for (const cid of opts.chatIds) {
-    // Botões inline só funcionam via Bot API. Se houver botões, pula a rota
-    // premium MTProto (que não consegue anexar inline keyboard) e força o
-    // envio pelo bot — emojis premium ficam como caracteres normais.
-    if (!opts.replyMarkup) {
-      const premium = await sendTextWithPremiumEmojis({
-        userId: opts.userId,
-        chatId: cid,
-        text: opts.text,
-        replyToMessageId: opts.replyTo?.[String(cid)],
-      });
-      if (premium.applied) {
-        if (premium.ok && premium.messageId) out[String(cid)] = premium.messageId;
-        continue;
-      }
+    const premium = await sendTextWithPremiumEmojis({
+      userId: opts.userId,
+      chatId: cid,
+      text: opts.text,
+      replyToMessageId: opts.replyTo?.[String(cid)],
+      buttonRows: opts.replyMarkup?.inline_keyboard,
+    });
+    if (premium.applied) {
+      if (premium.ok && premium.messageId) out[String(cid)] = premium.messageId;
+      continue;
     }
     const botText = opts.replyMarkup ? await renderBotApiText(opts.userId, opts.text) : opts.text;
     const r = await callTelegram<{ message_id: number }>(opts.botToken, "sendMessage", {
