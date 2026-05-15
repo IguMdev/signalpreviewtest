@@ -1267,10 +1267,14 @@ function ScheduleDialog({
                   imagePath: f.imagePath || null,
                   imageMime: f.imageMime || null,
                   videoId: f.videoId || null,
+                  buttonText: f.buttonText?.trim() || null,
+                  buttonUrl: f.buttonUrl?.trim() || null,
                 })),
                 isPremium,
                 isActive,
                 timezone: "America/Sao_Paulo",
+                buttonText: buttonText.trim() || null,
+                buttonUrl: buttonUrl.trim() || null,
               })
             }
           >
