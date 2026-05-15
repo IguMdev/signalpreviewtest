@@ -227,6 +227,17 @@ export const sendRoomTest = createServerFn({ method: "POST" })
       .map((b) => [{ text: renderEmojiTokens(b.label, emojiLookup).text, url: b.url }]);
     const replyMarkup = buttonRows.length ? { inline_keyboard: buttonRows } : undefined;
     const botText = replyMarkup ? renderEmojiTokensToHtml(text, emojiLookup).text : text;
+    const sendButtonMessage = async (replyToMessageId?: number | null) => {
+      if (!replyMarkup) return;
+      await callTelegram<{ message_id: number }>(acc.bot_token, "sendMessage", {
+        chat_id: chat.chat_id,
+        text: "👇",
+        parse_mode: "HTML",
+        reply_to_message_id: replyToMessageId || undefined,
+        allow_sending_without_reply: true,
+        reply_markup: replyMarkup,
+      });
+    };
     let r;
     if (data.imagePath) {
       const bucket = data.imageBucket || "room-images";
@@ -268,17 +279,22 @@ export const sendRoomTest = createServerFn({ method: "POST" })
           caption: text,
           buttonRows: buttonRows.length ? buttonRows : undefined,
         });
-        r = premiumPhoto.applied
-          ? premiumPhoto.ok
-            ? { ok: true, result: { message_id: premiumPhoto.messageId ?? undefined } }
-            : { ok: false, description: premiumPhoto.error }
-          : await callTelegram<{ message_id: number }>(acc.bot_token, "sendPhoto", {
+        if (premiumPhoto.applied) {
+          if (premiumPhoto.ok) {
+            await sendButtonMessage(premiumPhoto.messageId);
+            r = { ok: true, result: { message_id: premiumPhoto.messageId ?? undefined } };
+          } else {
+            r = { ok: false, description: premiumPhoto.error };
+          }
+        } else {
+          r = await callTelegram<{ message_id: number }>(acc.bot_token, "sendPhoto", {
               chat_id: chat.chat_id,
               photo: pub.publicUrl,
               caption: botText || undefined,
               parse_mode: "HTML",
               reply_markup: replyMarkup,
             });
+        }
       }
     } else {
       if (!text) throw new Error("Mensagem vazia");
@@ -290,6 +306,7 @@ export const sendRoomTest = createServerFn({ method: "POST" })
       });
       if (premium.applied) {
         if (!premium.ok) throw new Error(premium.error);
+        await sendButtonMessage(premium.messageId);
         r = { ok: true, result: { message_id: premium.messageId ?? undefined } };
       } else
         r = await callTelegram<{ message_id: number }>(acc.bot_token, "sendMessage", {
