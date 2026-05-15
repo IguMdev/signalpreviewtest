@@ -25,6 +25,7 @@ import {
   Bot,
   MessageCircle,
   Forward,
+  ScrollText,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -54,6 +55,7 @@ const botItems = [
   { to: "/bots/boasvindas", label: "BotBoasVindas", icon: MessageCircle, type: "boasvindas" as const },
   { to: "/bots/encaminhador", label: "BotEncaminhador", icon: Forward, type: "encaminhador" as const },
 ] as const;
+const botLogsItem = { to: "/bots/logs", label: "Logs dos Bots", icon: ScrollText } as const;
 
 const accountItems = [
   { to: "/perfil", label: "Minha conta", icon: UserCircle, tour: "nav-perfil" },
@@ -290,6 +292,25 @@ function AuthenticatedLayout() {
                     </Link>
                   );
                 })}
+                {(() => {
+                  const Icon = botLogsItem.icon;
+                  const active = location.pathname === botLogsItem.to;
+                  return (
+                    <Link
+                      to={botLogsItem.to}
+                      onClick={() => setSidebarOpen(false)}
+                      className={cn(
+                        "relative flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition",
+                        active
+                          ? "cyber-gradient-soft text-foreground cyber-border"
+                          : "text-foreground/70 hover:bg-white/5 hover:text-foreground",
+                      )}
+                    >
+                      <Icon className={cn("size-4", active && "text-primary")} />
+                      {botLogsItem.label}
+                    </Link>
+                  );
+                })()}
               </CollapsibleContent>
             </Collapsible>
           )}
