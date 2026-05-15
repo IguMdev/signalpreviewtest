@@ -3,7 +3,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { callTelegram } from "@/lib/telegram.server";
-import { dispatchVideoNote } from "@/lib/videos.functions";
+import { dispatchVideoNote, dispatchVideo } from "@/lib/videos.functions";
 import { sendPhotoWithPremiumEmojiCaption, sendTextWithPremiumEmojis } from "@/lib/premium-send.server";
 
 const TimeRe = /^([01]\d|2[0-3]):[0-5]\d$/;
@@ -15,6 +15,8 @@ const FollowUpInput = z.object({
   imagePath: z.string().max(500).nullable().optional(),
   imageMime: z.string().max(100).nullable().optional(),
   videoId: z.string().uuid().nullable().optional(),
+  buttonText: z.string().max(64).nullable().optional(),
+  buttonUrl: z.string().url().max(2048).nullable().optional(),
 });
 
 const ScheduleInput = z.object({
@@ -36,6 +38,8 @@ const ScheduleInput = z.object({
   isPremium: z.boolean().default(false),
   isActive: z.boolean().default(true),
   timezone: z.string().default("America/Sao_Paulo"),
+  buttonText: z.string().max(64).nullable().optional(),
+  buttonUrl: z.string().url().max(2048).nullable().optional(),
 });
 
 export const upsertSchedule = createServerFn({ method: "POST" })
@@ -67,10 +71,14 @@ export const upsertSchedule = createServerFn({ method: "POST" })
         image_path: f.imagePath ?? null,
         image_mime: f.imageMime ?? null,
         video_id: f.videoId ?? null,
+        button_text: f.buttonText ?? null,
+        button_url: f.buttonUrl ?? null,
       })),
       is_premium: data.isPremium,
       is_active: data.isActive,
       timezone: data.timezone,
+      button_text: data.buttonText ?? null,
+      button_url: data.buttonUrl ?? null,
     };
     if (data.id) {
       const { error } = await supabase.from("recurring_schedules").update(row).eq("id", data.id);
