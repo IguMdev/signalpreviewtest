@@ -51,6 +51,7 @@ type Schedule = {
 
 type PendingFollowup = {
   id: string;
+  schedule_id: string | null;
   user_id: string;
   room_id: string;
   account_id: string | null;
@@ -59,7 +60,6 @@ type PendingFollowup = {
   image_mime: string | null;
   video_id: string | null;
   parse_mode: string;
-  is_premium?: boolean;
 };
 
 async function sendOne(
@@ -257,7 +257,6 @@ export const Route = createFileRoute("/api/public/cron/dispatch-recurring")({
                 image_mime: f.image_mime ?? null,
                 video_id: f.video_id ?? null,
                 parse_mode: s.parse_mode,
-                  is_premium: s.is_premium,
               };
             });
             await supabaseAdmin.from("recurring_pending_followups").insert(rows);
@@ -268,7 +267,7 @@ export const Route = createFileRoute("/api/public/cron/dispatch-recurring")({
         const nowIso = new Date().toISOString();
         const { data: pendings } = await supabaseAdmin
           .from("recurring_pending_followups")
-            .select("id, user_id, room_id, account_id, content, image_path, image_mime, video_id, parse_mode, is_premium")
+          .select("id, schedule_id, user_id, room_id, account_id, content, image_path, image_mime, video_id, parse_mode")
           .eq("status", "pending")
           .lte("scheduled_at", nowIso)
           .limit(100);
