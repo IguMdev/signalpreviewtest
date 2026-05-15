@@ -71,14 +71,18 @@ export const confirmPremiumCode = createServerFn({ method: "POST" })
     const { supabase } = context;
     const { data: acc, error } = await supabase
       .from("telegram_accounts")
-      .select("tg_api_id, tg_api_hash, phone, tg_phone_code_hash")
+      .select("tg_api_id, tg_api_hash, phone, tg_phone_code_hash, tg_session")
       .eq("id", data.accountId)
       .maybeSingle();
     if (error || !acc) throw new Error("Conta não encontrada");
     if (!acc.tg_api_id || !acc.tg_api_hash || !acc.phone || !acc.tg_phone_code_hash) {
       throw new Error("Solicite o código novamente.");
     }
-    const client = await makeClient(acc.tg_api_id as number, acc.tg_api_hash as string);
+    const client = await makeClient(
+      acc.tg_api_id as number,
+      acc.tg_api_hash as string,
+      (acc.tg_session as string) ?? "",
+    );
     try {
       const me = (await client.signInUser(
         { apiId: acc.tg_api_id as number, apiHash: acc.tg_api_hash as string },
