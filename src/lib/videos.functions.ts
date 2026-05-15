@@ -36,6 +36,9 @@ async function sendVideoToChat(opts: {
   filename: string;
   mimeType: string;
   duration?: number | null;
+  caption?: string | null;
+  parseMode?: string | null;
+  replyMarkup?: unknown;
 }) {
   if (!opts.botToken) {
     return { ok: false, description: "Conta sem bot_token" } as { ok: boolean; result?: { message_id: number }; description?: string };
@@ -43,6 +46,11 @@ async function sendVideoToChat(opts: {
   const form = new FormData();
   form.append("chat_id", String(opts.chatId));
   if (opts.duration) form.append("duration", String(opts.duration));
+  if (opts.caption && opts.caption.trim()) {
+    form.append("caption", opts.caption);
+    if (opts.parseMode) form.append("parse_mode", opts.parseMode);
+  }
+  if (opts.replyMarkup) form.append("reply_markup", JSON.stringify(opts.replyMarkup));
   form.append(
     "video",
     new Blob([opts.fileBytes], { type: opts.mimeType || "video/mp4" }),
@@ -152,5 +160,36 @@ export async function dispatchVideoNote(opts: {
     filename: opts.filename ?? "video.mp4",
     mimeType: opts.mimeType ?? "video/mp4",
     duration: opts.duration,
+  });
+}
+
+export async function dispatchVideo(opts: {
+  botToken: string | null | undefined;
+  storagePath: string;
+  chatId: number;
+  duration?: number | null;
+  mimeType?: string | null;
+  filename?: string;
+  caption?: string | null;
+  parseMode?: string | null;
+  replyMarkup?: unknown;
+}): Promise<{ ok: boolean; result?: { message_id: number }; description?: string }> {
+  const { data: file, error } = await supabaseAdmin.storage
+    .from("videos")
+    .download(opts.storagePath);
+  if (error || !file) {
+    return { ok: false, description: "Falha ao baixar vídeo" };
+  }
+  const bytes = await file.arrayBuffer();
+  return sendVideoToChat({
+    botToken: opts.botToken,
+    chatId: opts.chatId,
+    fileBytes: bytes,
+    filename: opts.filename ?? "video.mp4",
+    mimeType: opts.mimeType ?? "video/mp4",
+    duration: opts.duration,
+    caption: opts.caption,
+    parseMode: opts.parseMode,
+    replyMarkup: opts.replyMarkup,
   });
 }
