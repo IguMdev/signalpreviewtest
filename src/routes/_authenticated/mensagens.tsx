@@ -552,7 +552,10 @@ function ScheduleDialog({
       setOverrideInputs({});
       setFollowUps(
         (editing.follow_ups ?? []).map((f) => ({
-          delayMinutes: f.delay_minutes,
+          delayValue: f.delay_seconds && f.delay_seconds > 0 ? f.delay_seconds : f.delay_minutes,
+          delayUnit: (f.delay_seconds && f.delay_seconds > 0 ? "seconds" : "minutes") as
+            | "seconds"
+            | "minutes",
           content: f.content ?? "",
           imagePath: f.image_path ?? "",
           imageMime: f.image_mime ?? "",
