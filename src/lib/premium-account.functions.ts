@@ -13,6 +13,18 @@ async function makeClient(apiId: number, apiHash: string, session = "") {
   return client;
 }
 
+function imageDataUrl(bytes: Buffer): string | null {
+  if (!bytes.length) return null;
+  const mime = bytes.subarray(0, 4).toString("hex").startsWith("ffd8")
+    ? "image/jpeg"
+    : bytes.subarray(0, 8).toString("hex") === "89504e470d0a1a0a"
+      ? "image/png"
+      : bytes.subarray(0, 4).toString("ascii") === "RIFF" && bytes.subarray(8, 12).toString("ascii") === "WEBP"
+        ? "image/webp"
+        : null;
+  return mime ? `data:${mime};base64,${bytes.toString("base64")}` : null;
+}
+
 export const requestPremiumCode = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) =>
@@ -223,28 +235,39 @@ export const syncPremiumEmojis = createServerFn({ method: "POST" })
           // ignora diálogos sem permissão de leitura
         }
       }
-      // Baixa o thumbnail (preview estático) de cada custom emoji
+      // Baixa o thumbnail real de cada custom emoji.
       if (items.length) {
         try {
+          const { strippedPhotoToJpg } = await import("telegram/Utils");
           const docs = (await client.invoke(
             new Api.messages.GetCustomEmojiDocuments({
               documentId: items.map((i) => bigInt(i.custom_emoji_id) as never),
             }),
           )) as unknown as Array<{
             id?: { toString(): string };
-            mimeType?: string;
-            thumbs?: Array<{ type?: string; bytes?: Uint8Array }>;
+            thumbs?: Array<{ className?: string; type?: string; bytes?: Uint8Array }>;
           }>;
           for (const doc of docs ?? []) {
             const id = doc.id ? String(doc.id) : null;
             if (!id) continue;
             const target = items.find((i) => i.custom_emoji_id === id);
             if (!target) continue;
-            // Pega thumb estático (geralmente WEBP) embutido no Document
-            const thumb = (doc.thumbs ?? []).find((t) => t.bytes && t.bytes.length > 0);
-            if (thumb?.bytes) {
-              const b64 = Buffer.from(thumb.bytes).toString("base64");
-              target.thumb_data_url = `data:image/webp;base64,${b64}`;
+
+            const downloadableThumbs = (doc.thumbs ?? []).filter((t) => t.className !== "PhotoPathSize");
+            const downloaded = (await client.downloadMedia(doc as never, {
+              thumb: Math.max(downloadableThumbs.length - 1, 0),
+            }).catch(() => null)) as Buffer | null;
+            if (downloaded?.length) {
+              target.thumb_data_url = imageDataUrl(downloaded);
+            }
+
+            if (!target.thumb_data_url) {
+              const embedded = downloadableThumbs.find((t) => t.bytes && t.bytes.length > 0);
+              if (embedded?.bytes) {
+                const raw = Buffer.from(embedded.bytes);
+                const normalized = embedded.className === "PhotoStrippedSize" ? strippedPhotoToJpg(raw) : raw;
+                target.thumb_data_url = imageDataUrl(normalized);
+              }
             }
           }
         } catch {
