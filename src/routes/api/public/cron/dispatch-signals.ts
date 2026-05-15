@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { callTelegram } from "@/lib/telegram.server";
 import { getUserEmojiLookup, sendTextWithPremiumEmojis } from "@/lib/premium-send.server";
-import { renderEmojiTokensToHtml } from "@/lib/premium-emoji-render";
+import { renderEmojiTokens, renderEmojiTokensToHtml } from "@/lib/premium-emoji-render";
 import {
   buildSlots, categoryFor, getBinanceM1Candle, nowParts,
   pickRandom, renderTemplate, resolveBinary,
@@ -35,7 +35,7 @@ async function buildReplyMarkup(userId: string, buttons: TemplateButton[], kind:
   const rows = buttons
     .filter((b) => b.template_kind === kind && b.label && b.url)
     .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
-    .map((b) => [{ text: renderEmojiTokensToHtml(b.label, lookup).text.replace(/<[^>]+>/g, ""), url: b.url }]);
+    .map((b) => [{ text: renderEmojiTokens(b.label, lookup).text, url: b.url }]);
   return rows.length ? { inline_keyboard: rows } : undefined;
 }
 
