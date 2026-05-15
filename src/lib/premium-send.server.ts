@@ -33,7 +33,7 @@ export async function renderPremiumEmojiTokensForBotApi(userId: string, text: st
 
 /**
  * Tenta enviar uma mensagem de texto via conta premium MTProto, substituindo
- * tokens {NOME}/{EMOJI:NOME} por entities `MessageEntityCustomEmoji` reais.
+ * tokens {NOME} por entities `MessageEntityCustomEmoji` reais.
  *
  * Retorna `{ applied: false }` quando a rota premium não se aplica
  * (sem tokens, sem conta premium ativa, ou nenhum nome bate). Nesse caso
@@ -51,9 +51,8 @@ export async function sendTextWithPremiumEmojis(opts: {
 
   const lookup = await getUserEmojiLookup(opts.userId);
 
-  const rendered = renderEmojiTokensToHtml(opts.text, lookup);
-  const { entities } = renderEmojiTokens(opts.text, lookup);
-  if (!rendered.replaced) {
+  const rendered = renderEmojiTokens(opts.text, lookup);
+  if (!rendered.entities.length) {
     return { applied: false, reason: "no-known-emojis" };
   }
 
@@ -71,8 +70,9 @@ export async function sendTextWithPremiumEmojis(opts: {
     return { applied: false, reason: "no-premium-account" };
   }
 
-  const { TelegramClient } = await import("telegram");
+  const { TelegramClient, Api } = await import("telegram");
   const { StringSession } = await import("telegram/sessions");
+  const { default: bigInt } = await import("big-integer");
 
   const client = new TelegramClient(
     new StringSession(acc.tg_session as string),
@@ -87,7 +87,14 @@ export async function sendTextWithPremiumEmojis(opts: {
     const target = Number.isFinite(numeric) ? (numeric as number) : opts.chatId;
     const msg = await client.sendMessage(target as never, {
       message: rendered.text,
-      parseMode: "html",
+      formattingEntities: rendered.entities.map(
+        (entity) =>
+          new Api.MessageEntityCustomEmoji({
+            offset: entity.offset,
+            length: entity.length,
+            documentId: bigInt(entity.documentId) as never,
+          }),
+      ),
       replyTo: opts.replyToMessageId,
     });
     return { applied: true, ok: true, messageId: Number(msg.id) };

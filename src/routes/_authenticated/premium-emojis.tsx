@@ -125,7 +125,10 @@ function PremiumEmojisPage() {
     const ids = list.data.map((e) => e.custom_emoji_id);
     getCachedEmojis(ids).then(async (cached) => {
       setSavedThumbs(cached);
-      const missing = ids.filter((id) => !cached.get(id)?.thumb_data_url);
+      const missing = ids.filter((id) => {
+        const item = cached.get(id);
+        return !item?.thumb_data_url || item.thumb_mime === "application/x-tgsticker";
+      });
       if (!missing.length) return;
       const fresh = await fetchThumbs({ data: { ids: missing } }).catch(() => null);
       if (!fresh?.ok || !fresh.items.length) return;
