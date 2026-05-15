@@ -37,6 +37,50 @@ function mediaDataUrl(bytes: Buffer): { url: string; mime: string } | null {
   return { url: `data:${mime};base64,${bytes.toString("base64")}`, mime };
 }
 
+async function hydrateEmojiDocuments(
+  client: Awaited<ReturnType<typeof makeClient>>,
+  items: Array<{ custom_emoji_id: string; thumb_data_url: string | null; thumb_mime: string | null }>,
+) {
+  if (!items.length) return;
+  const { Api } = await import("telegram");
+  const { strippedPhotoToJpg } = await import("telegram/Utils");
+  const { default: bigInt } = await import("big-integer");
+  const docs = (await client.invoke(
+    new Api.messages.GetCustomEmojiDocuments({
+      documentId: items.map((i) => bigInt(i.custom_emoji_id) as never),
+    }),
+  )) as unknown as Array<{
+    id?: { toString(): string };
+    thumbs?: Array<{ className?: string; bytes?: Uint8Array }>;
+  }>;
+  for (const doc of docs ?? []) {
+    const id = doc.id ? String(doc.id) : null;
+    if (!id) continue;
+    const target = items.find((i) => i.custom_emoji_id === id);
+    if (!target) continue;
+    const fullBytes = (await client.downloadMedia(doc as never).catch(() => null)) as Buffer | null;
+    if (fullBytes?.length) {
+      const detected = mediaDataUrl(fullBytes);
+      if (detected) {
+        target.thumb_data_url = detected.url;
+        target.thumb_mime = detected.mime;
+      }
+    }
+    if (!target.thumb_data_url) {
+      const embedded = (doc.thumbs ?? []).find((t) => t.className !== "PhotoPathSize" && t.bytes?.length);
+      if (embedded?.bytes) {
+        const raw = Buffer.from(embedded.bytes);
+        const normalized = embedded.className === "PhotoStrippedSize" ? strippedPhotoToJpg(raw) : raw;
+        const detected = mediaDataUrl(normalized);
+        if (detected) {
+          target.thumb_data_url = detected.url;
+          target.thumb_mime = detected.mime;
+        }
+      }
+    }
+  }
+}
+
 export const requestPremiumCode = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) =>
