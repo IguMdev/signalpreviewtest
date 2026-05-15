@@ -217,12 +217,21 @@ function BoasVindasPage() {
                    {premiumAccountId && (() => {
                      const acc = (premiumAccountsQ.data ?? []).find((a: any) => a.id === premiumAccountId) as any;
                      if (!acc) return null;
-                     const handle = acc.bot_username ? `@${acc.bot_username}` : acc.phone || "";
-                     return (
-                       <p className="text-[11px] text-muted-foreground">
-                         Conectada como <span className="font-medium text-foreground">{acc.label}</span>{handle ? ` (${handle})` : ""}.
-                       </p>
-                     );
+                      const handle = acc.bot_username ? `@${acc.bot_username}` : acc.phone || "";
+                      return (
+                        <div className="flex items-center gap-2 mt-1">
+                          <div
+                            className="w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0"
+                            style={{ backgroundColor: stringToColor(acc.id) }}
+                            title={acc.label}
+                          >
+                            {getInitials(acc.label)}
+                          </div>
+                          <p className="text-[11px] text-muted-foreground">
+                            Conectada como <span className="font-medium text-foreground">{acc.label}</span>{handle ? ` (${handle})` : ""}.
+                          </p>
+                        </div>
+                      );
                    })()}
                    {(premiumAccountsQ.data ?? []).length === 0 && (
                     <p className="text-[11px] text-amber-500">Nenhuma conta Premium conectada. Conecte uma em "Contas Telegram".</p>
