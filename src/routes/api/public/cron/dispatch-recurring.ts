@@ -105,7 +105,7 @@ export const Route = createFileRoute("/api/public/cron/dispatch-recurring")({
         const { data: schedules, error } = await supabaseAdmin
           .from("recurring_schedules")
           .select(
-            "id, user_id, room_id, account_id, content, video_id, image_path, image_mime, parse_mode, times, weekdays, weekday_overrides, follow_ups, timezone, last_fire_key",
+            "id, user_id, room_id, account_id, content, video_id, image_path, image_mime, parse_mode, is_premium, times, weekdays, weekday_overrides, follow_ups, timezone, last_fire_key",
           )
           .eq("is_active", true);
         if (error) {
@@ -174,7 +174,7 @@ export const Route = createFileRoute("/api/public/cron/dispatch-recurring")({
           for (const c of chats) {
             let r: { ok: boolean; result?: { message_id?: number }; description?: string };
             const premium =
-              !s.image_path && !video && s.content
+              s.is_premium && !s.image_path && !video && s.content
                 ? await sendTextWithPremiumEmojis({
                     userId: s.user_id,
                     chatId: c.chat_id,
@@ -257,6 +257,7 @@ export const Route = createFileRoute("/api/public/cron/dispatch-recurring")({
                 image_mime: f.image_mime ?? null,
                 video_id: f.video_id ?? null,
                 parse_mode: s.parse_mode,
+                  is_premium: s.is_premium,
               };
             });
             await supabaseAdmin.from("recurring_pending_followups").insert(rows);
@@ -267,7 +268,7 @@ export const Route = createFileRoute("/api/public/cron/dispatch-recurring")({
         const nowIso = new Date().toISOString();
         const { data: pendings } = await supabaseAdmin
           .from("recurring_pending_followups")
-          .select("id, user_id, room_id, account_id, content, image_path, image_mime, video_id, parse_mode")
+            .select("id, user_id, room_id, account_id, content, image_path, image_mime, video_id, parse_mode, is_premium")
           .eq("status", "pending")
           .lte("scheduled_at", nowIso)
           .limit(100);
@@ -343,6 +344,7 @@ export const Route = createFileRoute("/api/public/cron/dispatch-recurring")({
                   image_path: p.image_path,
                   parse_mode: p.parse_mode,
                   user_id: p.user_id,
+                  is_premium: p.is_premium,
                 });
             await supabaseAdmin.from("message_logs").insert({
               user_id: p.user_id,
