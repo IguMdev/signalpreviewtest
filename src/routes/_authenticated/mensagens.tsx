@@ -809,26 +809,6 @@ function ScheduleDialog({
                   }
                   disabled={!!videoId && isRoundVideo(videoId)}
                 />
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  <div className="space-y-1">
-                    <Label className="text-xs">Botão (texto)</Label>
-                    <Input
-                      value={buttonText}
-                      onChange={(e) => setButtonText(e.target.value)}
-                      placeholder="Ex.: Acessar"
-                      maxLength={64}
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs">Botão (URL)</Label>
-                    <Input
-                      value={buttonUrl}
-                      onChange={(e) => setButtonUrl(e.target.value)}
-                      placeholder="https://..."
-                      maxLength={2048}
-                    />
-                  </div>
-                </div>
                 <p className="text-xs text-muted-foreground">
                   Suporta HTML do Telegram: &lt;b&gt;, &lt;i&gt;, &lt;u&gt;, &lt;code&gt;. Para emojis premium, use{" "}
                   <code className="px-1 py-0.5 rounded bg-muted">{"{NOME}"}</code>.
