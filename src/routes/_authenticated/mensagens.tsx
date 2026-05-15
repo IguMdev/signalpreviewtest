@@ -536,12 +536,14 @@ function ScheduleDialog({
   const [weekdayOverrides, setWeekdayOverrides] = useState<Record<string, string[]>>({});
   const [overrideInputs, setOverrideInputs] = useState<Record<string, string>>({});
   const [followUps, setFollowUps] = useState<
-    Array<{ delayValue: number; delayUnit: "seconds" | "minutes"; content: string; imagePath: string; imageMime: string; videoId: string }>
+    Array<{ delayValue: number; delayUnit: "seconds" | "minutes"; content: string; imagePath: string; imageMime: string; videoId: string; buttonText: string; buttonUrl: string }>
   >([]);
   const [followUpUploading, setFollowUpUploading] = useState<number | null>(null);
   const [isPremium, setIsPremium] = useState(false);
   const [isActive, setIsActive] = useState(true);
   const [newTime, setNewTime] = useState("");
+  const [buttonText, setButtonText] = useState("");
+  const [buttonUrl, setButtonUrl] = useState("");
 
   const open = !!editing;
 
@@ -568,11 +570,18 @@ function ScheduleDialog({
           imagePath: f.image_path ?? "",
           imageMime: f.image_mime ?? "",
           videoId: f.video_id ?? "",
+          buttonText: f.button_text ?? "",
+          buttonUrl: f.button_url ?? "",
         })),
       );
       setIsPremium(editing.is_premium);
       setIsActive(editing.is_active);
       setNewTime("");
+      setButtonText(editing.button_text ?? "");
+      setButtonUrl(editing.button_url ?? "");
+    } else {
+      setButtonText("");
+      setButtonUrl("");
     }
   }, [editing, presetRoomId]);
 
