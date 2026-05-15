@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { PremiumEmojiPicker } from "@/components/PremiumEmojiPicker";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -683,6 +684,9 @@ function ScheduleDialog({
                 <Label>
                   Mensagem <span className="text-destructive">*</span>
                 </Label>
+                <div className="flex justify-end -mb-1">
+                  <PremiumEmojiPicker value={content} onChange={setContent} />
+                </div>
                 <Textarea
                   value={content}
                   onChange={(e) => setContent(e.target.value)}
@@ -857,6 +861,12 @@ function ScheduleDialog({
                           <span className="text-xs text-muted-foreground">
                             depois da mensagem anterior
                           </span>
+                        </div>
+                        <div className="flex justify-end -mb-1">
+                          <PremiumEmojiPicker
+                            value={f.content}
+                            onChange={(v) => update({ content: v })}
+                          />
                         </div>
                         <Textarea
                           rows={3}

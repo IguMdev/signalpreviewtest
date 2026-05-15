@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { PremiumEmojiPicker } from "@/components/PremiumEmojiPicker";
 import {
   Select,
   SelectContent,
@@ -497,6 +498,9 @@ function TelegramAccountsPage() {
             </div>
             <div className="space-y-2">
               <Label>Mensagem</Label>
+              <div className="flex justify-end -mb-1">
+                <PremiumEmojiPicker value={testText} onChange={setTestText} />
+              </div>
               <Textarea value={testText} onChange={(e) => setTestText(e.target.value)} rows={4} />
             </div>
           </div>
