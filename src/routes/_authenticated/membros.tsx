@@ -7,6 +7,8 @@ import { Card } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { UserPlus, UserMinus, TrendingUp, Users, RefreshCw } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/_authenticated/membros")({
   component: MembrosPage,
@@ -15,7 +17,15 @@ export const Route = createFileRoute("/_authenticated/membros")({
 function MembrosPage() {
   const fetchStats = useServerFn(getMemberStats);
   const fetchCurrentCounts = useServerFn(getCurrentMemberCounts);
-  const q = useQuery({ queryKey: ["member-stats"], queryFn: () => fetchStats() });
+  const today = new Date();
+  const defaultFrom = new Date(today.getTime() - 29 * 24 * 60 * 60 * 1000);
+  const fmt = (d: Date) => d.toISOString().slice(0, 10);
+  const [from, setFrom] = useState<string>(fmt(defaultFrom));
+  const [to, setTo] = useState<string>(fmt(today));
+  const q = useQuery({
+    queryKey: ["member-stats", from, to],
+    queryFn: () => fetchStats({ data: { from, to } }),
+  });
   const countsQ = useQuery({ queryKey: ["member-current-counts"], queryFn: () => fetchCurrentCounts() });
   const data = q.data;
   const currentCounts = countsQ.data;
@@ -75,9 +85,9 @@ function MembrosPage() {
   const totalLeaves = visiblePerChat.reduce((s, c) => s + c.leaves, 0);
 
   const cards = [
-    { label: "Entradas (30d)", value: totalJoins, icon: UserPlus, color: "text-emerald-500" },
-    { label: "Saídas (30d)", value: totalLeaves, icon: UserMinus, color: "text-rose-500" },
-    { label: "Saldo (30d)", value: totalJoins - totalLeaves, icon: TrendingUp, color: "text-primary" },
+    { label: "Entradas no período", value: totalJoins, icon: UserPlus, color: "text-emerald-500" },
+    { label: "Saídas no período", value: totalLeaves, icon: UserMinus, color: "text-rose-500" },
+    { label: "Saldo no período", value: totalJoins - totalLeaves, icon: TrendingUp, color: "text-primary" },
     { label: "Membros atuais", value: totalMembers, icon: Users, color: "text-foreground" },
   ];
 
@@ -91,6 +101,24 @@ function MembrosPage() {
           Entradas e saídas detectadas pelos bots. Ative o rastreamento em <span className="font-medium">Contas Telegram</span> para começar a coletar dados.
         </p>
       </div>
+
+      <Card className="p-4 flex flex-wrap items-end gap-3">
+        <div className="flex flex-col gap-1">
+          <label className="text-xs text-muted-foreground">De</label>
+          <Input type="date" value={from} max={to} onChange={(e) => setFrom(e.target.value)} className="w-[160px]" />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-xs text-muted-foreground">Até</label>
+          <Input type="date" value={to} min={from} max={fmt(new Date())} onChange={(e) => setTo(e.target.value)} className="w-[160px]" />
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" size="sm" onClick={() => { setFrom(fmt(new Date())); setTo(fmt(new Date())); }}>Hoje</Button>
+          <Button variant="outline" size="sm" onClick={() => { const d = new Date(); d.setDate(d.getDate() - 1); setFrom(fmt(d)); setTo(fmt(d)); }}>Ontem</Button>
+          <Button variant="outline" size="sm" onClick={() => { const d = new Date(); d.setDate(d.getDate() - 6); setFrom(fmt(d)); setTo(fmt(new Date())); }}>7 dias</Button>
+          <Button variant="outline" size="sm" onClick={() => { const d = new Date(); d.setDate(d.getDate() - 29); setFrom(fmt(d)); setTo(fmt(new Date())); }}>30 dias</Button>
+        </div>
+        {q.isFetching && <RefreshCw className="size-4 text-muted-foreground animate-spin ml-auto" />}
+      </Card>
 
       <Tabs value={tab} onValueChange={(v) => setTab(v as "group" | "channel")}>
         <div className="flex flex-wrap items-center gap-3 justify-between">
@@ -140,7 +168,7 @@ function MembrosPage() {
       </div>
 
       <Card className="p-6">
-        <h2 className="font-semibold mb-4">Últimos 30 dias</h2>
+        <h2 className="font-semibold mb-4">Entradas e saídas por dia</h2>
         {!data?.daily.length ? (
           <p className="text-sm text-muted-foreground py-8 text-center">Sem eventos ainda.</p>
         ) : (
