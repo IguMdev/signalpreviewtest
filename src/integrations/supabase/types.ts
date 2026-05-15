@@ -567,6 +567,36 @@ export type Database = {
           },
         ]
       }
+      room_report_runs: {
+        Row: {
+          created_at: string
+          id: string
+          message_ids: Json
+          report_key: string
+          room_id: string
+          user_id: string
+          window_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message_ids?: Json
+          report_key: string
+          room_id: string
+          user_id: string
+          window_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message_ids?: Json
+          report_key?: string
+          room_id?: string
+          user_id?: string
+          window_id?: string
+        }
+        Relationships: []
+      }
       room_reports: {
         Row: {
           created_at: string

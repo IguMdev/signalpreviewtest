@@ -239,6 +239,24 @@ async function normalizeCustomEmojiAlts(
   return { text, entities: normalizedEntities };
 }
 
+async function renderTelegramHtmlWithPremiumEmojis(text: string, lookup: EmojiLookup) {
+  const { HTMLParser } = await import("telegram/extensions/html");
+  const { Api } = await import("telegram");
+  const { default: bigInt } = await import("big-integer");
+  const html = renderEmojiTokensToHtml(text, lookup).text;
+  const [parsedText, rawEntities] = HTMLParser.parse(html) as [string, Array<{ className?: string; offset: number; length: number; documentId?: unknown }>];
+  const entities = (rawEntities ?? []).map((entity) =>
+    entity.className === "MessageEntityCustomEmoji"
+      ? new Api.MessageEntityCustomEmoji({
+          offset: entity.offset,
+          length: entity.length,
+          documentId: bigInt(String(entity.documentId)) as never,
+        })
+      : entity,
+  );
+  return { text: parsedText, entities };
+}
+
 export async function getPremiumAccountConnectionStatus(userId: string, accountId: string) {
   const acc = await getActivePremiumAccount(userId, accountId);
   if (!acc) return { ok: false as const, error: "Conecte a conta Telegram Premium novamente." };
@@ -286,8 +304,10 @@ export async function sendTextWithPremiumEmojis(opts: {
       });
       try {
         const buttons = await buildInlineMarkup(opts.buttonRows);
+        const formatted = await renderTelegramHtmlWithPremiumEmojis(opts.text, new Map());
         const msg = await client.sendMessage(resolveTelegramTarget(opts.chatId) as never, {
-          message: opts.text,
+          message: formatted.text,
+          formattingEntities: formatted.entities as never,
           replyTo: opts.replyToMessageId,
           ...(buttons ? { buttons: buttons as never } : {}),
         });
@@ -339,9 +359,6 @@ export async function sendTextWithPremiumEmojis(opts: {
     return { applied: false, reason: "no-premium-account" };
   }
 
-  const { Api } = await import("telegram");
-  const { default: bigInt } = await import("big-integer");
-
   const { client, isPremium } = await connectAndAssertPremium({
     tg_api_id: acc.tg_api_id as number,
     tg_api_hash: acc.tg_api_hash as string,
@@ -363,27 +380,20 @@ export async function sendTextWithPremiumEmojis(opts: {
   }
 
   try {
-    const normalized = await normalizeCustomEmojiAlts(client, rendered);
+    const formatted = await renderTelegramHtmlWithPremiumEmojis(opts.text, lookup);
     const target = resolveTelegramTarget(opts.chatId);
     const buttons = await buildInlineMarkup(opts.buttonRows);
     console.log("[premium-send] sending text", {
       userId: opts.userId,
       accountId: acc.id,
       chatId: String(opts.chatId),
-      entitiesCount: normalized.entities.length,
-      docIds: normalized.entities.map((e) => e.documentId),
+      entitiesCount: formatted.entities.length,
+      docIds: rendered.entities.map((e) => e.documentId),
       buttonRows: opts.buttonRows?.length ?? 0,
     });
     const msg = await client.sendMessage(target as never, {
-      message: normalized.text,
-      formattingEntities: normalized.entities.map(
-        (entity) =>
-          new Api.MessageEntityCustomEmoji({
-            offset: entity.offset,
-            length: entity.length,
-            documentId: bigInt(entity.documentId) as never,
-          }),
-      ),
+      message: formatted.text,
+      formattingEntities: formatted.entities as never,
       replyTo: opts.replyToMessageId,
       ...(buttons ? { buttons: buttons as never } : {}),
     });
@@ -471,28 +481,21 @@ export async function sendPhotoWithPremiumEmojiCaption(opts: {
   }
 
   try {
-    const normalized = await normalizeCustomEmojiAlts(client, rendered);
+    const formatted = await renderTelegramHtmlWithPremiumEmojis(opts.caption, lookup);
     const target = resolveTelegramTarget(opts.chatId);
     const buttons = await buildInlineMarkup(opts.buttonRows);
     console.log("[premium-send] sending photo", {
       userId: opts.userId,
       accountId: acc.id,
       chatId: String(opts.chatId),
-      entitiesCount: normalized.entities.length,
-      docIds: normalized.entities.map((e) => e.documentId),
+      entitiesCount: formatted.entities.length,
+      docIds: rendered.entities.map((e) => e.documentId),
       buttonRows: opts.buttonRows?.length ?? 0,
     });
     const msg = await client.sendFile(target as never, {
       file: opts.photoUrl,
-      caption: normalized.text,
-      formattingEntities: normalized.entities.map(
-        (entity) =>
-          new Api.MessageEntityCustomEmoji({
-            offset: entity.offset,
-            length: entity.length,
-            documentId: bigInt(entity.documentId) as never,
-          }),
-      ),
+      caption: formatted.text,
+      formattingEntities: formatted.entities as never,
       replyTo: opts.replyToMessageId,
       ...(buttons ? { buttons: buttons as never } : {}),
     });
