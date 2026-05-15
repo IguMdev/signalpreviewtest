@@ -709,9 +709,10 @@ function ScheduleDialog({
                   placeholder={
                     imagePath
                       ? "Legenda da imagem (opcional)"
+                      : videoId
+                      ? "Texto enviado como mensagem separada após o vídeo (opcional)"
                       : "Texto da mensagem. Use {NOME} para emojis premium."
                   }
-                  disabled={!!videoId}
                 />
                 <p className="text-xs text-muted-foreground">
                   Suporta HTML do Telegram: &lt;b&gt;, &lt;i&gt;, &lt;u&gt;, &lt;code&gt;. Para emojis premium, use{" "}
@@ -902,8 +903,11 @@ function ScheduleDialog({
                           rows={3}
                           value={f.content}
                           onChange={(e) => update({ content: e.target.value })}
-                          placeholder="Texto desta mensagem (ou apenas legenda da imagem)"
-                          disabled={!!f.videoId}
+                          placeholder={
+                            f.videoId
+                              ? "Texto enviado após o vídeo (opcional)"
+                              : "Texto desta mensagem (ou legenda da imagem)"
+                          }
                         />
                         {f.imagePath ? (
                           <div className="flex items-start gap-3">
@@ -1178,7 +1182,7 @@ function ScheduleDialog({
                 roomId,
                 accountId: accountId || null,
                 title: title.trim(),
-                content: videoId ? null : content || null,
+                content: content || null,
                 videoId: videoId || null,
                 imagePath: videoId ? null : imagePath || null,
                 imageMime: videoId ? null : imageMime || null,
