@@ -10,7 +10,21 @@ import {
   sendVideoWithPremiumEmojiCaption,
   getUserEmojiLookup,
 } from "@/lib/premium-send.server";
-import { renderEmojiTokensToHtml, hasEmojiTokens } from "@/lib/premium-emoji-render";
+import {
+  renderEmojiTokensToHtml,
+  renderEmojiTokensPlain,
+  hasEmojiTokens,
+} from "@/lib/premium-emoji-render";
+
+async function renderButtonTextForUser(
+  userId: string,
+  buttonText: string | null | undefined,
+): Promise<string | null> {
+  if (!buttonText) return null;
+  if (!hasEmojiTokens(buttonText)) return buttonText;
+  const lookup = await getUserEmojiLookup(userId);
+  return renderEmojiTokensPlain(buttonText, lookup);
+}
 
 const TimeRe = /^([01]\d|2[0-3]):[0-5]\d$/;
 
