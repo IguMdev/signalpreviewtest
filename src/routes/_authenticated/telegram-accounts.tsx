@@ -609,18 +609,47 @@ function AccountCard({
             {isPremium ? "✨ Premium" : "Bot"}
           </span>
         </div>
-        <span
-          className={`text-xs px-2 py-0.5 rounded-full inline-flex items-center gap-1 ${
-            a.status === "ok"
-              ? "bg-emerald-500/10 text-emerald-500"
-              : a.status === "error"
-                ? "bg-destructive/10 text-destructive"
-                : "bg-muted text-muted-foreground"
-          }`}
-        >
-          <span className="size-1.5 rounded-full bg-current" />
-          {a.status === "ok" ? "Ativo" : a.status === "error" ? "Erro" : "Aguardando"}
-        </span>
+        <TooltipProvider delayDuration={150}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span
+                className={`text-xs px-2 py-0.5 rounded-full inline-flex items-center gap-1 cursor-help ${
+                  a.status === "ok"
+                    ? "bg-emerald-500/10 text-emerald-500"
+                    : a.status === "error"
+                      ? "bg-destructive/10 text-destructive"
+                      : "bg-muted text-muted-foreground"
+                }`}
+              >
+                <span className="size-1.5 rounded-full bg-current" />
+                {a.status === "ok"
+                  ? isPremium ? "Premium ativo" : "Ativo"
+                  : a.status === "error"
+                    ? "Erro"
+                    : "Aguardando"}
+              </span>
+            </TooltipTrigger>
+            <TooltipContent side="left" className="max-w-xs space-y-1">
+              <p className="font-semibold">
+                {isPremium ? "Status da conta Premium" : "Status da conta"}
+              </p>
+              <p className="text-xs">
+                {a.status === "ok"
+                  ? isPremium
+                    ? "Telegram Premium verificado — emojis animados serão entregues."
+                    : "Conta verificada e pronta para enviar."
+                  : a.status === "error"
+                    ? a.last_error ?? "Erro desconhecido na última verificação."
+                    : "Ainda não verificada. Clique em Verificar para testar a conexão."}
+              </p>
+              <p className="text-[10px] text-muted-foreground">
+                Última checagem: {a.last_check_at
+                  ? new Date(a.last_check_at).toLocaleString("pt-BR")
+                  : "nunca"}
+              </p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       </div>
 
       <div>
@@ -668,7 +697,13 @@ function AccountCard({
             : "Nunca usado"}
         </span>
         <div className="flex items-center gap-0.5">
-          <Button size="icon" variant="ghost" className="size-8" onClick={onVerify} title="Verificar">
+          <Button
+            size="icon"
+            variant="ghost"
+            className="size-8"
+            onClick={onVerify}
+            title={isPremium ? "Verificar status Premium" : "Verificar"}
+          >
             <RefreshCw className="size-3.5" />
           </Button>
           {!isPremium && (
