@@ -65,15 +65,22 @@ export const getMemberStats = createServerFn({ method: "GET" })
   )
   .handler(async ({ data, context }) => {
     const { supabase } = context;
-    const fromDate = data?.from ? new Date(data.from) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-    const toDate = data?.to ? new Date(data.to) : new Date();
-    // normalize to inclusive day bounds
-    fromDate.setHours(0, 0, 0, 0);
-    toDate.setHours(23, 59, 59, 999);
-    const since = fromDate.toISOString();
-    const until = toDate.toISOString();
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
+    const TZ = "America/Sao_Paulo";
+    // Format a Date as YYYY-MM-DD in the given timezone
+    const dayInTZ = (d: Date) =>
+      new Intl.DateTimeFormat("en-CA", { timeZone: TZ, year: "numeric", month: "2-digit", day: "2-digit" }).format(d);
+    // Convert YYYY-MM-DD (interpreted in TZ) to a UTC instant at start/end of day
+    const tzDayBoundary = (ymd: string, end: boolean) => {
+      // BRT is UTC-3 (no DST since 2019). Build the ISO with explicit offset.
+      const time = end ? "23:59:59.999" : "00:00:00.000";
+      return new Date(`${ymd}T${time}-03:00`);
+    };
+    const todayYmd = dayInTZ(new Date());
+    const defaultFromYmd = dayInTZ(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000));
+    const fromYmd = data?.from || defaultFromYmd;
+    const toYmd = data?.to || todayYmd;
+    const since = tzDayBoundary(fromYmd, false).toISOString();
+    const until = tzDayBoundary(toYmd, true).toISOString();
 
     const [{ data: events }, { data: recent }] = await Promise.all([
       supabase
@@ -99,23 +106,22 @@ export const getMemberStats = createServerFn({ method: "GET" })
     let leaves30 = 0;
     const byDay = new Map<string, { day: string; joins: number; leaves: number }>();
     const byChat = new Map<number, { chat_id: number; chat_title: string | null; joins: number; leaves: number }>();
-    const todayMs = todayStart.getTime();
 
     for (const e of list) {
-      const t = new Date(e.occurred_at).getTime();
-      const day = new Date(e.occurred_at).toISOString().slice(0, 10);
+      const occurred = new Date(e.occurred_at);
+      const day = dayInTZ(occurred);
       const bd = byDay.get(day) ?? { day, joins: 0, leaves: 0 };
       const isJoin = e.event_type === "join";
       const isLeave = e.event_type === "leave" || e.event_type === "kicked";
       if (isJoin) {
         joins30++;
         bd.joins++;
-        if (t >= todayMs) joinsToday++;
+        if (day === todayYmd) joinsToday++;
       }
       if (isLeave) {
         leaves30++;
         bd.leaves++;
-        if (t >= todayMs) leavesToday++;
+        if (day === todayYmd) leavesToday++;
       }
       byDay.set(day, bd);
 
