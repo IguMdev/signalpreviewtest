@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { callTelegram, type TelegramUser, type TelegramUpdate } from "./telegram.server";
-import { sendTextWithPremiumEmojis } from "./premium-send.server";
+import { sendPhotoWithPremiumEmojiCaption, sendTextWithPremiumEmojis } from "./premium-send.server";
 
 export const verifyAccount = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -183,12 +183,22 @@ export const sendRoomTest = createServerFn({ method: "POST" })
           });
         }
       } else {
-        r = await callTelegram<{ message_id: number }>(acc.bot_token, "sendPhoto", {
-          chat_id: chat.chat_id,
-          photo: pub.publicUrl,
-          caption: text || undefined,
-          parse_mode: "HTML",
+        const premiumPhoto = await sendPhotoWithPremiumEmojiCaption({
+          userId,
+          chatId: chat.chat_id,
+          photoUrl: pub.publicUrl,
+          caption: text,
         });
+        r = premiumPhoto.applied
+          ? premiumPhoto.ok
+            ? { ok: true, result: { message_id: premiumPhoto.messageId ?? undefined } }
+            : { ok: false, description: premiumPhoto.error }
+          : await callTelegram<{ message_id: number }>(acc.bot_token, "sendPhoto", {
+              chat_id: chat.chat_id,
+              photo: pub.publicUrl,
+              caption: text || undefined,
+              parse_mode: "HTML",
+            });
       }
     } else {
       if (!text) throw new Error("Mensagem vazia");

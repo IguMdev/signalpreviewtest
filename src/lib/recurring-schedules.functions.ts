@@ -4,7 +4,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { callTelegram } from "@/lib/telegram.server";
 import { dispatchVideoNote } from "@/lib/videos.functions";
-import { renderPremiumEmojiTokensForBotApi, sendTextWithPremiumEmojis } from "@/lib/premium-send.server";
+import { sendPhotoWithPremiumEmojiCaption, sendTextWithPremiumEmojis } from "@/lib/premium-send.server";
 
 const TimeRe = /^([01]\d|2[0-3]):[0-5]\d$/;
 
@@ -164,6 +164,7 @@ export const testSchedule = createServerFn({ method: "POST" })
               userId: s.user_id,
               chatId: c.chat_id,
               text: s.content,
+                  strict: true,
             })
           : { applied: false as const, reason: "skip" };
       if (premium.applied) {
@@ -175,17 +176,28 @@ export const testSchedule = createServerFn({ method: "POST" })
             const { data: pub } = supabaseAdmin.storage
               .from("room-images")
               .getPublicUrl(s.image_path!);
-            const caption = s.is_premium
-              ? await renderPremiumEmojiTokensForBotApi(s.user_id, s.content)
-              : { text: s.content, replaced: false };
+            if (s.is_premium) {
+              const premiumPhoto = await sendPhotoWithPremiumEmojiCaption({
+                userId: s.user_id,
+                chatId: c.chat_id,
+                photoUrl: pub.publicUrl,
+                caption: s.content,
+                strict: true,
+              });
+              if (premiumPhoto.applied) {
+                return premiumPhoto.ok
+                  ? { ok: true, result: { message_id: premiumPhoto.messageId ?? undefined } }
+                  : { ok: false, description: premiumPhoto.error };
+              }
+            }
             return await callTelegram<{ message_id: number }>(
               acc.bot_token,
               "sendPhoto",
               {
                 chat_id: c.chat_id,
                 photo: pub.publicUrl,
-                caption: caption.text ?? undefined,
-                parse_mode: caption.text ? "HTML" : undefined,
+                caption: s.content ?? undefined,
+                parse_mode: s.content ? s.parse_mode : undefined,
               },
             );
           })()

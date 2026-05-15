@@ -3,7 +3,7 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { callTelegram } from "@/lib/telegram.server";
 import { dispatchVideoNote } from "@/lib/videos.functions";
 import { triggerSignalReactions } from "@/lib/engagement.functions";
-import { renderPremiumEmojiTokensForBotApi, sendTextWithPremiumEmojis } from "@/lib/premium-send.server";
+import { sendPhotoWithPremiumEmojiCaption, sendTextWithPremiumEmojis } from "@/lib/premium-send.server";
 
 function nowParts(tz: string) {
   const fmt = new Intl.DateTimeFormat("en-GB", {
@@ -72,6 +72,7 @@ async function sendOne(
       userId: msg.user_id,
       chatId,
       text: msg.content,
+      strict: true,
     });
     if (premium.applied) {
       return premium.ok
@@ -81,14 +82,25 @@ async function sendOne(
   }
   if (msg.image_path) {
     const { data: pub } = supabaseAdmin.storage.from("room-images").getPublicUrl(msg.image_path);
-    const caption = msg.is_premium && msg.user_id
-      ? await renderPremiumEmojiTokensForBotApi(msg.user_id, msg.content)
-      : { text: msg.content, replaced: false };
+    if (msg.is_premium && msg.user_id) {
+      const premiumPhoto = await sendPhotoWithPremiumEmojiCaption({
+        userId: msg.user_id,
+        chatId,
+        photoUrl: pub.publicUrl,
+        caption: msg.content,
+        strict: true,
+      });
+      if (premiumPhoto.applied) {
+        return premiumPhoto.ok
+          ? { ok: true, result: { message_id: premiumPhoto.messageId ?? undefined } }
+          : { ok: false, description: premiumPhoto.error };
+      }
+    }
     return await callTelegram<{ message_id: number }>(botToken, "sendPhoto", {
       chat_id: chatId,
       photo: pub.publicUrl,
-      caption: caption.text ?? undefined,
-      parse_mode: caption.text ? "HTML" : undefined,
+      caption: msg.content ?? undefined,
+      parse_mode: msg.content ? msg.parse_mode : undefined,
     });
   }
   return await callTelegram<{ message_id: number }>(botToken, "sendMessage", {
@@ -179,6 +191,7 @@ export const Route = createFileRoute("/api/public/cron/dispatch-recurring")({
                     userId: s.user_id,
                     chatId: c.chat_id,
                     text: s.content,
+                    strict: true,
                   })
                 : { applied: false as const, reason: "skip" };
             if (premium.applied) {
@@ -190,17 +203,28 @@ export const Route = createFileRoute("/api/public/cron/dispatch-recurring")({
                   const { data: pub } = supabaseAdmin.storage
                     .from("room-images")
                     .getPublicUrl(s.image_path!);
-                const caption = s.is_premium
-                  ? await renderPremiumEmojiTokensForBotApi(s.user_id, s.content)
-                  : { text: s.content, replaced: false };
+                  if (s.is_premium) {
+                    const premiumPhoto = await sendPhotoWithPremiumEmojiCaption({
+                      userId: s.user_id,
+                      chatId: c.chat_id,
+                      photoUrl: pub.publicUrl,
+                      caption: s.content,
+                      strict: true,
+                    });
+                    if (premiumPhoto.applied) {
+                      return premiumPhoto.ok
+                        ? { ok: true, result: { message_id: premiumPhoto.messageId ?? undefined } }
+                        : { ok: false, description: premiumPhoto.error };
+                    }
+                  }
                   return await callTelegram<{ message_id: number }>(
                     acc.bot_token,
                     "sendPhoto",
                     {
                       chat_id: c.chat_id,
                       photo: pub.publicUrl,
-                    caption: caption.text ?? undefined,
-                    parse_mode: caption.text ? "HTML" : undefined,
+                      caption: s.content ?? undefined,
+                      parse_mode: s.content ? s.parse_mode : undefined,
                     },
                   );
                 })()

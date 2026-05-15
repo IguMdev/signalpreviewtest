@@ -25,6 +25,26 @@ async function getUserEmojiLookup(userId: string): Promise<EmojiLookup> {
   );
 }
 
+async function getActivePremiumAccount(userId: string) {
+  const { data: acc } = await supabaseAdmin
+    .from("telegram_accounts")
+    .select("tg_api_id, tg_api_hash, tg_session")
+    .eq("user_id", userId)
+    .eq("account_type", "premium")
+    .eq("is_active", true)
+    .not("tg_session", "is", null)
+    .limit(1)
+    .maybeSingle();
+
+  if (!acc?.tg_session || !acc.tg_api_id || !acc.tg_api_hash) return null;
+  return acc;
+}
+
+function resolveTelegramTarget(chatId: number | string) {
+  const numeric = typeof chatId === "string" ? Number(chatId) : chatId;
+  return Number.isFinite(numeric) ? (numeric as number) : chatId;
+}
+
 export async function renderPremiumEmojiTokensForBotApi(userId: string, text: string | null | undefined) {
   if (!text || !hasEmojiTokens(text)) return { text: text ?? null, replaced: false };
   const lookup = await getUserEmojiLookup(userId);
@@ -44,6 +64,7 @@ export async function sendTextWithPremiumEmojis(opts: {
   chatId: number | string;
   text: string;
   replyToMessageId?: number;
+  strict?: boolean;
 }): Promise<PremiumSendResult> {
   if (!hasEmojiTokens(opts.text)) {
     return { applied: false, reason: "no-tokens" };
@@ -53,20 +74,17 @@ export async function sendTextWithPremiumEmojis(opts: {
 
   const rendered = renderEmojiTokens(opts.text, lookup);
   if (!rendered.entities.length) {
+    if (opts.strict) {
+      return { applied: true, ok: false, error: "Nenhum emoji premium salvo corresponde aos tokens da mensagem." };
+    }
     return { applied: false, reason: "no-known-emojis" };
   }
 
-  const { data: acc } = await supabaseAdmin
-    .from("telegram_accounts")
-    .select("tg_api_id, tg_api_hash, tg_session")
-    .eq("user_id", opts.userId)
-    .eq("account_type", "premium")
-    .eq("is_active", true)
-    .not("tg_session", "is", null)
-    .limit(1)
-    .maybeSingle();
-
-  if (!acc?.tg_session || !acc.tg_api_id || !acc.tg_api_hash) {
+  const acc = await getActivePremiumAccount(opts.userId);
+  if (!acc) {
+    if (opts.strict) {
+      return { applied: true, ok: false, error: "Conecte uma conta Telegram Premium ativa para enviar emojis premium animados." };
+    }
     return { applied: false, reason: "no-premium-account" };
   }
 
@@ -83,10 +101,77 @@ export async function sendTextWithPremiumEmojis(opts: {
   await client.connect();
 
   try {
-    const numeric = typeof opts.chatId === "string" ? Number(opts.chatId) : opts.chatId;
-    const target = Number.isFinite(numeric) ? (numeric as number) : opts.chatId;
+    const target = resolveTelegramTarget(opts.chatId);
     const msg = await client.sendMessage(target as never, {
       message: rendered.text,
+      formattingEntities: rendered.entities.map(
+        (entity) =>
+          new Api.MessageEntityCustomEmoji({
+            offset: entity.offset,
+            length: entity.length,
+            documentId: bigInt(entity.documentId) as never,
+          }),
+      ),
+      replyTo: opts.replyToMessageId,
+    });
+    return { applied: true, ok: true, messageId: Number(msg.id) };
+  } catch (e) {
+    return {
+      applied: true,
+      ok: false,
+      error: e instanceof Error ? e.message : String(e),
+    };
+  } finally {
+    await client.disconnect().catch(() => {});
+  }
+}
+
+export async function sendPhotoWithPremiumEmojiCaption(opts: {
+  userId: string;
+  chatId: number | string;
+  photoUrl: string;
+  caption: string | null | undefined;
+  replyToMessageId?: number;
+  strict?: boolean;
+}): Promise<PremiumSendResult> {
+  if (!opts.caption || !hasEmojiTokens(opts.caption)) {
+    return { applied: false, reason: "no-tokens" };
+  }
+
+  const lookup = await getUserEmojiLookup(opts.userId);
+  const rendered = renderEmojiTokens(opts.caption, lookup);
+  if (!rendered.entities.length) {
+    if (opts.strict) {
+      return { applied: true, ok: false, error: "Nenhum emoji premium salvo corresponde aos tokens da legenda." };
+    }
+    return { applied: false, reason: "no-known-emojis" };
+  }
+
+  const acc = await getActivePremiumAccount(opts.userId);
+  if (!acc) {
+    if (opts.strict) {
+      return { applied: true, ok: false, error: "Conecte uma conta Telegram Premium ativa para enviar emojis premium animados." };
+    }
+    return { applied: false, reason: "no-premium-account" };
+  }
+
+  const { TelegramClient, Api } = await import("telegram");
+  const { StringSession } = await import("telegram/sessions");
+  const { default: bigInt } = await import("big-integer");
+
+  const client = new TelegramClient(
+    new StringSession(acc.tg_session as string),
+    acc.tg_api_id as number,
+    acc.tg_api_hash as string,
+    { connectionRetries: 2, useWSS: true },
+  );
+  await client.connect();
+
+  try {
+    const target = resolveTelegramTarget(opts.chatId);
+    const msg = await client.sendFile(target as never, {
+      file: opts.photoUrl,
+      caption: rendered.text,
       formattingEntities: rendered.entities.map(
         (entity) =>
           new Api.MessageEntityCustomEmoji({
