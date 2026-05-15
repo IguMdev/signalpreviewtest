@@ -34,6 +34,18 @@ export const Route = createFileRoute("/_authenticated/rooms/")({
   component: RoomsPage,
 });
 
+function getInitials(name?: string | null) {
+  if (!name) return "?";
+  return name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase();
+}
+function stringToColor(str?: string | null) {
+  if (!str) return "#64748b";
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  const c = (hash & 0x00ffffff).toString(16).padStart(6, "0");
+  return `#${c}`;
+}
+
 type RoomRow = {
   id: string;
   name: string;
