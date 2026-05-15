@@ -50,7 +50,11 @@ async function decodeTgsDataUrl(dataUrl: string) {
   return JSON.parse(await new Response(stream).text()) as object;
 }
 
-function TgsEmojiMedia({ src, className, animate }: { src: string; className: string; animate: boolean }) {
+function EmojiFallback({ fallback }: { fallback: string | null }) {
+  return <span className="text-xl leading-none">{fallback ?? "✨"}</span>;
+}
+
+function TgsEmojiMedia({ src, className, animate, fallback }: { src: string; className: string; animate: boolean; fallback: string | null }) {
   const ref = useRef<HTMLDivElement | null>(null);
   const [failed, setFailed] = useState(false);
 
@@ -79,7 +83,7 @@ function TgsEmojiMedia({ src, className, animate }: { src: string; className: st
     };
   }, [src, animate]);
 
-  if (failed) return null;
+  if (failed) return <EmojiFallback fallback={fallback} />;
   return <div ref={ref} className={`${className} [&_svg]:!block`} />;
 }
 
@@ -92,10 +96,10 @@ export function PremiumEmojiMedia({ cached, fallback, className = "size-7", anim
       return <img src={cached.thumb_data_url} alt="" className={`${className} object-contain`} />;
     }
     if (cached.thumb_mime === "application/x-tgsticker") {
-      return <TgsEmojiMedia src={cached.thumb_data_url} className={className} animate={animate} />;
+      return <TgsEmojiMedia src={cached.thumb_data_url} className={className} animate={animate} fallback={fallback} />;
     }
   }
-  return <span className="text-xl leading-none">{fallback ?? "✨"}</span>;
+  return <EmojiFallback fallback={fallback} />;
 }
 
 type Props = {
