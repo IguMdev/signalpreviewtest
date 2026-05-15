@@ -40,6 +40,7 @@ type Schedule = {
   weekday_overrides: Record<string, string[]> | null;
   follow_ups: Array<{
     delay_minutes: number;
+    delay_seconds?: number | null;
     content: string | null;
     image_path: string | null;
     image_mime: string | null;
@@ -272,13 +273,17 @@ export const Route = createFileRoute("/api/public/cron/dispatch-recurring")({
           if (fups.length > 0) {
             let cumulative = 0;
             const rows = fups.map((f) => {
-              cumulative += Math.max(1, Number(f.delay_minutes) || 1);
+              const sec =
+                f.delay_seconds != null && Number(f.delay_seconds) > 0
+                  ? Number(f.delay_seconds)
+                  : Math.max(1, Number(f.delay_minutes) || 1) * 60;
+              cumulative += sec;
               return {
                 schedule_id: s.id,
                 user_id: s.user_id,
                 room_id: s.room_id,
                 account_id: accountId,
-                scheduled_at: new Date(Date.now() + cumulative * 60_000).toISOString(),
+                scheduled_at: new Date(Date.now() + cumulative * 1000).toISOString(),
                 content: f.content ?? null,
                 image_path: f.image_path ?? null,
                 image_mime: f.image_mime ?? null,
