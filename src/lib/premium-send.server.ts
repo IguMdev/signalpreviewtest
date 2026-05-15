@@ -471,14 +471,13 @@ export async function sendPhotoWithPremiumEmojiCaption(opts: {
   try {
     const normalized = await normalizeCustomEmojiAlts(client, rendered);
     const target = resolveTelegramTarget(opts.chatId);
-    const buttons = await buildInlineMarkup(opts.buttonRows);
     console.log("[premium-send] sending photo", {
       userId: opts.userId,
       accountId: acc.id,
       chatId: String(opts.chatId),
       entitiesCount: normalized.entities.length,
       docIds: normalized.entities.map((e) => e.documentId),
-      buttonRows: opts.buttonRows?.length ?? 0,
+      buttonRowsIgnored: opts.buttonRows?.length ?? 0,
     });
     const msg = await client.sendFile(target as never, {
       file: opts.photoUrl,
@@ -492,7 +491,6 @@ export async function sendPhotoWithPremiumEmojiCaption(opts: {
           }),
       ),
       replyTo: opts.replyToMessageId,
-      ...(buttons ? { buttons: buttons as never } : {}),
     });
     return { applied: true, ok: true, messageId: Number(msg.id) };
   } catch (e) {
