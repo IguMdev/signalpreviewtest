@@ -4,7 +4,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { callTelegram } from "@/lib/telegram.server";
 import { getUserEmojiLookup, sendTextWithPremiumEmojis } from "@/lib/premium-send.server";
-import { renderEmojiTokensToHtml } from "@/lib/premium-emoji-render";
+import { renderEmojiTokens, renderEmojiTokensToHtml } from "@/lib/premium-emoji-render";
 import { categoryFor, pickRandom, renderTemplate } from "@/lib/signals.server";
 
 function fmtHHMM(d: Date, tz: string) {
@@ -78,9 +78,10 @@ export const testWindow = createServerFn({ method: "POST" })
       .select("template_kind, label, url, sort_order")
       .eq("room_id", w.room_id)
       .order("sort_order", { ascending: true });
+    const emojiLookup = await getUserEmojiLookup(userId);
     const signalButtons = (btnsRaw ?? [])
       .filter((b) => b.template_kind === "signal" && b.label && b.url)
-      .map((b) => [{ text: b.label, url: b.url }]);
+      .map((b) => [{ text: renderEmojiTokens(b.label, emojiLookup).text, url: b.url }]);
     const replyMarkup = signalButtons.length
       ? { inline_keyboard: signalButtons }
       : undefined;
@@ -99,7 +100,7 @@ export const testWindow = createServerFn({ method: "POST" })
     });
 
     const botText = replyMarkup
-      ? renderEmojiTokensToHtml(text, await getUserEmojiLookup(userId)).text
+      ? renderEmojiTokensToHtml(text, emojiLookup).text
       : text;
     const ids: Record<string, number> = {};
     const errors: string[] = [];
