@@ -86,3 +86,23 @@ export function renderEmojiTokensToHtml(
   });
   return { text: out, replaced };
 }
+
+/**
+ * Substitui {NOME} pelo `preview_char` em texto puro (sem entities).
+ * Útil para campos como o texto de botões inline, onde a API do Telegram
+ * não aceita entidades de emoji custom — apenas texto.
+ */
+export function renderEmojiTokensPlain(
+  text: string,
+  lookup: EmojiLookup,
+): string {
+  const normalizedLookup = new Map(
+    Array.from(lookup.entries()).map(([name, value]) => [name.trim().toUpperCase(), value]),
+  );
+  return text.replace(TOKEN_RE, (token, rawName: string) => {
+    const name = rawName.trim();
+    const found = lookup.get(name) ?? normalizedLookup.get(name.toUpperCase());
+    if (!found) return token;
+    return found.preview_char && found.preview_char.length > 0 ? found.preview_char : "⭐";
+  });
+}

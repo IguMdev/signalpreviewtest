@@ -10,7 +10,21 @@ import {
   sendVideoWithPremiumEmojiCaption,
   getUserEmojiLookup,
 } from "@/lib/premium-send.server";
-import { renderEmojiTokensToHtml, hasEmojiTokens } from "@/lib/premium-emoji-render";
+import {
+  renderEmojiTokensToHtml,
+  renderEmojiTokensPlain,
+  hasEmojiTokens,
+} from "@/lib/premium-emoji-render";
+
+async function renderButtonTextForUser(
+  userId: string,
+  buttonText: string | null | undefined,
+): Promise<string | null> {
+  if (!buttonText) return null;
+  if (!hasEmojiTokens(buttonText)) return buttonText;
+  const lookup = await getUserEmojiLookup(userId);
+  return renderEmojiTokensPlain(buttonText, lookup);
+}
 
 const TimeRe = /^([01]\d|2[0-3]):[0-5]\d$/;
 
@@ -220,9 +234,10 @@ export const testSchedule = createServerFn({ method: "POST" })
         description: "no-op",
       };
       const sAny = s as unknown as { button_text: string | null; button_url: string | null };
+      const renderedBtnText = await renderButtonTextForUser(s.user_id, sAny.button_text);
       const replyMarkup =
-        sAny.button_text && sAny.button_url
-          ? { inline_keyboard: [[{ text: sAny.button_text, url: sAny.button_url }]] }
+        renderedBtnText && sAny.button_url
+          ? { inline_keyboard: [[{ text: renderedBtnText, url: sAny.button_url }]] }
           : undefined;
       const isNormalVideo = video && video.kind === "normal";
       const premium =
@@ -409,9 +424,10 @@ export const testMessage = createServerFn({ method: "POST" })
       video = v ?? null;
     }
 
+    const renderedBtnText = await renderButtonTextForUser(userId, data.buttonText ?? null);
     const replyMarkup =
-      data.buttonText && data.buttonUrl
-        ? { inline_keyboard: [[{ text: data.buttonText, url: data.buttonUrl }]] }
+      renderedBtnText && data.buttonUrl
+        ? { inline_keyboard: [[{ text: renderedBtnText, url: data.buttonUrl }]] }
         : undefined;
     const isNormalVideo = video && video.kind === "normal";
 

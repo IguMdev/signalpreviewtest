@@ -6,7 +6,19 @@ import { triggerSignalReactions } from "@/lib/engagement.functions";
 import {
   sendPhotoWithPremiumEmojiCaption,
   sendTextWithPremiumEmojis,
+  getUserEmojiLookup,
 } from "@/lib/premium-send.server";
+import { renderEmojiTokensPlain, hasEmojiTokens } from "@/lib/premium-emoji-render";
+
+async function renderButtonTextForUser(
+  userId: string,
+  buttonText: string | null | undefined,
+): Promise<string | null> {
+  if (!buttonText) return null;
+  if (!hasEmojiTokens(buttonText)) return buttonText;
+  const lookup = await getUserEmojiLookup(userId);
+  return renderEmojiTokensPlain(buttonText, lookup);
+}
 
 type TelegramResult = { ok: boolean; result?: { message_id?: number }; description?: string };
 
@@ -256,9 +268,10 @@ export const Route = createFileRoute("/api/public/cron/dispatch-recurring")({
             video = v ?? null;
           }
           const isNormalVideo = video && video.kind === "normal";
+          const renderedBtnText = await renderButtonTextForUser(s.user_id, s.button_text);
           const replyMarkup =
-            s.button_text && s.button_url
-              ? { inline_keyboard: [[{ text: s.button_text, url: s.button_url }]] }
+            renderedBtnText && s.button_url
+              ? { inline_keyboard: [[{ text: renderedBtnText, url: s.button_url }]] }
               : undefined;
 
           let okAny = false;
@@ -480,9 +493,10 @@ export const Route = createFileRoute("/api/public/cron/dispatch-recurring")({
                 .maybeSingle()
             : { data: null };
           const isPremium = Boolean(parentSchedule?.is_premium);
+          const pRenderedBtnText = await renderButtonTextForUser(p.user_id, p.button_text);
           const pReplyMarkup =
-            p.button_text && p.button_url
-              ? { inline_keyboard: [[{ text: p.button_text, url: p.button_url }]] }
+            pRenderedBtnText && p.button_url
+              ? { inline_keyboard: [[{ text: pRenderedBtnText, url: p.button_url }]] }
               : undefined;
           const pIsNormalVideo = video && video.kind === "normal";
           for (const c of chats) {
