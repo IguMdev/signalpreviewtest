@@ -43,7 +43,7 @@ function BoasVindasPage() {
 
   const premiumAccountsQ = useQuery({
     queryKey: ["premium-accounts-pick"],
-    queryFn: async () => (await supabase.from("telegram_accounts").select("id, label, status").eq("account_type", "premium").eq("is_active", true).order("label")).data ?? [],
+    queryFn: async () => (await supabase.from("telegram_accounts").select("id, label, status, bot_username, phone, bot_first_name").eq("account_type", "premium").eq("is_active", true).order("label")).data ?? [],
   });
 
   const [roomId, setRoomId] = useState<string>("");
@@ -193,12 +193,27 @@ function BoasVindasPage() {
                     <SelectTrigger><SelectValue placeholder="Selecione uma conta premium" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">Selecione...</SelectItem>
-                      {(premiumAccountsQ.data ?? []).map((a: any) => (
-                        <SelectItem key={a.id} value={a.id}>{a.label} {a.status !== "ok" ? `(${a.status})` : ""}</SelectItem>
-                      ))}
+                       {(premiumAccountsQ.data ?? []).map((a: any) => {
+                         const handle = a.bot_username ? `@${a.bot_username}` : a.phone || "";
+                         return (
+                           <SelectItem key={a.id} value={a.id}>
+                             {a.label}{handle ? ` — ${handle}` : ""}{a.status !== "ok" ? ` (${a.status})` : ""}
+                           </SelectItem>
+                         );
+                       })}
                     </SelectContent>
                   </Select>
-                  {(premiumAccountsQ.data ?? []).length === 0 && (
+                   {premiumAccountId && (() => {
+                     const acc = (premiumAccountsQ.data ?? []).find((a: any) => a.id === premiumAccountId) as any;
+                     if (!acc) return null;
+                     const handle = acc.bot_username ? `@${acc.bot_username}` : acc.phone || "";
+                     return (
+                       <p className="text-[11px] text-muted-foreground">
+                         Conectada como <span className="font-medium text-foreground">{acc.label}</span>{handle ? ` (${handle})` : ""}.
+                       </p>
+                     );
+                   })()}
+                   {(premiumAccountsQ.data ?? []).length === 0 && (
                     <p className="text-[11px] text-amber-500">Nenhuma conta Premium conectada. Conecte uma em "Contas Telegram".</p>
                   )}
                 </div>
