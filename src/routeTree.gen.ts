@@ -23,6 +23,7 @@ import { Route as AuthenticatedMensagensRouteImport } from './routes/_authentica
 import { Route as AuthenticatedMembrosRouteImport } from './routes/_authenticated/membros'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedRoomsIndexRouteImport } from './routes/_authenticated/rooms.index'
+import { Route as AuthenticatedIntegracoesMetaRouteImport } from './routes/_authenticated/integracoes.meta'
 import { Route as ApiPublicKirvanoWebhookRouteImport } from './routes/api/public/kirvano/webhook'
 import { Route as ApiPublicCronDispatchSignalsRouteImport } from './routes/api/public/cron/dispatch-signals'
 import { Route as ApiPublicCronDispatchRecurringRouteImport } from './routes/api/public/cron/dispatch-recurring'
@@ -100,6 +101,12 @@ const AuthenticatedRoomsIndexRoute = AuthenticatedRoomsIndexRouteImport.update({
   path: '/rooms/',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedIntegracoesMetaRoute =
+  AuthenticatedIntegracoesMetaRouteImport.update({
+    id: '/integracoes/meta',
+    path: '/integracoes/meta',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const ApiPublicKirvanoWebhookRoute = ApiPublicKirvanoWebhookRouteImport.update({
   id: '/api/public/kirvano/webhook',
   path: '/api/public/kirvano/webhook',
@@ -143,6 +150,7 @@ export interface FileRoutesByFullPath {
   '/telegram-accounts': typeof AuthenticatedTelegramAccountsRoute
   '/tutorial': typeof AuthenticatedTutorialRoute
   '/videos': typeof AuthenticatedVideosRoute
+  '/integracoes/meta': typeof AuthenticatedIntegracoesMetaRoute
   '/rooms/': typeof AuthenticatedRoomsIndexRoute
   '/rooms/$roomId/edit': typeof AuthenticatedRoomsRoomIdEditRoute
   '/api/public/cron/dispatch-recurring': typeof ApiPublicCronDispatchRecurringRoute
@@ -163,6 +171,7 @@ export interface FileRoutesByTo {
   '/tutorial': typeof AuthenticatedTutorialRoute
   '/videos': typeof AuthenticatedVideosRoute
   '/': typeof AuthenticatedIndexRoute
+  '/integracoes/meta': typeof AuthenticatedIntegracoesMetaRoute
   '/rooms': typeof AuthenticatedRoomsIndexRoute
   '/rooms/$roomId/edit': typeof AuthenticatedRoomsRoomIdEditRoute
   '/api/public/cron/dispatch-recurring': typeof ApiPublicCronDispatchRecurringRoute
@@ -185,6 +194,7 @@ export interface FileRoutesById {
   '/_authenticated/tutorial': typeof AuthenticatedTutorialRoute
   '/_authenticated/videos': typeof AuthenticatedVideosRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
+  '/_authenticated/integracoes/meta': typeof AuthenticatedIntegracoesMetaRoute
   '/_authenticated/rooms/': typeof AuthenticatedRoomsIndexRoute
   '/_authenticated/rooms/$roomId/edit': typeof AuthenticatedRoomsRoomIdEditRoute
   '/api/public/cron/dispatch-recurring': typeof ApiPublicCronDispatchRecurringRoute
@@ -207,6 +217,7 @@ export interface FileRouteTypes {
     | '/telegram-accounts'
     | '/tutorial'
     | '/videos'
+    | '/integracoes/meta'
     | '/rooms/'
     | '/rooms/$roomId/edit'
     | '/api/public/cron/dispatch-recurring'
@@ -227,6 +238,7 @@ export interface FileRouteTypes {
     | '/tutorial'
     | '/videos'
     | '/'
+    | '/integracoes/meta'
     | '/rooms'
     | '/rooms/$roomId/edit'
     | '/api/public/cron/dispatch-recurring'
@@ -248,6 +260,7 @@ export interface FileRouteTypes {
     | '/_authenticated/tutorial'
     | '/_authenticated/videos'
     | '/_authenticated/'
+    | '/_authenticated/integracoes/meta'
     | '/_authenticated/rooms/'
     | '/_authenticated/rooms/$roomId/edit'
     | '/api/public/cron/dispatch-recurring'
@@ -366,6 +379,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedRoomsIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/integracoes/meta': {
+      id: '/_authenticated/integracoes/meta'
+      path: '/integracoes/meta'
+      fullPath: '/integracoes/meta'
+      preLoaderRoute: typeof AuthenticatedIntegracoesMetaRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/api/public/kirvano/webhook': {
       id: '/api/public/kirvano/webhook'
       path: '/api/public/kirvano/webhook'
@@ -415,6 +435,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedTutorialRoute: typeof AuthenticatedTutorialRoute
   AuthenticatedVideosRoute: typeof AuthenticatedVideosRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
+  AuthenticatedIntegracoesMetaRoute: typeof AuthenticatedIntegracoesMetaRoute
   AuthenticatedRoomsIndexRoute: typeof AuthenticatedRoomsIndexRoute
   AuthenticatedRoomsRoomIdEditRoute: typeof AuthenticatedRoomsRoomIdEditRoute
 }
@@ -430,6 +451,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedTutorialRoute: AuthenticatedTutorialRoute,
   AuthenticatedVideosRoute: AuthenticatedVideosRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
+  AuthenticatedIntegracoesMetaRoute: AuthenticatedIntegracoesMetaRoute,
   AuthenticatedRoomsIndexRoute: AuthenticatedRoomsIndexRoute,
   AuthenticatedRoomsRoomIdEditRoute: AuthenticatedRoomsRoomIdEditRoute,
 }

@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { sendMetaEvent } from "@/lib/meta-capi.server";
 
 // Kirvano envia POST com payload da venda. Autenticamos via header
 // `x-kirvano-token` comparado ao secret KIRVANO_WEBHOOK_TOKEN.
@@ -8,8 +9,10 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 type KirvanoPayload = {
   event?: string; // "SALE_APPROVED" | "SUBSCRIPTION_CANCELED" | etc.
   sale_id?: string;
-  customer?: { email?: string };
+  customer?: { email?: string; phone?: string; name?: string };
   product?: { offer_url?: string; slug?: string };
+  total_price?: number | string;
+  currency?: string;
   // Lovable: o cliente vincula a conta passando o user_id como query/UTM
   utm?: { utm_content?: string };
   metadata?: Record<string, string>;
@@ -88,6 +91,29 @@ export const Route = createFileRoute("/api/public/kirvano/webhook")({
           if (insErr) {
             return Response.json({ ok: false, error: insErr.message }, { status: 500 });
           }
+
+          // Dispara Purchase no Meta CAPI (silencioso se não houver integração)
+          const value = Number(payload.total_price ?? plan.price_brl ?? 0);
+          await sendMetaEvent({
+            userId,
+            eventName: "Purchase",
+            eventId: payload.sale_id ?? `kirvano-${Date.now()}`,
+            actionSource: "system_generated",
+            userData: {
+              email: payload.customer?.email,
+              phone: payload.customer?.phone,
+              firstName: payload.customer?.name?.split(" ")[0],
+              externalId: userId,
+            },
+            customData: {
+              value,
+              currency: payload.currency || "BRL",
+              content_name: plan.name,
+              content_ids: [plan.slug],
+              content_type: "product",
+            },
+          });
+
           return Response.json({ ok: true, action: "activated" });
         }
 

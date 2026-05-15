@@ -198,6 +198,75 @@ export type Database = {
           },
         ]
       }
+      meta_event_logs: {
+        Row: {
+          created_at: string
+          error: string | null
+          event_id: string | null
+          event_name: string
+          id: string
+          ok: boolean
+          request_payload: Json | null
+          response_payload: Json | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          error?: string | null
+          event_id?: string | null
+          event_name: string
+          id?: string
+          ok: boolean
+          request_payload?: Json | null
+          response_payload?: Json | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          error?: string | null
+          event_id?: string | null
+          event_name?: string
+          id?: string
+          ok?: boolean
+          request_payload?: Json | null
+          response_payload?: Json | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      meta_integrations: {
+        Row: {
+          access_token: string
+          created_at: string
+          id: string
+          is_active: boolean
+          pixel_id: string
+          test_event_code: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          access_token: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          pixel_id: string
+          test_event_code?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          access_token?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          pixel_id?: string
+          test_event_code?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       premium_emojis: {
         Row: {
           created_at: string
