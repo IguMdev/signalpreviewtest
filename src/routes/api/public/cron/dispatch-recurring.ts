@@ -393,6 +393,13 @@ export const Route = createFileRoute("/api/public/cron/dispatch-recurring")({
                   user_id: p.user_id,
                   is_premium: isPremium,
                 });
+            if (video && r.ok && p.content && p.content.trim()) {
+              await callTelegram<{ message_id: number }>(acc.bot_token, "sendMessage", {
+                chat_id: c.chat_id,
+                text: p.content,
+                parse_mode: p.parse_mode,
+              });
+            }
             await supabaseAdmin.from("message_logs").insert({
               user_id: p.user_id,
               account_id: accountId,
