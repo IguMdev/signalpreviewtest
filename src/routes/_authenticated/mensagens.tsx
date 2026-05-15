@@ -10,6 +10,7 @@ import {
   testSchedule,
 } from "@/lib/recurring-schedules.functions";
 import { syncRoomPhoto } from "@/lib/room-photos.functions";
+import { QuickTemplatesBar } from "@/components/QuickTemplatesBar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -274,6 +275,15 @@ function MensagensPage() {
           className="pl-9"
         />
       </div>
+
+      <QuickTemplatesBar
+        rooms={(rooms.data ?? []).map((r) => ({
+          id: r.id,
+          name: r.name,
+          default_account_id: r.default_account_id,
+        }))}
+        accounts={(accounts.data ?? []) as { id: string; label: string }[]}
+      />
 
       {(rooms.data ?? []).length === 0 && (
         <Card className="p-10 text-center text-muted-foreground text-sm">
