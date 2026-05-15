@@ -565,6 +565,7 @@ export const testMessage = createServerFn({ method: "POST" })
           text: data.content ?? "",
           parse_mode: data.parseMode,
           reply_markup: replyMarkup,
+          link_preview_options: { is_disabled: true },
         });
       }
       await supabaseAdmin.from("message_logs").insert({
