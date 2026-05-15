@@ -3,7 +3,7 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { callTelegram } from "@/lib/telegram.server";
 import { dispatchVideoNote } from "@/lib/videos.functions";
 import { triggerSignalReactions } from "@/lib/engagement.functions";
-import { sendTextWithPremiumEmojis } from "@/lib/premium-send.server";
+import { renderPremiumEmojiTokensForBotApi, sendTextWithPremiumEmojis } from "@/lib/premium-send.server";
 
 function nowParts(tz: string) {
   const fmt = new Intl.DateTimeFormat("en-GB", {
@@ -34,6 +34,7 @@ type Schedule = {
   image_path: string | null;
   image_mime: string | null;
   parse_mode: string;
+  is_premium: boolean;
   times: string[];
   weekdays: number[];
   weekday_overrides: Record<string, string[]> | null;
@@ -58,14 +59,15 @@ type PendingFollowup = {
   image_mime: string | null;
   video_id: string | null;
   parse_mode: string;
+  is_premium?: boolean;
 };
 
 async function sendOne(
   botToken: string | null | undefined,
   chatId: number | string,
-  msg: { content: string | null; image_path: string | null; parse_mode: string; user_id?: string },
+  msg: { content: string | null; image_path: string | null; parse_mode: string; user_id?: string; is_premium?: boolean },
 ): Promise<{ ok: boolean; result?: { message_id?: number }; description?: string }> {
-  if (!msg.image_path && msg.content && msg.user_id) {
+  if (!msg.image_path && msg.content && msg.user_id && msg.is_premium) {
     const premium = await sendTextWithPremiumEmojis({
       userId: msg.user_id,
       chatId,
@@ -79,11 +81,14 @@ async function sendOne(
   }
   if (msg.image_path) {
     const { data: pub } = supabaseAdmin.storage.from("room-images").getPublicUrl(msg.image_path);
+    const caption = msg.is_premium && msg.user_id
+      ? await renderPremiumEmojiTokensForBotApi(msg.user_id, msg.content)
+      : { text: msg.content, replaced: false };
     return await callTelegram<{ message_id: number }>(botToken, "sendPhoto", {
       chat_id: chatId,
       photo: pub.publicUrl,
-      caption: msg.content ?? undefined,
-      parse_mode: msg.content ? msg.parse_mode : undefined,
+      caption: caption.text ?? undefined,
+      parse_mode: caption.text ? "HTML" : undefined,
     });
   }
   return await callTelegram<{ message_id: number }>(botToken, "sendMessage", {
