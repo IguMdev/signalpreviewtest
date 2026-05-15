@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { callTelegram } from "@/lib/telegram.server";
-import { dispatchVideoNote } from "@/lib/videos.functions";
+import { dispatchVideoNote, dispatchVideo } from "@/lib/videos.functions";
 import { triggerSignalReactions } from "@/lib/engagement.functions";
 import { sendPhotoWithPremiumEmojiCaption, sendTextWithPremiumEmojis } from "@/lib/premium-send.server";
 
@@ -48,6 +48,8 @@ type Schedule = {
   }> | null;
   timezone: string;
   last_fire_key: string | null;
+  button_text?: string | null;
+  button_url?: string | null;
 };
 
 type PendingFollowup = {
@@ -66,7 +68,7 @@ type PendingFollowup = {
 async function sendOne(
   botToken: string | null | undefined,
   chatId: number | string,
-  msg: { content: string | null; image_path: string | null; parse_mode: string; user_id?: string; is_premium?: boolean },
+  msg: { content: string | null; image_path: string | null; parse_mode: string; user_id?: string; is_premium?: boolean; reply_markup?: unknown },
 ): Promise<{ ok: boolean; result?: { message_id?: number }; description?: string }> {
   if (!msg.image_path && msg.content && msg.user_id && msg.is_premium) {
     const premium = await sendTextWithPremiumEmojis({
@@ -102,12 +104,14 @@ async function sendOne(
       photo: pub.publicUrl,
       caption: msg.content ?? undefined,
       parse_mode: msg.content ? msg.parse_mode : undefined,
+      reply_markup: msg.reply_markup,
     });
   }
   return await callTelegram<{ message_id: number }>(botToken, "sendMessage", {
     chat_id: chatId,
     text: msg.content ?? "",
     parse_mode: msg.parse_mode,
+    reply_markup: msg.reply_markup,
   });
 }
 
@@ -118,7 +122,7 @@ export const Route = createFileRoute("/api/public/cron/dispatch-recurring")({
         const { data: schedules, error } = await supabaseAdmin
           .from("recurring_schedules")
           .select(
-            "id, user_id, room_id, account_id, content, video_id, image_path, image_mime, parse_mode, is_premium, times, weekdays, weekday_overrides, follow_ups, timezone, last_fire_key",
+            "id, user_id, room_id, account_id, content, video_id, image_path, image_mime, parse_mode, is_premium, times, weekdays, weekday_overrides, follow_ups, timezone, last_fire_key, button_text, button_url",
           )
           .eq("is_active", true);
         if (error) {
@@ -173,15 +177,20 @@ export const Route = createFileRoute("/api/public/cron/dispatch-recurring")({
             .eq("room_id", s.room_id);
           if (!acc || !chats?.length) continue;
 
-          let video: { storage_path: string; mime_type: string | null; duration_seconds: number | null; title: string } | null = null;
+          let video: { storage_path: string; mime_type: string | null; duration_seconds: number | null; title: string; kind: string | null } | null = null;
           if (s.video_id) {
             const { data: v } = await supabaseAdmin
               .from("videos")
-              .select("storage_path, mime_type, duration_seconds, title")
+              .select("storage_path, mime_type, duration_seconds, title, kind")
               .eq("id", s.video_id)
               .maybeSingle();
             video = v ?? null;
           }
+          const isNormalVideo = video && video.kind === "normal";
+          const replyMarkup =
+            s.button_text && s.button_url
+              ? { inline_keyboard: [[{ text: s.button_text, url: s.button_url }]] }
+              : undefined;
 
           let okAny = false;
           for (const c of chats) {
@@ -226,11 +235,24 @@ export const Route = createFileRoute("/api/public/cron/dispatch-recurring")({
                       photo: pub.publicUrl,
                       caption: s.content ?? undefined,
                       parse_mode: s.content ? s.parse_mode : undefined,
+                      reply_markup: replyMarkup,
                     },
                   );
                 })()
               : video
-              ? await dispatchVideoNote({
+              ? isNormalVideo
+                ? await dispatchVideo({
+                    botToken: acc.bot_token,
+                    storagePath: video!.storage_path,
+                    chatId: c.chat_id,
+                    duration: video!.duration_seconds,
+                    mimeType: video!.mime_type,
+                    filename: (video!.title || "video").replace(/[^\w.-]+/g, "_") + ".mp4",
+                    caption: s.content,
+                    parseMode: s.parse_mode,
+                    replyMarkup,
+                  })
+                : await dispatchVideoNote({
                   botToken: acc.bot_token,
                   storagePath: video.storage_path,
                   chatId: c.chat_id,
@@ -242,15 +264,8 @@ export const Route = createFileRoute("/api/public/cron/dispatch-recurring")({
                   chat_id: c.chat_id,
                   text: s.content ?? "",
                   parse_mode: s.parse_mode,
+                  reply_markup: replyMarkup,
                 });
-            // Vídeo (note) não suporta legenda — envia texto como mensagem separada
-            if (video && r.ok && s.content && s.content.trim()) {
-              await callTelegram<{ message_id: number }>(acc.bot_token, "sendMessage", {
-                chat_id: c.chat_id,
-                text: s.content,
-                parse_mode: s.parse_mode,
-              });
-            }
             await supabaseAdmin.from("message_logs").insert({
               user_id: s.user_id,
               account_id: accountId,
