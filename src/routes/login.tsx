@@ -40,7 +40,7 @@ function LoginPage() {
           <div className="size-14 rounded-2xl cyber-gradient text-primary-foreground grid place-items-center neon-glow animate-pulse-neon">
             <Send className="size-6" />
           </div>
-          <h1 className="text-3xl font-bold tracking-tight cyber-text">Sala de Sinais</h1>
+          <h1 className="text-3xl font-bold tracking-tight cyber-text">TelesinAIs - Automação Telegram</h1>
           <p className="text-sm text-muted-foreground">Entre na sua conta</p>
         </div>
         <form onSubmit={onSubmit} className="space-y-4">

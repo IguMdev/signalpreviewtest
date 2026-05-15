@@ -104,7 +104,7 @@ function AuthenticatedLayout() {
           <div className="size-8 rounded-lg cyber-gradient text-primary-foreground grid place-items-center neon-glow">
             <Send className="size-4" />
           </div>
-          <span className="font-semibold tracking-tight cyber-text">Sala de Sinais</span>
+          <span className="font-semibold tracking-tight cyber-text">TelesinAIs - Automação Telegram</span>
         </Link>
         <div className="ml-auto flex items-center gap-3">
           <div className="hidden sm:flex items-center gap-2 rounded-full glass cyber-border px-3 py-1.5 text-sm">

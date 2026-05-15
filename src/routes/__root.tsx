@@ -74,10 +74,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Sala de Sinais" },
+      { title: "TelesinAIs - Automação Telegram" },
       { name: "description", content: "Painel para gerenciar contas Telegram, grupos e envio agendado de sinais." },
-      { name: "author", content: "Sala de Sinais" },
-      { property: "og:title", content: "Sala de Sinais" },
+      { name: "author", content: "TelesinAIs - Automação Telegram" },
+      { property: "og:title", content: "TelesinAIs - Automação Telegram" },
       { property: "og:description", content: "Painel para gerenciar contas Telegram, grupos e envio agendado de sinais." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

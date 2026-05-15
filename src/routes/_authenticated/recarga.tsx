@@ -41,7 +41,7 @@ const salasPlanos: SalaPlano[] = [
     id: "salas-1",
     nome: "Plano Básico",
     preco: 150,
-    descricao: "Inclui 1 crédito de sala — você pode operar 1 sala de sinais.",
+    descricao: "Inclui 1 crédito de sala — você pode operar 1 automação Telegram.",
   },
   {
     id: "salas-3",
