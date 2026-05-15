@@ -38,6 +38,42 @@ async function hasActiveSub(userId: string, botType: "boasvindas" | "encaminhado
   return !!data;
 }
 
+async function logBot(entry: {
+  userId: string;
+  accountId?: string | null;
+  roomId?: string | null;
+  botType: "boasvindas" | "encaminhador";
+  event: "received" | "sent" | "skipped" | "failed";
+  chatId?: number | null;
+  targetChatId?: number | null;
+  tgUserId?: number | null;
+  tgUsername?: string | null;
+  tgFirstName?: string | null;
+  message?: string | null;
+  error?: string | null;
+  details?: Record<string, unknown> | null;
+}) {
+  try {
+    await supabaseAdmin.from("bot_execution_logs").insert({
+      user_id: entry.userId,
+      account_id: entry.accountId ?? null,
+      room_id: entry.roomId ?? null,
+      bot_type: entry.botType,
+      event: entry.event,
+      chat_id: entry.chatId ?? null,
+      target_chat_id: entry.targetChatId ?? null,
+      tg_user_id: entry.tgUserId ?? null,
+      tg_username: entry.tgUsername ?? null,
+      tg_first_name: entry.tgFirstName ?? null,
+      message: entry.message ?? null,
+      error: entry.error ?? null,
+      details: entry.details ?? null,
+    });
+  } catch (e) {
+    console.error("[bot-log] insert failed:", e);
+  }
+}
+
 function buildInlineButton(text: string | null | undefined, url: string | null | undefined) {
   if (!text || !url) return undefined;
   return { inline_keyboard: [[{ text, url }]] };
@@ -49,12 +85,25 @@ function renderTemplate(tpl: string, vars: Record<string, string>) {
 
 async function runWelcomeBot(opts: {
   userId: string;
+  accountId: string;
   botToken: string | null | undefined;
   chatId: number;
   user: { id?: number; first_name?: string; last_name?: string; username?: string };
 }) {
   if (!opts.botToken || !opts.user.id) return;
-  if (!(await hasActiveSub(opts.userId, "boasvindas"))) return;
+  await logBot({
+    userId: opts.userId, accountId: opts.accountId, botType: "boasvindas",
+    event: "received", chatId: opts.chatId, tgUserId: opts.user.id ?? null,
+    tgUsername: opts.user.username ?? null, tgFirstName: opts.user.first_name ?? null,
+  });
+  if (!(await hasActiveSub(opts.userId, "boasvindas"))) {
+    await logBot({
+      userId: opts.userId, accountId: opts.accountId, botType: "boasvindas",
+      event: "skipped", chatId: opts.chatId, tgUserId: opts.user.id ?? null,
+      message: "Sem assinatura ativa do BotBoasVindas",
+    });
+    return;
+  }
 
   // Find any room owned by this user that maps this chat_id
   const { data: rc } = await supabaseAdmin
@@ -64,14 +113,26 @@ async function runWelcomeBot(opts: {
     .eq("chat_id", opts.chatId)
     .limit(1)
     .maybeSingle();
-  if (!rc?.room_id) return;
+  if (!rc?.room_id) {
+    await logBot({
+      userId: opts.userId, accountId: opts.accountId, botType: "boasvindas",
+      event: "skipped", chatId: opts.chatId, message: "Chat não está vinculado a nenhuma sala",
+    });
+    return;
+  }
 
   const { data: cfg } = await supabaseAdmin
     .from("room_engagement_settings")
     .select("welcome_bot_enabled, welcome_message, welcome_image_path, welcome_image_mime, welcome_video_id, welcome_parse_mode, welcome_button_text, welcome_button_url")
     .eq("room_id", rc.room_id)
     .maybeSingle();
-  if (!cfg?.welcome_bot_enabled) return;
+  if (!cfg?.welcome_bot_enabled) {
+    await logBot({
+      userId: opts.userId, accountId: opts.accountId, roomId: rc.room_id, botType: "boasvindas",
+      event: "skipped", chatId: opts.chatId, message: "BotBoasVindas desativado para esta sala",
+    });
+    return;
+  }
 
   const firstName = (opts.user.first_name ?? "amigo(a)").replace(/[<>&]/g, "");
   const mention = `<a href="tg://user?id=${opts.user.id}">${firstName}</a>`;
@@ -83,6 +144,8 @@ async function runWelcomeBot(opts: {
 
   const reply_markup = buildInlineButton(cfg.welcome_button_text, cfg.welcome_button_url);
   const parse_mode = cfg.welcome_parse_mode ?? "HTML";
+  let mediaKind: "video_note" | "video" | "photo" | "text" = "text";
+  let resp: { ok: boolean; description?: string } | null = null;
 
   // Video round (video_note) takes precedence > image > text
   if (cfg.welcome_video_id) {
@@ -97,56 +160,95 @@ async function runWelcomeBot(opts: {
       const body: Record<string, unknown> = { chat_id: opts.chatId };
       if (method === "sendVideoNote") body.video_note = url;
       else { body.video = url; body.caption = text; body.parse_mode = parse_mode; }
-      await callTelegram(opts.botToken, method, body);
+      mediaKind = method === "sendVideoNote" ? "video_note" : "video";
+      resp = await callTelegram(opts.botToken, method, body);
       // companion text/button when video_note (no caption support)
       if (method === "sendVideoNote") {
         await callTelegram(opts.botToken, "sendMessage", { chat_id: opts.chatId, text, parse_mode, reply_markup });
       } else if (reply_markup) {
         await callTelegram(opts.botToken, "sendMessage", { chat_id: opts.chatId, text: "\u2063", reply_markup });
       }
+      await logBot({
+        userId: opts.userId, accountId: opts.accountId, roomId: rc.room_id, botType: "boasvindas",
+        event: resp?.ok ? "sent" : "failed", chatId: opts.chatId, tgUserId: opts.user.id ?? null,
+        tgFirstName: opts.user.first_name ?? null, message: text,
+        error: resp?.ok ? null : (resp?.description ?? "telegram error"),
+        details: { media: mediaKind },
+      });
       return;
     }
   }
 
   if (cfg.welcome_image_path) {
     const url = publicUrl("room-images", cfg.welcome_image_path);
-    await callTelegram(opts.botToken, "sendPhoto", {
+    resp = await callTelegram(opts.botToken, "sendPhoto", {
       chat_id: opts.chatId, photo: url, caption: text, parse_mode, reply_markup,
+    });
+    await logBot({
+      userId: opts.userId, accountId: opts.accountId, roomId: rc.room_id, botType: "boasvindas",
+      event: resp?.ok ? "sent" : "failed", chatId: opts.chatId, tgUserId: opts.user.id ?? null,
+      tgFirstName: opts.user.first_name ?? null, message: text,
+      error: resp?.ok ? null : (resp?.description ?? "telegram error"),
+      details: { media: "photo" },
     });
     return;
   }
 
-  await callTelegram(opts.botToken, "sendMessage", {
+  resp = await callTelegram(opts.botToken, "sendMessage", {
     chat_id: opts.chatId, text, parse_mode, reply_markup,
     disable_web_page_preview: true,
+  });
+  await logBot({
+    userId: opts.userId, accountId: opts.accountId, roomId: rc.room_id, botType: "boasvindas",
+    event: resp?.ok ? "sent" : "failed", chatId: opts.chatId, tgUserId: opts.user.id ?? null,
+    tgFirstName: opts.user.first_name ?? null, message: text,
+    error: resp?.ok ? null : (resp?.description ?? "telegram error"),
+    details: { media: "text" },
   });
 }
 
 async function runForwarder(opts: {
   userId: string;
+  accountId: string;
   botToken: string | null | undefined;
   fromChatId: number;
   messageId: number;
 }) {
   if (!opts.botToken) return;
-  if (!(await hasActiveSub(opts.userId, "encaminhador"))) return;
-
   const { data: cfgs } = await supabaseAdmin
     .from("room_engagement_settings")
     .select("forwarder_enabled, forwarder_target_chat_ids")
     .eq("user_id", opts.userId)
     .eq("forwarder_enabled", true)
     .eq("forwarder_source_chat_id", opts.fromChatId);
-  if (!cfgs?.length) return;
+  if (!cfgs?.length) return; // não loga: barulho de mensagens não relacionadas
+
+  await logBot({
+    userId: opts.userId, accountId: opts.accountId, botType: "encaminhador",
+    event: "received", chatId: opts.fromChatId, details: { message_id: opts.messageId },
+  });
+  if (!(await hasActiveSub(opts.userId, "encaminhador"))) {
+    await logBot({
+      userId: opts.userId, accountId: opts.accountId, botType: "encaminhador",
+      event: "skipped", chatId: opts.fromChatId, message: "Sem assinatura ativa do BotEncaminhador",
+    });
+    return;
+  }
 
   const targets = new Set<number>();
   for (const c of cfgs) for (const t of (c.forwarder_target_chat_ids ?? [])) targets.add(t);
   for (const target of targets) {
     if (target === opts.fromChatId) continue;
-    await callTelegram(opts.botToken, "copyMessage", {
+    const r = await callTelegram(opts.botToken, "copyMessage", {
       chat_id: target,
       from_chat_id: opts.fromChatId,
       message_id: opts.messageId,
+    });
+    await logBot({
+      userId: opts.userId, accountId: opts.accountId, botType: "encaminhador",
+      event: r?.ok ? "sent" : "failed", chatId: opts.fromChatId, targetChatId: target,
+      error: r?.ok ? null : (r?.description ?? "telegram error"),
+      details: { message_id: opts.messageId },
     });
   }
 }
@@ -228,6 +330,7 @@ export const Route = createFileRoute("/api/public/telegram/webhook/$accountId")(
             if (eventType === "join") {
               await runWelcomeBot({
                 userId: acc.user_id,
+                accountId: acc.id,
                 botToken: acc.bot_token,
                 chatId: cm.chat.id,
                 user: u,
@@ -241,6 +344,7 @@ export const Route = createFileRoute("/api/public/telegram/webhook/$accountId")(
         if (post?.chat?.id && post?.message_id) {
           await runForwarder({
             userId: acc.user_id,
+            accountId: acc.id,
             botToken: acc.bot_token,
             fromChatId: post.chat.id,
             messageId: post.message_id,
