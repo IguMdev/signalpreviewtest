@@ -35,7 +35,12 @@ export const Route = createFileRoute("/_authenticated/premium-emojis")({
   component: PremiumEmojisPage,
 });
 
-type Captured = { custom_emoji_id: string; preview_char: string | null; name: string };
+type Captured = {
+  custom_emoji_id: string;
+  preview_char: string | null;
+  thumb_data_url: string | null;
+  name: string;
+};
 
 function PremiumEmojisPage() {
   useAuth();
@@ -101,13 +106,24 @@ function PremiumEmojisPage() {
     },
   });
 
-  const mergeFresh = (items: Array<{ custom_emoji_id: string; preview_char: string | null }>) => {
+  const mergeFresh = (
+    items: Array<{
+      custom_emoji_id: string;
+      preview_char: string | null;
+      thumb_data_url?: string | null;
+    }>,
+  ) => {
     setCaptured((prev) => {
       const seen = new Set(prev.map((p) => p.custom_emoji_id));
       const merged = [...prev];
       for (const it of items) {
         if (!seen.has(it.custom_emoji_id)) {
-          merged.push({ ...it, name: "" });
+          merged.push({
+            custom_emoji_id: it.custom_emoji_id,
+            preview_char: it.preview_char,
+            thumb_data_url: it.thumb_data_url ?? null,
+            name: "",
+          });
         }
       }
       return merged;
@@ -301,7 +317,13 @@ function PremiumEmojisPage() {
                 key={item.custom_emoji_id}
                 className="rounded-lg border border-border bg-muted/20 p-5 flex flex-col items-center gap-3"
               >
-                {item.preview_char ? (
+                {item.thumb_data_url ? (
+                  <img
+                    src={item.thumb_data_url}
+                    alt="emoji"
+                    className="size-12 object-contain"
+                  />
+                ) : item.preview_char ? (
                   <div className="text-4xl leading-none">{item.preview_char}</div>
                 ) : (
                   <Zap className="size-7 text-amber-400" />
