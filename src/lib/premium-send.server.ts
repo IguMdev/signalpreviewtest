@@ -12,6 +12,25 @@ export type PremiumSendResult =
   | { applied: true; ok: false; error: string; reason: string }
   | { applied: false; reason: string };
 
+export type PremiumButtonRow = { text: string; url: string }[];
+
+async function buildInlineMarkup(buttonRows?: PremiumButtonRow[]) {
+  if (!buttonRows || !buttonRows.length) return undefined;
+  const { Api } = await import("telegram");
+  const rows = buttonRows
+    .map(
+      (row) =>
+        new Api.KeyboardButtonRow({
+          buttons: row
+            .filter((b) => b.text && b.url)
+            .map((b) => new Api.KeyboardButtonUrl({ text: b.text, url: b.url })),
+        }),
+    )
+    .filter((r) => r.buttons.length > 0);
+  if (!rows.length) return undefined;
+  return new Api.ReplyInlineMarkup({ rows });
+}
+
 function logPremiumFallback(
   ctx: {
     where: string;
