@@ -4,7 +4,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { callTelegram } from "@/lib/telegram.server";
 import { dispatchVideoNote, dispatchVideo } from "@/lib/videos.functions";
-import { sendPhotoWithPremiumEmojiCaption, sendTextWithPremiumEmojis, getUserEmojiLookup } from "@/lib/premium-send.server";
+import { sendPhotoWithPremiumEmojiCaption, sendTextWithPremiumEmojis, sendVideoWithPremiumEmojiCaption, getUserEmojiLookup } from "@/lib/premium-send.server";
 import { renderEmojiTokensToHtml, hasEmojiTokens } from "@/lib/premium-emoji-render";
 
 const TimeRe = /^([01]\d|2[0-3]):[0-5]\d$/;
