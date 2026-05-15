@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { callTelegram } from "@/lib/telegram.server";
+import { sendTextWithPremiumEmojis } from "@/lib/premium-send.server";
 import { categoryFor, pickRandom, renderTemplate } from "@/lib/signals.server";
 
 function fmtHHMM(d: Date, tz: string) {
@@ -88,6 +89,16 @@ export const testWindow = createServerFn({ method: "POST" })
     const ids: Record<string, number> = {};
     const errors: string[] = [];
     for (const cid of chatIds) {
+      const premium = await sendTextWithPremiumEmojis({
+        userId: w.user_id,
+        chatId: cid,
+        text,
+      });
+      if (premium.applied) {
+        if (premium.ok && premium.messageId) ids[String(cid)] = premium.messageId;
+        else errors.push(`chat ${cid}: ${premium.ok ? "erro" : premium.error}`);
+        continue;
+      }
       const r = await callTelegram<{ message_id: number }>(botToken, "sendMessage", {
         chat_id: cid,
         text,

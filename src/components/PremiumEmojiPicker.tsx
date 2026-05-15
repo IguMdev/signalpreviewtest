@@ -104,7 +104,7 @@ export function PremiumEmojiPicker({ value, onChange, targetRef, size = "sm", cl
   }, [list.data, q]);
 
   const insert = (name: string) => {
-    const token = `{EMOJI:${name}}`;
+    const token = `{${name}}`;
     insertAtCursor(ref.current, value, token, onChange);
     setOpen(false);
   };
@@ -150,7 +150,7 @@ export function PremiumEmojiPicker({ value, onChange, targetRef, size = "sm", cl
                     type="button"
                     onClick={() => insert(e.name)}
                     className="flex flex-col items-center justify-center gap-0.5 rounded-md p-1.5 hover:bg-accent transition"
-                    title={`{EMOJI:${e.name}}`}
+                    title={`{${e.name}}`}
                   >
                     <Thumb cached={thumbs.get(e.custom_emoji_id)} fallback={e.preview_char} />
                     <span className="text-[9px] font-mono uppercase truncate w-full text-center text-muted-foreground">
@@ -162,7 +162,7 @@ export function PremiumEmojiPicker({ value, onChange, targetRef, size = "sm", cl
             )}
           </div>
           <p className="text-[10px] text-muted-foreground text-center pt-1 border-t">
-            Insere <code className="font-mono">{"{EMOJI:NOME}"}</code> na posição do cursor.
+            Insere <code className="font-mono">{"{NOME}"}</code> na posição do cursor.
           </p>
         </div>
       </PopoverContent>

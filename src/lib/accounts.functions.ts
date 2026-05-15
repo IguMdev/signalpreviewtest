@@ -2,12 +2,13 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { callTelegram, type TelegramUser, type TelegramUpdate } from "./telegram.server";
+import { sendTextWithPremiumEmojis } from "./premium-send.server";
 
 export const verifyAccount = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ accountId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
-    const { supabase } = context;
+    const { supabase, userId } = context;
     const { data: acc, error } = await supabase
       .from("telegram_accounts")
       .select("id, bot_token")
@@ -51,13 +52,22 @@ export const sendTestMessage = createServerFn({ method: "POST" })
       .parse(d),
   )
   .handler(async ({ data, context }) => {
-    const { supabase } = context;
+    const { supabase, userId } = context;
     const { data: acc, error } = await supabase
       .from("telegram_accounts")
       .select("bot_token")
       .eq("id", data.accountId)
       .maybeSingle();
     if (error || !acc) throw new Error("Conta não encontrada");
+    const premium = await sendTextWithPremiumEmojis({
+      userId,
+      chatId: data.chatId,
+      text: data.text,
+    });
+    if (premium.applied) {
+      if (!premium.ok) return { ok: false, error: premium.error };
+      return { ok: true, messageId: premium.messageId ?? undefined };
+    }
     const r = await callTelegram<{ message_id: number }>(acc.bot_token, "sendMessage", {
       chat_id: data.chatId,
       text: data.text,
@@ -120,7 +130,7 @@ export const sendRoomTest = createServerFn({ method: "POST" })
       .parse(d),
   )
   .handler(async ({ data, context }) => {
-    const { supabase } = context;
+    const { supabase, userId } = context;
     const { data: room, error: roomErr } = await supabase
       .from("rooms")
       .select("id, default_account_id")
@@ -163,7 +173,10 @@ export const sendRoomTest = createServerFn({ method: "POST" })
           sticker: pub.publicUrl,
         });
         if (r.ok && text) {
-          await callTelegram<{ message_id: number }>(acc.bot_token, "sendMessage", {
+          const premium = await sendTextWithPremiumEmojis({ userId, chatId: chat.chat_id, text });
+          if (premium.applied) {
+            if (!premium.ok) throw new Error(premium.error);
+          } else await callTelegram<{ message_id: number }>(acc.bot_token, "sendMessage", {
             chat_id: chat.chat_id,
             text,
             parse_mode: "HTML",
@@ -179,7 +192,11 @@ export const sendRoomTest = createServerFn({ method: "POST" })
       }
     } else {
       if (!text) throw new Error("Mensagem vazia");
-      r = await callTelegram<{ message_id: number }>(acc.bot_token, "sendMessage", {
+      const premium = await sendTextWithPremiumEmojis({ userId, chatId: chat.chat_id, text });
+      if (premium.applied) {
+        if (!premium.ok) throw new Error(premium.error);
+        r = { ok: true, result: { message_id: premium.messageId ?? undefined } };
+      } else r = await callTelegram<{ message_id: number }>(acc.bot_token, "sendMessage", {
         chat_id: chat.chat_id,
         text,
         parse_mode: "HTML",

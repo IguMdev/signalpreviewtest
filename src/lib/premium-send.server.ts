@@ -12,7 +12,7 @@ export type PremiumSendResult =
 
 /**
  * Tenta enviar uma mensagem de texto via conta premium MTProto, substituindo
- * tokens {EMOJI:NOME} por entities `MessageEntityCustomEmoji` reais.
+ * tokens {NOME}/{EMOJI:NOME} por entities `MessageEntityCustomEmoji` reais.
  *
  * Retorna `{ applied: false }` quando a rota premium não se aplica
  * (sem tokens, sem conta premium ativa, ou nenhum nome bate). Nesse caso
@@ -22,6 +22,7 @@ export async function sendTextWithPremiumEmojis(opts: {
   userId: string;
   chatId: number | string;
   text: string;
+  replyToMessageId?: number;
 }): Promise<PremiumSendResult> {
   if (!hasEmojiTokens(opts.text)) {
     return { applied: false, reason: "no-tokens" };
@@ -84,6 +85,7 @@ export async function sendTextWithPremiumEmojis(opts: {
     const msg = await client.sendMessage(target as never, {
       message: text,
       formattingEntities: apiEntities,
+      replyTo: opts.replyToMessageId,
     });
     return { applied: true, ok: true, messageId: Number(msg.id) };
   } catch (e) {
