@@ -61,3 +61,26 @@ export function renderEmojiTokens(
   out += text.slice(last);
   return { text: out, entities };
 }
+
+/**
+ * Renderiza os mesmos tokens no formato HTML aceito pelo Telegram Bot API.
+ * Mantém o restante do texto intacto para não quebrar templates que já usam HTML.
+ */
+export function renderEmojiTokensToHtml(
+  text: string,
+  lookup: EmojiLookup,
+): { text: string; replaced: boolean } {
+  const normalizedLookup = new Map(
+    Array.from(lookup.entries()).map(([name, value]) => [name.trim().toUpperCase(), value]),
+  );
+  let replaced = false;
+  const out = text.replace(/\{([A-Za-z0-9_\-]+)\}/g, (token, rawName: string) => {
+    const name = rawName.trim();
+    const found = lookup.get(name) ?? normalizedLookup.get(name.toUpperCase());
+    if (!found) return token;
+    replaced = true;
+    const fallback = found.preview_char && found.preview_char.length > 0 ? found.preview_char : "⭐";
+    return `<tg-emoji emoji-id="${found.custom_emoji_id}">${fallback}</tg-emoji>`;
+  });
+  return { text: out, replaced };
+}
