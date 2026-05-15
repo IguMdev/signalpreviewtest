@@ -1294,7 +1294,7 @@ function TemplateEditor({
         toast.error("Adicione conteúdo ou imagem antes de testar");
         return;
       }
-      await sendTest({ data: { roomId, text: content, imagePath: imagePath ?? undefined, imageMime: imageMime ?? undefined, imageExt: imageExt ?? undefined } });
+      await sendTest({ data: { roomId, templateKind: kind, text: content, imagePath: imagePath ?? undefined, imageMime: imageMime ?? undefined, imageExt: imageExt ?? undefined } });
       toast.success("Teste enviado");
     } catch (e: any) { toast.error(e.message); }
     finally { setTesting(false); }
