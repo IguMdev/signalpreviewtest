@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { callTelegram, type TelegramUser, type TelegramUpdate } from "./telegram.server";
-import { sendPhotoWithPremiumEmojiCaption, sendTextWithPremiumEmojis } from "./premium-send.server";
+import { getPremiumAccountConnectionStatus, sendPhotoWithPremiumEmojiCaption, sendTextWithPremiumEmojis } from "./premium-send.server";
 
 export const verifyAccount = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -11,10 +11,33 @@ export const verifyAccount = createServerFn({ method: "POST" })
     const { supabase, userId } = context;
     const { data: acc, error } = await supabase
       .from("telegram_accounts")
-      .select("id, bot_token")
+      .select("id, bot_token, account_type")
       .eq("id", data.accountId)
       .maybeSingle();
     if (error || !acc) throw new Error("Conta não encontrada");
+    if (acc.account_type === "premium") {
+      const premium = await getPremiumAccountConnectionStatus(userId, acc.id);
+      const premiumUpdate = premium.ok
+        ? {
+            status: "ok" as const,
+            last_check_at: new Date().toISOString(),
+            last_error: premium.isPremium ? null : "A conta conectada não tem Telegram Premium ativo.",
+            bot_username: premium.username ?? null,
+            bot_first_name: premium.firstName ?? null,
+          }
+        : {
+            status: "error" as const,
+            last_check_at: new Date().toISOString(),
+            last_error: premium.error,
+          };
+      await supabase
+        .from("telegram_accounts")
+        .update(premiumUpdate)
+        .eq("id", acc.id);
+      if (!premium.ok) return { ok: false, error: premium.error };
+      if (!premium.isPremium) return { ok: false, error: "A conta conectada não tem Telegram Premium ativo." };
+      return { ok: true, bot: { id: 0, is_bot: false, first_name: premium.firstName ?? "Conta Premium", username: premium.username ?? undefined } };
+    }
     const r = await callTelegram<TelegramUser>(acc.bot_token, "getMe");
     if (!r.ok || !r.result) {
       await supabase
@@ -55,14 +78,17 @@ export const sendTestMessage = createServerFn({ method: "POST" })
     const { supabase, userId } = context;
     const { data: acc, error } = await supabase
       .from("telegram_accounts")
-      .select("bot_token")
+      .select("id, bot_token, account_type")
       .eq("id", data.accountId)
       .maybeSingle();
     if (error || !acc) throw new Error("Conta não encontrada");
     const premium = await sendTextWithPremiumEmojis({
       userId,
+      accountId: acc.account_type === "premium" ? acc.id : undefined,
       chatId: data.chatId,
       text: data.text,
+      allowPlain: acc.account_type === "premium",
+      strict: acc.account_type === "premium",
     });
     if (premium.applied) {
       if (!premium.ok) return { ok: false, error: premium.error };
