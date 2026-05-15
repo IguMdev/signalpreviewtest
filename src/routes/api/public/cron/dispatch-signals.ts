@@ -30,11 +30,12 @@ type TemplateButton = {
   template_kind: string; label: string; url: string; sort_order: number;
 };
 
-function buildReplyMarkup(buttons: TemplateButton[], kind: string) {
+async function buildReplyMarkup(userId: string, buttons: TemplateButton[], kind: string) {
+  const lookup = await getUserEmojiLookup(userId);
   const rows = buttons
     .filter((b) => b.template_kind === kind && b.label && b.url)
     .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
-    .map((b) => [{ text: b.label, url: b.url }]);
+    .map((b) => [{ text: renderEmojiTokensToHtml(b.label, lookup).text.replace(/<[^>]+>/g, ""), url: b.url }]);
   return rows.length ? { inline_keyboard: rows } : undefined;
 }
 
@@ -233,7 +234,7 @@ async function sendScheduled(): Promise<number> {
       chatIds: ctx.chatIds,
       text,
       parseMode: tpl.parse_mode,
-      replyMarkup: buildReplyMarkup(ctx.buttons, "signal"),
+      replyMarkup: await buildReplyMarkup(ctx.room.user_id, ctx.buttons, "signal"),
     });
 
     await supabaseAdmin.from("signal_events").update({
@@ -316,7 +317,7 @@ async function postResult(
     text,
     parseMode: tpl.parse_mode,
     replyTo,
-    replyMarkup: buildReplyMarkup(ctx.buttons, tplKind),
+    replyMarkup: await buildReplyMarkup(ctx.room.user_id, ctx.buttons, tplKind),
   });
 
   // se LOSS e ainda há gales disponíveis, encadeia próxima entrada
