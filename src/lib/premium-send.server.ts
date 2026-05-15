@@ -45,6 +45,44 @@ function resolveTelegramTarget(chatId: number | string) {
   return Number.isFinite(numeric) ? (numeric as number) : chatId;
 }
 
+/**
+ * Conecta na conta MTProto e garante que ela é Telegram Premium.
+ * Sem Premium o servidor do Telegram aceita a mensagem mas REMOVE as
+ * entities `MessageEntityCustomEmoji` silenciosamente — o destinatário vê
+ * apenas o caractere fallback (ex.: 🚨 em vez do emoji animado).
+ */
+async function connectAndAssertPremium(acc: {
+  tg_api_id: number;
+  tg_api_hash: string;
+  tg_session: string;
+}) {
+  const { TelegramClient, Api } = await import("telegram");
+  const { StringSession } = await import("telegram/sessions");
+
+  const client = new TelegramClient(
+    new StringSession(acc.tg_session),
+    acc.tg_api_id,
+    acc.tg_api_hash,
+    { connectionRetries: 2, useWSS: true },
+  );
+  await client.connect();
+
+  let isPremium = false;
+  try {
+    const me = await client.invoke(
+      new Api.users.GetFullUser({ id: new Api.InputUserSelf() }),
+    );
+    const user = (me.users ?? []).find(
+      (u): u is InstanceType<typeof Api.User> => u.className === "User",
+    );
+    isPremium = Boolean(user?.premium);
+  } catch {
+    isPremium = false;
+  }
+
+  return { client, isPremium };
+}
+
 export async function renderPremiumEmojiTokensForBotApi(userId: string, text: string | null | undefined) {
   if (!text || !hasEmojiTokens(text)) return { text: text ?? null, replaced: false };
   const lookup = await getUserEmojiLookup(userId);
@@ -88,17 +126,23 @@ export async function sendTextWithPremiumEmojis(opts: {
     return { applied: false, reason: "no-premium-account" };
   }
 
-  const { TelegramClient, Api } = await import("telegram");
-  const { StringSession } = await import("telegram/sessions");
+  const { Api } = await import("telegram");
   const { default: bigInt } = await import("big-integer");
 
-  const client = new TelegramClient(
-    new StringSession(acc.tg_session as string),
-    acc.tg_api_id as number,
-    acc.tg_api_hash as string,
-    { connectionRetries: 2, useWSS: true },
-  );
-  await client.connect();
+  const { client, isPremium } = await connectAndAssertPremium({
+    tg_api_id: acc.tg_api_id as number,
+    tg_api_hash: acc.tg_api_hash as string,
+    tg_session: acc.tg_session as string,
+  });
+  if (!isPremium) {
+    await client.disconnect().catch(() => {});
+    return {
+      applied: true,
+      ok: false,
+      error:
+        "A conta Telegram conectada não tem assinatura Premium ativa. Sem Premium o Telegram remove os emojis animados antes de entregar a mensagem.",
+    };
+  }
 
   try {
     const target = resolveTelegramTarget(opts.chatId);
@@ -155,17 +199,23 @@ export async function sendPhotoWithPremiumEmojiCaption(opts: {
     return { applied: false, reason: "no-premium-account" };
   }
 
-  const { TelegramClient, Api } = await import("telegram");
-  const { StringSession } = await import("telegram/sessions");
+  const { Api } = await import("telegram");
   const { default: bigInt } = await import("big-integer");
 
-  const client = new TelegramClient(
-    new StringSession(acc.tg_session as string),
-    acc.tg_api_id as number,
-    acc.tg_api_hash as string,
-    { connectionRetries: 2, useWSS: true },
-  );
-  await client.connect();
+  const { client, isPremium } = await connectAndAssertPremium({
+    tg_api_id: acc.tg_api_id as number,
+    tg_api_hash: acc.tg_api_hash as string,
+    tg_session: acc.tg_session as string,
+  });
+  if (!isPremium) {
+    await client.disconnect().catch(() => {});
+    return {
+      applied: true,
+      ok: false,
+      error:
+        "A conta Telegram conectada não tem assinatura Premium ativa. Sem Premium o Telegram remove os emojis animados da legenda antes de entregar.",
+    };
+  }
 
   try {
     const target = resolveTelegramTarget(opts.chatId);
