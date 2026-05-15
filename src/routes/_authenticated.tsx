@@ -19,12 +19,15 @@ import {
   UserPlus,
   GraduationCap,
   Megaphone,
+  Plug,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
 import { TourProvider } from "@/components/tour/TourProvider";
-
 export const Route = createFileRoute("/_authenticated")({
   component: AuthenticatedLayout,
 });
@@ -38,7 +41,13 @@ const navItems = [
   { to: "/mensagens", label: "Agendamentos", icon: CalendarClock, tour: "nav-mensagens" },
   { to: "/videos", label: "Vídeos", icon: Video, tour: "nav-videos" },
   { to: "/recarga", label: "Recarga", icon: Wallet, tour: "nav-recarga" },
+] as const;
+
+const connectionItems = [
   { to: "/integracoes/meta", label: "Meta Pixel", icon: Megaphone, tour: "nav-meta" },
+] as const;
+
+const accountItems = [
   { to: "/perfil", label: "Minha conta", icon: UserCircle, tour: "nav-perfil" },
 ] as const;
 
@@ -159,6 +168,69 @@ function AuthenticatedLayout() {
               </Link>
             );
           })}
+
+          {/* Separador sutil */}
+          <div className="my-2 border-t border-border/40" />
+
+          {/* Minha conta */}
+          {accountItems.map(({ to, label, icon: Icon, tour }) => {
+            const active = location.pathname === to || location.pathname.startsWith(to + "/");
+            return (
+              <Link
+                key={to}
+                to={to}
+                data-tour={tour}
+                onClick={() => setSidebarOpen(false)}
+                className={cn(
+                  "relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition",
+                  active
+                    ? "cyber-gradient-soft text-foreground cyber-border"
+                    : "text-foreground/70 hover:bg-white/5 hover:text-foreground",
+                )}
+              >
+                <Icon className={cn("size-4", active && "text-primary")} />
+                {label}
+              </Link>
+            );
+          })}
+
+          {/* Conexões dropdown */}
+          <Collapsible defaultOpen={connectionItems.some((i) => location.pathname === i.to || location.pathname.startsWith(i.to + "/"))}>
+            <CollapsibleTrigger asChild>
+              <button
+                type="button"
+                className="w-full relative flex items-center justify-between rounded-xl px-3 py-2.5 text-sm font-medium transition text-foreground/70 hover:bg-white/5 hover:text-foreground"
+              >
+                <span className="flex items-center gap-3">
+                  <Plug className="size-4" />
+                  Conexões
+                </span>
+                <ChevronDown className="size-4 transition-transform data-[state=open]:rotate-180" />
+              </button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="space-y-1 pl-2">
+              {connectionItems.map(({ to, label, icon: Icon, tour }) => {
+                const active = location.pathname === to || location.pathname.startsWith(to + "/");
+                return (
+                  <Link
+                    key={to}
+                    to={to}
+                    data-tour={tour}
+                    onClick={() => setSidebarOpen(false)}
+                    className={cn(
+                      "relative flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition",
+                      active
+                        ? "cyber-gradient-soft text-foreground cyber-border"
+                        : "text-foreground/70 hover:bg-white/5 hover:text-foreground",
+                    )}
+                  >
+                    <Icon className={cn("size-4", active && "text-primary")} />
+                    {label}
+                  </Link>
+                );
+              })}
+            </CollapsibleContent>
+          </Collapsible>
         </nav>
         <div className="px-3 pt-3 pb-4 mt-2 border-t border-border/60 bg-background/40 backdrop-blur-sm space-y-1">
           <p className="px-3 pb-1.5 text-[10px] uppercase tracking-wider text-muted-foreground/70">
