@@ -4,7 +4,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { callTelegram } from "@/lib/telegram.server";
 import { dispatchVideoNote, dispatchVideo } from "@/lib/videos.functions";
-import { sendPhotoWithPremiumEmojiCaption, sendTextWithPremiumEmojis, getUserEmojiLookup } from "@/lib/premium-send.server";
+import { sendPhotoWithPremiumEmojiCaption, sendTextWithPremiumEmojis, sendVideoWithPremiumEmojiCaption, getUserEmojiLookup } from "@/lib/premium-send.server";
 import { renderEmojiTokensToHtml, hasEmojiTokens } from "@/lib/premium-emoji-render";
 
 const TimeRe = /^([01]\d|2[0-3]):[0-5]\d$/;
@@ -168,7 +168,10 @@ export const testSchedule = createServerFn({ method: "POST" })
     let failed = 0;
     let lastError: string | null = null;
     for (const c of chats) {
-      let r: { ok: boolean; result?: { message_id?: number }; description?: string };
+      let r: { ok: boolean; result?: { message_id?: number }; description?: string } = {
+        ok: false,
+        description: "no-op",
+      };
       const sAny = s as unknown as { button_text: string | null; button_url: string | null };
       const replyMarkup =
         sAny.button_text && sAny.button_url
@@ -221,17 +224,43 @@ export const testSchedule = createServerFn({ method: "POST" })
           })()
         : video
         ? isNormalVideo
-          ? await dispatchVideo({
-              botToken: acc.bot_token,
-              storagePath: video!.storage_path,
-              chatId: c.chat_id,
-              duration: video!.duration_seconds,
-              mimeType: video!.mime_type,
-              filename: (video!.title || "video").replace(/[^\w.-]+/g, "_") + ".mp4",
-              caption: s.content,
-              parseMode: s.parse_mode,
-              replyMarkup,
-            })
+          ? await (async () => {
+              if (s.is_premium && s.content && hasEmojiTokens(s.content)) {
+                const { data: file } = await supabaseAdmin.storage
+                  .from("videos")
+                  .download(video!.storage_path);
+                if (file) {
+                  const bytes = await file.arrayBuffer();
+                  const pv = await sendVideoWithPremiumEmojiCaption({
+                    userId: s.user_id,
+                    chatId: c.chat_id,
+                    videoBytes: bytes,
+                    filename: (video!.title || "video").replace(/[^\w.-]+/g, "_") + ".mp4",
+                    mimeType: video!.mime_type ?? "video/mp4",
+                    duration: video!.duration_seconds,
+                    caption: s.content,
+                    strict: true,
+                    buttonRows: sAny.button_text && sAny.button_url ? [[{ text: sAny.button_text, url: sAny.button_url }]] : undefined,
+                  });
+                  if (pv.applied) {
+                    return pv.ok
+                      ? { ok: true, result: { message_id: pv.messageId ?? undefined } }
+                      : { ok: false, description: pv.error };
+                  }
+                }
+              }
+              return await dispatchVideo({
+                botToken: acc.bot_token,
+                storagePath: video!.storage_path,
+                chatId: c.chat_id,
+                duration: video!.duration_seconds,
+                mimeType: video!.mime_type,
+                filename: (video!.title || "video").replace(/[^\w.-]+/g, "_") + ".mp4",
+                caption: s.content,
+                parseMode: s.parse_mode,
+                replyMarkup,
+              });
+            })()
           : await dispatchVideoNote({
             botToken: acc.bot_token,
             storagePath: video.storage_path,
@@ -346,7 +375,10 @@ export const testMessage = createServerFn({ method: "POST" })
     let failed = 0;
     let lastError: string | null = null;
     for (const c of chats) {
-      let r: { ok: boolean; result?: { message_id?: number }; description?: string };
+      let r: { ok: boolean; result?: { message_id?: number }; description?: string } = {
+        ok: false,
+        description: "no-op",
+      };
       const premium =
         wantsPremium && !data.imagePath && !video && data.content
           ? await sendTextWithPremiumEmojis({
@@ -398,17 +430,45 @@ export const testMessage = createServerFn({ method: "POST" })
         }
       } else if (video) {
         if (isNormalVideo) {
-          r = await dispatchVideo({
-            botToken: acc.bot_token,
-            storagePath: video.storage_path,
-            chatId: c.chat_id,
-            duration: video.duration_seconds,
-            mimeType: video.mime_type,
-            filename: (video.title || "video").replace(/[^\w.-]+/g, "_") + ".mp4",
-            caption: captionForMedia,
-            parseMode: captionParseMode,
-            replyMarkup,
-          });
+          let premiumVideoOk = false;
+          if (wantsPremium && data.content && hasEmojiTokens(data.content)) {
+            const { data: file } = await supabaseAdmin.storage
+              .from("videos")
+              .download(video.storage_path);
+            if (file) {
+              const bytes = await file.arrayBuffer();
+              const pv = await sendVideoWithPremiumEmojiCaption({
+                userId,
+                chatId: c.chat_id,
+                videoBytes: bytes,
+                filename: (video.title || "video").replace(/[^\w.-]+/g, "_") + ".mp4",
+                mimeType: video.mime_type ?? "video/mp4",
+                duration: video.duration_seconds,
+                caption: data.content,
+                strict: true,
+                buttonRows,
+              });
+              if (pv.applied) {
+                r = pv.ok
+                  ? { ok: true, result: { message_id: pv.messageId ?? undefined } }
+                  : { ok: false, description: pv.error };
+                premiumVideoOk = true;
+              }
+            }
+          }
+          if (!premiumVideoOk) {
+            r = await dispatchVideo({
+              botToken: acc.bot_token,
+              storagePath: video.storage_path,
+              chatId: c.chat_id,
+              duration: video.duration_seconds,
+              mimeType: video.mime_type,
+              filename: (video.title || "video").replace(/[^\w.-]+/g, "_") + ".mp4",
+              caption: captionForMedia,
+              parseMode: captionParseMode,
+              replyMarkup,
+            });
+          }
         } else {
           r = await dispatchVideoNote({
             botToken: acc.bot_token,

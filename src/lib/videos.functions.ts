@@ -51,6 +51,7 @@ async function sendVideoToChat(opts: {
     if (opts.parseMode) form.append("parse_mode", opts.parseMode);
   }
   if (opts.replyMarkup) form.append("reply_markup", JSON.stringify(opts.replyMarkup));
+  form.append("supports_streaming", "true");
   form.append(
     "video",
     new Blob([opts.fileBytes], { type: opts.mimeType || "video/mp4" }),
