@@ -25,6 +25,30 @@ function imageDataUrl(bytes: Buffer): string | null {
   return mime ? `data:${mime};base64,${bytes.toString("base64")}` : null;
 }
 
+function detectMime(bytes: Buffer): string | null {
+  if (!bytes.length) return null;
+  const hex4 = bytes.subarray(0, 4).toString("hex");
+  const hex8 = bytes.subarray(0, 8).toString("hex");
+  if (hex4.startsWith("ffd8")) return "image/jpeg";
+  if (hex8 === "89504e470d0a1a0a") return "image/png";
+  if (
+    bytes.subarray(0, 4).toString("ascii") === "RIFF" &&
+    bytes.subarray(8, 12).toString("ascii") === "WEBP"
+  )
+    return "image/webp";
+  // WebM / Matroska EBML header: 1A 45 DF A3
+  if (hex4 === "1a45dfa3") return "video/webm";
+  // GZIP (TGS = gzipped Lottie JSON)
+  if (bytes[0] === 0x1f && bytes[1] === 0x8b) return "application/x-tgsticker";
+  return null;
+}
+
+function mediaDataUrl(bytes: Buffer): { url: string; mime: string } | null {
+  const mime = detectMime(bytes);
+  if (!mime) return null;
+  return { url: `data:${mime};base64,${bytes.toString("base64")}`, mime };
+}
+
 export const requestPremiumCode = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) =>
