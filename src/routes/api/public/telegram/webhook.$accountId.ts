@@ -271,11 +271,12 @@ async function runForwarder(opts: {
   botToken: string | null | undefined;
   fromChatId: number;
   messageId: number;
+  messageType: string;
 }) {
   if (!opts.botToken) return;
   const { data: cfgs } = await supabaseAdmin
     .from("room_engagement_settings")
-    .select("forwarder_enabled, forwarder_target_chat_ids")
+    .select("forwarder_enabled, forwarder_target_chat_ids, forwarder_allowed_types")
     .eq("user_id", opts.userId)
     .eq("forwarder_enabled", true)
     .eq("forwarder_source_chat_id", opts.fromChatId);
@@ -283,12 +284,24 @@ async function runForwarder(opts: {
 
   await logBot({
     userId: opts.userId, accountId: opts.accountId, botType: "encaminhador",
-    event: "received", chatId: opts.fromChatId, details: { message_id: opts.messageId },
+    event: "received", chatId: opts.fromChatId, details: { message_id: opts.messageId, type: opts.messageType },
   });
   if (!(await hasActiveSub(opts.userId, "encaminhador"))) {
     await logBot({
       userId: opts.userId, accountId: opts.accountId, botType: "encaminhador",
       event: "skipped", chatId: opts.fromChatId, message: "Sem assinatura ativa do BotEncaminhador",
+    });
+    return;
+  }
+
+  const allowed = new Set<string>();
+  for (const c of cfgs) for (const t of (c.forwarder_allowed_types ?? [])) allowed.add(t);
+  if (!allowed.has(opts.messageType)) {
+    await logBot({
+      userId: opts.userId, accountId: opts.accountId, botType: "encaminhador",
+      event: "skipped", chatId: opts.fromChatId,
+      message: `Tipo "${opts.messageType}" não está habilitado para encaminhamento`,
+      details: { message_id: opts.messageId, type: opts.messageType },
     });
     return;
   }
@@ -306,7 +319,7 @@ async function runForwarder(opts: {
       userId: opts.userId, accountId: opts.accountId, botType: "encaminhador",
       event: r?.ok ? "sent" : "failed", chatId: opts.fromChatId, targetChatId: target,
       error: r?.ok ? null : (r?.description ?? "telegram error"),
-      details: { message_id: opts.messageId },
+      details: { message_id: opts.messageId, type: opts.messageType },
     });
   }
 }
@@ -400,12 +413,27 @@ export const Route = createFileRoute("/api/public/telegram/webhook/$accountId")(
         // BotEncaminhador — copia mensagens do canal/grupo de origem para destinos
         const post = update.channel_post ?? update.message;
         if (post?.chat?.id && post?.message_id) {
+          const messageType =
+            post.text ? "text" :
+            post.photo ? "photo" :
+            post.video ? "video" :
+            post.video_note ? "video_note" :
+            post.animation ? "animation" :
+            post.document ? "document" :
+            post.audio ? "audio" :
+            post.voice ? "voice" :
+            post.sticker ? "sticker" :
+            post.poll ? "poll" :
+            post.location ? "location" :
+            post.contact ? "contact" :
+            "other";
           await runForwarder({
             userId: acc.user_id,
             accountId: acc.id,
             botToken: acc.bot_token,
             fromChatId: post.chat.id,
             messageId: post.message_id,
+            messageType,
           }).catch((e) => console.error("[forwarder] failed:", e));
         }
 
