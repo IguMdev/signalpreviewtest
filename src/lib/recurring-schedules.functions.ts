@@ -81,13 +81,13 @@ export const upsertSchedule = createServerFn({ method: "POST" })
       button_url: data.buttonUrl ?? null,
     };
     if (data.id) {
-      const { error } = await supabase.from("recurring_schedules").update(row).eq("id", data.id);
+      const { error } = await supabase.from("recurring_schedules").update(row as never).eq("id", data.id);
       if (error) throw new Error(error.message);
       return { id: data.id };
     }
     const { data: ins, error } = await supabase
       .from("recurring_schedules")
-      .insert(row)
+      .insert(row as never)
       .select("id")
       .single();
     if (error) throw new Error(error.message);
