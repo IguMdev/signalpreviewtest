@@ -490,7 +490,6 @@ export async function sendVideoWithPremiumEmojiCaption(opts: {
       caption: formatted.text,
       formattingEntities: formatted.entities as never,
       attributes: attributes as never,
-      mimeType: opts.mimeType || "video/mp4",
       supportsStreaming: true,
       replyTo: opts.replyToMessageId,
       ...(buttons ? { buttons: buttons as never } : {}),
