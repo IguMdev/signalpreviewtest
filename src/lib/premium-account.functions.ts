@@ -126,7 +126,14 @@ export const confirmPremiumCode = createServerFn({ method: "POST" })
 
 export const syncPremiumEmojis = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) => z.object({ accountId: z.string().uuid() }).parse(d))
+  .inputValidator((d) =>
+    z
+      .object({
+        accountId: z.string().uuid(),
+        since: z.string().datetime().optional(),
+      })
+      .parse(d),
+  )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const { data: acc, error } = await supabase
@@ -149,6 +156,7 @@ export const syncPremiumEmojis = createServerFn({ method: "POST" })
       name: string;
       preview_char: string | null;
     }> = [];
+    const sinceUnix = data.since ? Math.floor(new Date(data.since).getTime() / 1000) : 0;
     try {
       const seen = new Set<string>();
 
@@ -179,6 +187,8 @@ export const syncPremiumEmojis = createServerFn({ method: "POST" })
           )) as unknown as {
             messages?: Array<{
               message?: string;
+              out?: boolean;
+              date?: number | Date;
               entities?: Array<{
                 className?: string;
                 documentId?: { toString(): string };
@@ -188,6 +198,14 @@ export const syncPremiumEmojis = createServerFn({ method: "POST" })
             }>;
           };
           for (const msg of history.messages ?? []) {
+            const msgUnix =
+              typeof msg.date === "number"
+                ? msg.date
+                : msg.date instanceof Date
+                  ? Math.floor(msg.date.getTime() / 1000)
+                  : 0;
+            if (sinceUnix && msgUnix < sinceUnix) continue;
+            if (msg.out !== true) continue;
             const text = msg.message ?? "";
             for (const ent of msg.entities ?? []) {
               if (ent.className === "MessageEntityCustomEmoji" && ent.documentId) {
