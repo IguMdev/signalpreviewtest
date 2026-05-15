@@ -391,3 +391,34 @@ export const sendPremiumMessage = createServerFn({ method: "POST" })
       await client.disconnect().catch(() => {});
     }
   });
+
+export const getPremiumAccountAvatar = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ accountId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    const { data: acc, error } = await supabase
+      .from("telegram_accounts")
+      .select("tg_api_id, tg_api_hash, tg_session")
+      .eq("id", data.accountId)
+      .maybeSingle();
+    if (error || !acc?.tg_session || !acc.tg_api_id || !acc.tg_api_hash) {
+      return { dataUrl: null as string | null };
+    }
+    const client = await makeClient(
+      acc.tg_api_id as number,
+      acc.tg_api_hash as string,
+      acc.tg_session as string,
+    );
+    try {
+      const me = await client.getMe();
+      const buf = await client.downloadProfilePhoto(me, { isBig: false } as never);
+      if (!buf || !(buf as Buffer).length) return { dataUrl: null };
+      const media = mediaDataUrl(buf as Buffer);
+      return { dataUrl: media?.url ?? null };
+    } catch {
+      return { dataUrl: null };
+    } finally {
+      await client.disconnect().catch(() => {});
+    }
+  });
