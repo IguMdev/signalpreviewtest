@@ -91,6 +91,28 @@ export const Route = createFileRoute("/api/public/kirvano/webhook")({
             return Response.json({ ok: false, error: insErr.message }, { status: 500 });
           }
 
+          // Para planos de SALAS, creditar a quantidade de créditos do plano (monthly_quota)
+          // diretamente no profile do usuário. Cada crédito = 1 sala que pode ser criada.
+          if (plan.bot_type === "salas" && (plan.monthly_quota ?? 0) > 0) {
+            const { data: prof } = await supabaseAdmin
+              .from("profiles")
+              .select("credits")
+              .eq("id", userId)
+              .maybeSingle();
+            const current = prof?.credits ?? 0;
+            await supabaseAdmin
+              .from("profiles")
+              .update({ credits: current + plan.monthly_quota })
+              .eq("id", userId);
+            await supabaseAdmin
+              .from("credit_transactions")
+              .insert({
+                user_id: userId,
+                delta: plan.monthly_quota,
+                reason: `kirvano_${plan.slug}`,
+              });
+          }
+
           return Response.json({ ok: true, action: "activated" });
         }
 
