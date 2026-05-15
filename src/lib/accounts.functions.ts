@@ -52,7 +52,7 @@ export const sendTestMessage = createServerFn({ method: "POST" })
       .parse(d),
   )
   .handler(async ({ data, context }) => {
-    const { supabase } = context;
+    const { supabase, userId } = context;
     const { data: acc, error } = await supabase
       .from("telegram_accounts")
       .select("bot_token")
