@@ -233,12 +233,7 @@ export const testSchedule = createServerFn({ method: "POST" })
         ok: false,
         description: "no-op",
       };
-      const sAny = s as unknown as { button_text: string | null; button_url: string | null };
-      const renderedBtnText = await renderButtonTextForUser(s.user_id, sAny.button_text);
-      const replyMarkup =
-        renderedBtnText && sAny.button_url
-          ? { inline_keyboard: [[{ text: renderedBtnText, url: sAny.button_url }]] }
-          : undefined;
+      const replyMarkup = undefined;
       const isNormalVideo = video && video.kind === "normal";
       const premium =
         s.is_premium && !s.image_path && !video && s.content
@@ -347,6 +342,7 @@ export const testSchedule = createServerFn({ method: "POST" })
                 text: s.content ?? "",
                 parse_mode: s.parse_mode,
                 reply_markup: replyMarkup,
+                link_preview_options: { is_disabled: true },
               });
       await supabaseAdmin.from("message_logs").insert({
         user_id: userId,

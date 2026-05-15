@@ -309,6 +309,7 @@ export async function sendTextWithPremiumEmojis(opts: {
           message: formatted.text,
           formattingEntities: formatted.entities as never,
           replyTo: opts.replyToMessageId,
+          linkPreview: false,
           ...(buttons ? { buttons: buttons as never } : {}),
         });
         return { applied: true, ok: true, messageId: Number(msg.id) };
@@ -395,6 +396,7 @@ export async function sendTextWithPremiumEmojis(opts: {
       message: formatted.text,
       formattingEntities: formatted.entities as never,
       replyTo: opts.replyToMessageId,
+      linkPreview: false,
       ...(buttons ? { buttons: buttons as never } : {}),
     });
     return { applied: true, ok: true, messageId: Number(msg.id) };
