@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { callTelegram } from "@/lib/telegram.server";
+import { sendTextWithPremiumEmojis } from "@/lib/premium-send.server";
 import {
   buildSlots, categoryFor, getBinanceM1Candle, nowParts,
   pickRandom, renderTemplate, resolveBinary,
@@ -35,6 +36,7 @@ function dirLabel(d: "buy" | "sell") {
 }
 
 async function sendToRoom(opts: {
+  userId: string;
   botToken: string;
   chatIds: number[];
   text: string;
@@ -43,6 +45,16 @@ async function sendToRoom(opts: {
 }): Promise<Record<string, number>> {
   const out: Record<string, number> = {};
   for (const cid of opts.chatIds) {
+    const premium = await sendTextWithPremiumEmojis({
+      userId: opts.userId,
+      chatId: cid,
+      text: opts.text,
+      replyToMessageId: opts.replyTo?.[String(cid)],
+    });
+    if (premium.applied) {
+      if (premium.ok && premium.messageId) out[String(cid)] = premium.messageId;
+      continue;
+    }
     const r = await callTelegram<{ message_id: number }>(opts.botToken, "sendMessage", {
       chat_id: cid,
       text: opts.text,
@@ -184,6 +196,7 @@ async function sendScheduled(): Promise<number> {
     });
 
     const ids = await sendToRoom({
+      userId: ctx.room.user_id,
       botToken: ctx.botToken,
       chatIds: ctx.chatIds,
       text,
@@ -264,6 +277,7 @@ async function postResult(
 
   const replyTo = (s.signal_message_ids ?? {}) as Record<string, number>;
   const ids = await sendToRoom({
+    userId: ctx.room.user_id,
     botToken: ctx.botToken,
     chatIds: ctx.chatIds,
     text,
