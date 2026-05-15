@@ -12,6 +12,25 @@ export type PremiumSendResult =
   | { applied: true; ok: false; error: string; reason: string }
   | { applied: false; reason: string };
 
+export type PremiumButtonRow = { text: string; url: string }[];
+
+async function buildInlineMarkup(buttonRows?: PremiumButtonRow[]) {
+  if (!buttonRows || !buttonRows.length) return undefined;
+  const { Api } = await import("telegram");
+  const rows = buttonRows
+    .map(
+      (row) =>
+        new Api.KeyboardButtonRow({
+          buttons: row
+            .filter((b) => b.text && b.url)
+            .map((b) => new Api.KeyboardButtonUrl({ text: b.text, url: b.url })),
+        }),
+    )
+    .filter((r) => r.buttons.length > 0);
+  if (!rows.length) return undefined;
+  return new Api.ReplyInlineMarkup({ rows });
+}
+
 function logPremiumFallback(
   ctx: {
     where: string;
@@ -248,6 +267,7 @@ export async function sendTextWithPremiumEmojis(opts: {
   replyToMessageId?: number;
   strict?: boolean;
   allowPlain?: boolean;
+  buttonRows?: PremiumButtonRow[];
 }): Promise<PremiumSendResult> {
   if (!hasEmojiTokens(opts.text)) {
     if (opts.allowPlain) {
@@ -265,9 +285,11 @@ export async function sendTextWithPremiumEmojis(opts: {
         tg_session: acc.tg_session as string,
       });
       try {
+        const buttons = await buildInlineMarkup(opts.buttonRows);
         const msg = await client.sendMessage(resolveTelegramTarget(opts.chatId) as never, {
           message: opts.text,
           replyTo: opts.replyToMessageId,
+          ...(buttons ? { buttons: buttons as never } : {}),
         });
         return { applied: true, ok: true, messageId: Number(msg.id) };
       } catch (e) {
@@ -343,12 +365,14 @@ export async function sendTextWithPremiumEmojis(opts: {
   try {
     const normalized = await normalizeCustomEmojiAlts(client, rendered);
     const target = resolveTelegramTarget(opts.chatId);
+    const buttons = await buildInlineMarkup(opts.buttonRows);
     console.log("[premium-send] sending text", {
       userId: opts.userId,
       accountId: acc.id,
       chatId: String(opts.chatId),
       entitiesCount: normalized.entities.length,
       docIds: normalized.entities.map((e) => e.documentId),
+      buttonRows: opts.buttonRows?.length ?? 0,
     });
     const msg = await client.sendMessage(target as never, {
       message: normalized.text,
@@ -361,6 +385,7 @@ export async function sendTextWithPremiumEmojis(opts: {
           }),
       ),
       replyTo: opts.replyToMessageId,
+      ...(buttons ? { buttons: buttons as never } : {}),
     });
     return { applied: true, ok: true, messageId: Number(msg.id) };
   } catch (e) {
@@ -390,6 +415,7 @@ export async function sendPhotoWithPremiumEmojiCaption(opts: {
   caption: string | null | undefined;
   replyToMessageId?: number;
   strict?: boolean;
+  buttonRows?: PremiumButtonRow[];
 }): Promise<PremiumSendResult> {
   if (!opts.caption || !hasEmojiTokens(opts.caption)) {
     return { applied: false, reason: "no-tokens" };
@@ -447,12 +473,14 @@ export async function sendPhotoWithPremiumEmojiCaption(opts: {
   try {
     const normalized = await normalizeCustomEmojiAlts(client, rendered);
     const target = resolveTelegramTarget(opts.chatId);
+    const buttons = await buildInlineMarkup(opts.buttonRows);
     console.log("[premium-send] sending photo", {
       userId: opts.userId,
       accountId: acc.id,
       chatId: String(opts.chatId),
       entitiesCount: normalized.entities.length,
       docIds: normalized.entities.map((e) => e.documentId),
+      buttonRows: opts.buttonRows?.length ?? 0,
     });
     const msg = await client.sendFile(target as never, {
       file: opts.photoUrl,
@@ -466,6 +494,7 @@ export async function sendPhotoWithPremiumEmojiCaption(opts: {
           }),
       ),
       replyTo: opts.replyToMessageId,
+      ...(buttons ? { buttons: buttons as never } : {}),
     });
     return { applied: true, ok: true, messageId: Number(msg.id) };
   } catch (e) {

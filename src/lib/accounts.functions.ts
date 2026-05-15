@@ -244,33 +244,30 @@ export const sendRoomTest = createServerFn({ method: "POST" })
           reply_markup: replyMarkup,
         });
         if (r.ok && text) {
-          if (replyMarkup)
+          const premium = await sendTextWithPremiumEmojis({
+            userId,
+            chatId: chat.chat_id,
+            text,
+            buttonRows: buttonRows.length ? buttonRows : undefined,
+          });
+          if (premium.applied) {
+            if (!premium.ok) throw new Error(premium.error);
+          } else
             await callTelegram<{ message_id: number }>(acc.bot_token, "sendMessage", {
               chat_id: chat.chat_id,
               text: botText,
               parse_mode: "HTML",
+              reply_markup: replyMarkup,
             });
-          else {
-            const premium = await sendTextWithPremiumEmojis({ userId, chatId: chat.chat_id, text });
-            if (premium.applied) {
-              if (!premium.ok) throw new Error(premium.error);
-            } else
-              await callTelegram<{ message_id: number }>(acc.bot_token, "sendMessage", {
-                chat_id: chat.chat_id,
-                text,
-                parse_mode: "HTML",
-              });
-          }
         }
       } else {
-        const premiumPhoto = replyMarkup
-          ? { applied: false as const, reason: "inline-buttons" }
-          : await sendPhotoWithPremiumEmojiCaption({
-              userId,
-              chatId: chat.chat_id,
-              photoUrl: pub.publicUrl,
-              caption: text,
-            });
+        const premiumPhoto = await sendPhotoWithPremiumEmojiCaption({
+          userId,
+          chatId: chat.chat_id,
+          photoUrl: pub.publicUrl,
+          caption: text,
+          buttonRows: buttonRows.length ? buttonRows : undefined,
+        });
         r = premiumPhoto.applied
           ? premiumPhoto.ok
             ? { ok: true, result: { message_id: premiumPhoto.messageId ?? undefined } }
@@ -285,9 +282,12 @@ export const sendRoomTest = createServerFn({ method: "POST" })
       }
     } else {
       if (!text) throw new Error("Mensagem vazia");
-      const premium = replyMarkup
-        ? { applied: false as const, reason: "inline-buttons" }
-        : await sendTextWithPremiumEmojis({ userId, chatId: chat.chat_id, text });
+      const premium = await sendTextWithPremiumEmojis({
+        userId,
+        chatId: chat.chat_id,
+        text,
+        buttonRows: buttonRows.length ? buttonRows : undefined,
+      });
       if (premium.applied) {
         if (!premium.ok) throw new Error(premium.error);
         r = { ok: true, result: { message_id: premium.messageId ?? undefined } };
