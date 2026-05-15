@@ -271,13 +271,14 @@ export async function sendTextWithPremiumEmojis(opts: {
         });
         return { applied: true, ok: true, messageId: Number(msg.id) };
       } catch (e) {
-        const error = e instanceof Error ? e.message : String(e);
+        const raw = e instanceof Error ? e.message : String(e);
+        const { message: error, reason } = translateMtprotoError(raw);
         logPremiumFallback(
           { where: "sendText.allowPlain", userId: opts.userId, accountId: acc.id, chatId: opts.chatId, text: opts.text, entitiesCount: 0 },
-          "client.sendMessage threw",
-          { error },
+          reason,
+          { rawError: raw },
         );
-        return { applied: true, ok: false, error, reason: "client-send-threw" };
+        return { applied: true, ok: false, error, reason };
       } finally {
         await client.disconnect().catch(() => {});
       }
