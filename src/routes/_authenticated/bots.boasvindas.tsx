@@ -63,7 +63,10 @@ function BoasVindasPage() {
   const [videoId, setVideoId] = useState<string>("");
   const [premiumEnabled, setPremiumEnabled] = useState(false);
   const [premiumAccountId, setPremiumAccountId] = useState<string>("");
+  const [roomPhotoError, setRoomPhotoError] = useState(false);
   const messageRef = useRef<HTMLTextAreaElement | null>(null);
+
+  useEffect(() => { setRoomPhotoError(false); }, [roomId]);
 
   useEffect(() => {
     const c = cfgQ.data;
