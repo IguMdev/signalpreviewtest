@@ -19,14 +19,14 @@ export const verifyAccount = createServerFn({ method: "POST" })
       const premium = await getPremiumAccountConnectionStatus(userId, acc.id);
       const premiumUpdate = premium.ok
         ? {
-            status: "ok",
+            status: "ok" as const,
             last_check_at: new Date().toISOString(),
             last_error: premium.isPremium ? null : "A conta conectada não tem Telegram Premium ativo.",
             bot_username: premium.username ?? null,
             bot_first_name: premium.firstName ?? null,
           }
         : {
-            status: "error",
+            status: "error" as const,
             last_check_at: new Date().toISOString(),
             last_error: premium.error,
           };
