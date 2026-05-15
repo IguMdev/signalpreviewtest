@@ -4,7 +4,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
-import { syncPremiumEmojis } from "@/lib/premium-account.functions";
+import { getPremiumEmojiThumbs, syncPremiumEmojis } from "@/lib/premium-account.functions";
+import { PremiumEmojiMedia } from "@/components/PremiumEmojiPicker";
 import {
   getCachedEmojis,
   putCachedEmojis,
@@ -57,68 +58,13 @@ function EmojiPreview({
   item: Pick<Captured, "thumb_data_url" | "thumb_mime" | "preview_char">;
   animate: boolean;
 }) {
-  const [failed, setFailed] = useState(false);
-
-  if (item.thumb_data_url && !failed) {
-    if (item.thumb_mime === "video/webm") {
-      if (!animate) {
-        // Modo estático: renderiza só o primeiro frame, sem decodificar o vídeo inteiro.
-        return (
-          <video
-            src={item.thumb_data_url}
-            muted
-            playsInline
-            preload="metadata"
-            className="size-12 object-contain"
-            onError={() => setFailed(true)}
-            onLoadedMetadata={(e) => {
-              const v = e.currentTarget;
-              v.currentTime = 0;
-              v.pause();
-            }}
-          />
-        );
-      }
-      return (
-        <video
-          src={item.thumb_data_url}
-          autoPlay
-          loop
-          muted
-          playsInline
-          className="size-12 object-contain"
-          onError={() => setFailed(true)}
-        />
-      );
-    }
-    if (item.thumb_mime && item.thumb_mime.startsWith("image/")) {
-      return (
-        <img
-          src={item.thumb_data_url}
-          alt="emoji"
-          className="size-12 object-contain"
-          onError={() => setFailed(true)}
-        />
-      );
-    }
-    // TGS (Lottie gzipped) — sem player nativo no browser, cai pro fallback unicode.
-  }
-
-  if (item.thumb_data_url && !item.thumb_mime && !failed) {
-    return (
-      <img
-        src={item.thumb_data_url}
-        alt="emoji"
-        className="size-12 object-contain"
-        onError={() => setFailed(true)}
-      />
-    );
-  }
-
-  return item.preview_char ? (
-    <div className="text-4xl leading-none">{item.preview_char}</div>
-  ) : (
-    <Zap className="size-7 text-amber-400" />
+  return (
+    <PremiumEmojiMedia
+      cached={item.thumb_data_url ? { custom_emoji_id: "", preview_char: item.preview_char, thumb_data_url: item.thumb_data_url, thumb_mime: item.thumb_mime, cached_at: 0 } : undefined}
+      fallback={item.preview_char}
+      className="size-12"
+      animate={animate}
+    />
   );
 }
 
@@ -141,6 +87,7 @@ function PremiumEmojisPage() {
     new Map(),
   );
   const syncEmojis = useServerFn(syncPremiumEmojis);
+  const fetchThumbs = useServerFn(getPremiumEmojiThumbs);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -176,8 +123,35 @@ function PremiumEmojisPage() {
   useEffect(() => {
     if (!list.data?.length) return;
     const ids = list.data.map((e) => e.custom_emoji_id);
-    getCachedEmojis(ids).then(setSavedThumbs);
-  }, [list.data]);
+    getCachedEmojis(ids).then(async (cached) => {
+      setSavedThumbs(cached);
+      const missing = ids.filter((id) => !cached.get(id)?.thumb_data_url);
+      if (!missing.length) return;
+      const fresh = await fetchThumbs({ data: { ids: missing } }).catch(() => null);
+      if (!fresh?.ok || !fresh.items.length) return;
+      await putCachedEmojis(
+        fresh.items.map((it) => ({
+          custom_emoji_id: it.custom_emoji_id,
+          preview_char: list.data.find((e) => e.custom_emoji_id === it.custom_emoji_id)?.preview_char ?? null,
+          thumb_data_url: it.thumb_data_url,
+          thumb_mime: it.thumb_mime,
+        })),
+      );
+      setSavedThumbs(
+        new Map([
+          ...cached,
+          ...fresh.items.map((it) => [
+            it.custom_emoji_id,
+            {
+              ...it,
+              preview_char: list.data.find((e) => e.custom_emoji_id === it.custom_emoji_id)?.preview_char ?? null,
+              cached_at: Date.now(),
+            } as CachedEmoji,
+          ] as const),
+        ]),
+      );
+    });
+  }, [list.data, fetchThumbs]);
 
   const updateMut = useMutation({
     mutationFn: async () => {

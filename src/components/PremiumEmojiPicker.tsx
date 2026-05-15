@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Sparkles, Search } from "lucide-react";
-import { getCachedEmojis, type CachedEmoji } from "@/lib/emoji-cache";
+import { getCachedEmojis, putCachedEmojis, type CachedEmoji } from "@/lib/emoji-cache";
+import { getPremiumEmojiThumbs } from "@/lib/premium-account.functions";
 
 type SavedEmoji = {
   id: string;
@@ -13,30 +15,6 @@ type SavedEmoji = {
   custom_emoji_id: string;
   preview_char: string | null;
 };
-
-function Thumb({ cached, fallback }: { cached?: CachedEmoji; fallback: string | null }) {
-  if (cached?.thumb_data_url) {
-    if (cached.thumb_mime === "video/webm") {
-      return (
-        <video
-          src={cached.thumb_data_url}
-          muted
-          playsInline
-          preload="metadata"
-          className="size-7 object-contain"
-          onLoadedMetadata={(e) => {
-            e.currentTarget.currentTime = 0;
-            e.currentTarget.pause();
-          }}
-        />
-      );
-    }
-    if (cached.thumb_mime?.startsWith("image/")) {
-      return <img src={cached.thumb_data_url} alt="" className="size-7 object-contain" />;
-    }
-  }
-  return <span className="text-xl leading-none">{fallback ?? "✨"}</span>;
-}
 
 /**
  * Insere texto na posição do cursor de um textarea/input controlado
@@ -63,6 +41,63 @@ export function insertAtCursor(
   });
 }
 
+async function decodeTgsDataUrl(dataUrl: string) {
+  const base64 = dataUrl.split(",")[1] ?? "";
+  const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
+  const win = window as typeof window & { DecompressionStream?: typeof DecompressionStream };
+  if (!win.DecompressionStream) return null;
+  const stream = new Blob([bytes]).stream().pipeThrough(new win.DecompressionStream("gzip"));
+  return JSON.parse(await new Response(stream).text()) as object;
+}
+
+function TgsEmojiMedia({ src, className, animate }: { src: string; className: string; animate: boolean }) {
+  const ref = useRef<HTMLDivElement | null>(null);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    if (!ref.current) return;
+    let destroyed = false;
+    let animation: { destroy: () => void; goToAndStop: (value: number, isFrame?: boolean) => void } | null = null;
+    decodeTgsDataUrl(src)
+      .then(async (animationData) => {
+        if (!animationData || destroyed || !ref.current) return setFailed(true);
+        const lottie = await import("lottie-web");
+        if (destroyed || !ref.current) return;
+        animation = lottie.default.loadAnimation({
+          container: ref.current,
+          renderer: "svg",
+          loop: animate,
+          autoplay: animate,
+          animationData,
+        });
+        if (!animate) animation.goToAndStop(0, true);
+      })
+      .catch(() => setFailed(true));
+    return () => {
+      destroyed = true;
+      animation?.destroy();
+    };
+  }, [src, animate]);
+
+  if (failed) return null;
+  return <div ref={ref} className={`${className} [&_svg]:!block`} />;
+}
+
+export function PremiumEmojiMedia({ cached, fallback, className = "size-7", animate = false }: { cached?: CachedEmoji; fallback: string | null; className?: string; animate?: boolean }) {
+  if (cached?.thumb_data_url) {
+    if (cached.thumb_mime === "video/webm") {
+      return <video src={cached.thumb_data_url} autoPlay={animate} loop={animate} muted playsInline preload="metadata" className={`${className} object-contain`} onLoadedMetadata={(e) => { if (!animate) { e.currentTarget.currentTime = 0; e.currentTarget.pause(); } }} />;
+    }
+    if (cached.thumb_mime?.startsWith("image/")) {
+      return <img src={cached.thumb_data_url} alt="" className={`${className} object-contain`} />;
+    }
+    if (cached.thumb_mime === "application/x-tgsticker") {
+      return <TgsEmojiMedia src={cached.thumb_data_url} className={className} animate={animate} />;
+    }
+  }
+  return <span className="text-xl leading-none">{fallback ?? "✨"}</span>;
+}
+
 type Props = {
   value: string;
   onChange: (v: string) => void;
@@ -75,6 +110,7 @@ export function PremiumEmojiPicker({ value, onChange, targetRef, size = "sm", cl
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
   const [thumbs, setThumbs] = useState<Map<string, CachedEmoji>>(new Map());
+  const fetchThumbs = useServerFn(getPremiumEmojiThumbs);
   const internalRef = useRef<HTMLTextAreaElement | HTMLInputElement | null>(null);
   const ref = targetRef ?? internalRef;
 
@@ -93,8 +129,17 @@ export function PremiumEmojiPicker({ value, onChange, targetRef, size = "sm", cl
 
   useEffect(() => {
     if (!list.data?.length) return;
-    getCachedEmojis(list.data.map((e) => e.custom_emoji_id)).then(setThumbs);
-  }, [list.data]);
+    const ids = list.data.map((e) => e.custom_emoji_id);
+    getCachedEmojis(ids).then(async (cached) => {
+      setThumbs(cached);
+      const missing = ids.filter((id) => !cached.get(id)?.thumb_data_url);
+      if (!missing.length) return;
+      const fresh = await fetchThumbs({ data: { ids: missing } }).catch(() => null);
+      if (!fresh?.ok || !fresh.items.length) return;
+      await putCachedEmojis(fresh.items.map((it) => ({ custom_emoji_id: it.custom_emoji_id, preview_char: list.data.find((e) => e.custom_emoji_id === it.custom_emoji_id)?.preview_char ?? null, thumb_data_url: it.thumb_data_url, thumb_mime: it.thumb_mime })));
+      setThumbs(new Map([...cached, ...fresh.items.map((it) => [it.custom_emoji_id, { ...it, preview_char: list.data.find((e) => e.custom_emoji_id === it.custom_emoji_id)?.preview_char ?? null, cached_at: Date.now() } as CachedEmoji] as const)]));
+    });
+  }, [list.data, fetchThumbs]);
 
   const filtered = useMemo(() => {
     const items = list.data ?? [];
@@ -152,7 +197,7 @@ export function PremiumEmojiPicker({ value, onChange, targetRef, size = "sm", cl
                     className="flex flex-col items-center justify-center gap-0.5 rounded-md p-1.5 hover:bg-accent transition"
                     title={`{${e.name}}`}
                   >
-                    <Thumb cached={thumbs.get(e.custom_emoji_id)} fallback={e.preview_char} />
+                    <PremiumEmojiMedia cached={thumbs.get(e.custom_emoji_id)} fallback={e.preview_char} />
                     <span className="text-[9px] font-mono uppercase truncate w-full text-center text-muted-foreground">
                       {e.name}
                     </span>
