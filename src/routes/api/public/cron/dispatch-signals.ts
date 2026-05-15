@@ -1,8 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { callTelegram } from "@/lib/telegram.server";
-import { sendTextWithPremiumEmojis } from "@/lib/premium-send.server";
-import { getUserEmojiLookup } from "@/lib/premium-send.server";
+import { getUserEmojiLookup, sendTextWithPremiumEmojis } from "@/lib/premium-send.server";
 import { renderEmojiTokensToHtml } from "@/lib/premium-emoji-render";
 import {
   buildSlots, categoryFor, getBinanceM1Candle, nowParts,
