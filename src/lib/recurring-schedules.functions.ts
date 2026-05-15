@@ -261,3 +261,162 @@ export const testSchedule = createServerFn({ method: "POST" })
     }
     return { ok: sent > 0, sent, failed, error: lastError };
   });
+
+const TestMessageInput = z.object({
+  roomId: z.string().uuid(),
+  accountId: z.string().uuid().nullable().optional(),
+  content: z.string().max(4000).nullable().optional(),
+  videoId: z.string().uuid().nullable().optional(),
+  imagePath: z.string().max(500).nullable().optional(),
+  imageMime: z.string().max(100).nullable().optional(),
+  parseMode: z.enum(["HTML", "Markdown", "MarkdownV2"]).default("HTML"),
+  isPremium: z.boolean().default(false),
+  buttonText: z.string().max(64).nullable().optional(),
+  buttonUrl: z.string().url().max(2048).nullable().optional(),
+});
+
+export const testMessage = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => TestMessageInput.parse(d))
+  .handler(async ({ data, context }) => {
+    const { userId } = context;
+
+    let accountId = data.accountId ?? null;
+    if (!accountId) {
+      const { data: room } = await supabaseAdmin
+        .from("rooms")
+        .select("default_account_id, user_id")
+        .eq("id", data.roomId)
+        .maybeSingle();
+      if (!room || room.user_id !== userId) throw new Error("Sala não encontrada");
+      accountId = (room.default_account_id as string | null) ?? null;
+    }
+    if (!accountId) throw new Error("Nenhuma conta de bot configurada");
+
+    const { data: acc } = await supabaseAdmin
+      .from("telegram_accounts")
+      .select("bot_token")
+      .eq("id", accountId)
+      .maybeSingle();
+    const { data: chats } = await supabaseAdmin
+      .from("room_chats")
+      .select("chat_id")
+      .eq("room_id", data.roomId);
+    if (!acc) throw new Error("Bot não encontrado");
+    if (!chats?.length) throw new Error("Nenhum grupo vinculado a esta sala");
+
+    let video: { storage_path: string; mime_type: string | null; duration_seconds: number | null; title: string; kind: string | null } | null = null;
+    if (data.videoId) {
+      const { data: v } = await supabaseAdmin
+        .from("videos")
+        .select("storage_path, mime_type, duration_seconds, title, kind")
+        .eq("id", data.videoId)
+        .maybeSingle();
+      video = v ?? null;
+    }
+
+    const replyMarkup =
+      data.buttonText && data.buttonUrl
+        ? { inline_keyboard: [[{ text: data.buttonText, url: data.buttonUrl }]] }
+        : undefined;
+    const isNormalVideo = video && video.kind === "normal";
+
+    let sent = 0;
+    let failed = 0;
+    let lastError: string | null = null;
+    for (const c of chats) {
+      let r: { ok: boolean; result?: { message_id?: number }; description?: string };
+      const premium =
+        data.isPremium && !data.imagePath && !video && data.content
+          ? await sendTextWithPremiumEmojis({
+              userId,
+              chatId: c.chat_id,
+              text: data.content,
+              strict: true,
+            })
+          : { applied: false as const, reason: "skip" };
+      if (premium.applied) {
+        r = premium.ok
+          ? { ok: true, result: { message_id: premium.messageId ?? undefined } }
+          : { ok: false, description: premium.error };
+      } else if (data.imagePath) {
+        const { data: pub } = supabaseAdmin.storage
+          .from("room-images")
+          .getPublicUrl(data.imagePath);
+        if (data.isPremium) {
+          const premiumPhoto = await sendPhotoWithPremiumEmojiCaption({
+            userId,
+            chatId: c.chat_id,
+            photoUrl: pub.publicUrl,
+            caption: data.content ?? null,
+            strict: true,
+          });
+          if (premiumPhoto.applied) {
+            r = premiumPhoto.ok
+              ? { ok: true, result: { message_id: premiumPhoto.messageId ?? undefined } }
+              : { ok: false, description: premiumPhoto.error };
+          } else {
+            r = await callTelegram<{ message_id: number }>(acc.bot_token, "sendPhoto", {
+              chat_id: c.chat_id,
+              photo: pub.publicUrl,
+              caption: data.content ?? undefined,
+              parse_mode: data.content ? data.parseMode : undefined,
+              reply_markup: replyMarkup,
+            });
+          }
+        } else {
+          r = await callTelegram<{ message_id: number }>(acc.bot_token, "sendPhoto", {
+            chat_id: c.chat_id,
+            photo: pub.publicUrl,
+            caption: data.content ?? undefined,
+            parse_mode: data.content ? data.parseMode : undefined,
+            reply_markup: replyMarkup,
+          });
+        }
+      } else if (video) {
+        if (isNormalVideo) {
+          r = await dispatchVideo({
+            botToken: acc.bot_token,
+            storagePath: video.storage_path,
+            chatId: c.chat_id,
+            duration: video.duration_seconds,
+            mimeType: video.mime_type,
+            filename: (video.title || "video").replace(/[^\w.-]+/g, "_") + ".mp4",
+            caption: data.content ?? null,
+            parseMode: data.parseMode,
+            replyMarkup,
+          });
+        } else {
+          r = await dispatchVideoNote({
+            botToken: acc.bot_token,
+            storagePath: video.storage_path,
+            chatId: c.chat_id,
+            duration: video.duration_seconds,
+            mimeType: video.mime_type,
+            filename: (video.title || "video").replace(/[^\w.-]+/g, "_") + ".mp4",
+          });
+        }
+      } else {
+        r = await callTelegram<{ message_id: number }>(acc.bot_token, "sendMessage", {
+          chat_id: c.chat_id,
+          text: data.content ?? "",
+          parse_mode: data.parseMode,
+          reply_markup: replyMarkup,
+        });
+      }
+      await supabaseAdmin.from("message_logs").insert({
+        user_id: userId,
+        account_id: accountId,
+        chat_id: c.chat_id,
+        ok: r.ok,
+        telegram_message_id: r.result?.message_id ?? null,
+        error: r.ok ? null : r.description ?? "erro",
+      } as never);
+      if (r.ok) sent++;
+      else {
+        failed++;
+        lastError = r.description ?? "erro";
+      }
+    }
+    return { ok: sent > 0, sent, failed, error: lastError };
+  });
