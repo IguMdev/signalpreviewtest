@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
@@ -54,6 +54,24 @@ import {
   Activity,
   KeyRound,
 } from "lucide-react";
+
+const PREMIUM_REASON_LABELS: Record<string, string> = {
+  "no-tokens": "A mensagem não contém tokens {NOME} para envio premium.",
+  "no-known-emojis": "Nenhum emoji premium salvo corresponde aos tokens.",
+  "no-premium-account": "Nenhuma conta Premium ativa conectada.",
+  "no-active-premium-account": "Conecte a conta Premium novamente.",
+  "account-not-premium": "A conta Telegram conectada não tem assinatura Premium ativa.",
+  "client-send-threw": "O cliente MTProto rejeitou o envio.",
+  "premium-send-failed": "Envio premium falhou.",
+};
+
+function reasonLabel(reason?: string | null) {
+  if (!reason) return null;
+  return PREMIUM_REASON_LABELS[reason] ?? reason;
+}
+
+const HAS_TOKEN_RE = /\{[^{}\n]{1,80}\}/;
+const AUTO_CHECK_KEY = "premium-auto-check-minutes";
 
 export const Route = createFileRoute("/_authenticated/telegram-accounts")({
   component: TelegramAccountsPage,
