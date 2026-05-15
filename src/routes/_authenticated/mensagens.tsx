@@ -694,13 +694,13 @@ function ScheduleDialog({
                   placeholder={
                     imagePath
                       ? "Legenda da imagem (opcional)"
-                      : "Texto da mensagem. Use {EMOJI:NOME} para emojis premium."
+                      : "Texto da mensagem. Use {NOME} para emojis premium."
                   }
                   disabled={!!videoId}
                 />
                 <p className="text-xs text-muted-foreground">
-                  Suporta HTML do Telegram: &lt;b&gt;, &lt;i&gt;, &lt;u&gt;, &lt;code&gt;. Para emojis premium (se ativados), use{" "}
-                  <code className="px-1 py-0.5 rounded bg-muted">{"{EMOJI:NOME}"}</code>.
+                  Suporta HTML do Telegram: &lt;b&gt;, &lt;i&gt;, &lt;u&gt;, &lt;code&gt;. Para emojis premium, use{" "}
+                  <code className="px-1 py-0.5 rounded bg-muted">{"{NOME}"}</code>.
                 </p>
               </div>
               <div className="space-y-2">
