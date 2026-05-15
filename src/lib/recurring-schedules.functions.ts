@@ -12,6 +12,7 @@ const FollowUpInput = z.object({
   content: z.string().max(4000).nullable().optional(),
   imagePath: z.string().max(500).nullable().optional(),
   imageMime: z.string().max(100).nullable().optional(),
+  videoId: z.string().uuid().nullable().optional(),
 });
 
 const ScheduleInput = z.object({
@@ -62,6 +63,7 @@ export const upsertSchedule = createServerFn({ method: "POST" })
         content: f.content ?? null,
         image_path: f.imagePath ?? null,
         image_mime: f.imageMime ?? null,
+        video_id: f.videoId ?? null,
       })),
       is_premium: data.isPremium,
       is_active: data.isActive,
