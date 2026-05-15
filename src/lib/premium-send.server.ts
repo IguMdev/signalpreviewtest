@@ -343,6 +343,11 @@ export async function sendPhotoWithPremiumEmojiCaption(opts: {
   const lookup = await getUserEmojiLookup(opts.userId);
   const rendered = renderEmojiTokens(opts.caption, lookup);
   if (!rendered.entities.length) {
+    logPremiumFallback(
+      { where: "sendPhoto", userId: opts.userId, accountId: opts.accountId, chatId: opts.chatId, text: opts.caption ?? "", entitiesCount: 0 },
+      "no-known-emojis",
+      { lookupSize: lookup.size },
+    );
     if (opts.strict) {
       return { applied: true, ok: false, error: "Nenhum emoji premium salvo corresponde aos tokens da legenda." };
     }
@@ -351,6 +356,10 @@ export async function sendPhotoWithPremiumEmojiCaption(opts: {
 
   const acc = await getActivePremiumAccount(opts.userId, opts.accountId);
   if (!acc) {
+    logPremiumFallback(
+      { where: "sendPhoto", userId: opts.userId, accountId: opts.accountId, chatId: opts.chatId, text: opts.caption ?? "", entitiesCount: rendered.entities.length },
+      "no-premium-account",
+    );
     if (opts.strict) {
       return { applied: true, ok: false, error: "Conecte uma conta Telegram Premium ativa para enviar emojis premium animados." };
     }
@@ -367,6 +376,10 @@ export async function sendPhotoWithPremiumEmojiCaption(opts: {
   });
   if (!isPremium) {
     await client.disconnect().catch(() => {});
+    logPremiumFallback(
+      { where: "sendPhoto", userId: opts.userId, accountId: acc.id, chatId: opts.chatId, text: opts.caption ?? "", entitiesCount: rendered.entities.length },
+      "account-not-premium",
+    );
     return {
       applied: true,
       ok: false,
@@ -378,6 +391,13 @@ export async function sendPhotoWithPremiumEmojiCaption(opts: {
   try {
     const normalized = await normalizeCustomEmojiAlts(client, rendered);
     const target = resolveTelegramTarget(opts.chatId);
+    console.log("[premium-send] sending photo", {
+      userId: opts.userId,
+      accountId: acc.id,
+      chatId: String(opts.chatId),
+      entitiesCount: normalized.entities.length,
+      docIds: normalized.entities.map((e) => e.documentId),
+    });
     const msg = await client.sendFile(target as never, {
       file: opts.photoUrl,
       caption: normalized.text,
@@ -393,10 +413,16 @@ export async function sendPhotoWithPremiumEmojiCaption(opts: {
     });
     return { applied: true, ok: true, messageId: Number(msg.id) };
   } catch (e) {
+    const error = e instanceof Error ? e.message : String(e);
+    logPremiumFallback(
+      { where: "sendPhoto", userId: opts.userId, accountId: acc.id, chatId: opts.chatId, text: opts.caption ?? "", entitiesCount: rendered.entities.length },
+      "client.sendFile threw",
+      { error },
+    );
     return {
       applied: true,
       ok: false,
-      error: e instanceof Error ? e.message : String(e),
+      error,
     };
   } finally {
     await client.disconnect().catch(() => {});
