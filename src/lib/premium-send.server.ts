@@ -90,7 +90,7 @@ function translateMtprotoError(raw: string): { message: string; reason: string }
   return { reason: "client-send-threw", message: raw };
 }
 
-async function getUserEmojiLookup(userId: string): Promise<EmojiLookup> {
+export async function getUserEmojiLookup(userId: string): Promise<EmojiLookup> {
   const { data: emojiRows } = await supabaseAdmin
     .from("premium_emojis")
     .select("name, custom_emoji_id, preview_char")
