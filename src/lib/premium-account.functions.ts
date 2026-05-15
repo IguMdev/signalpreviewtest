@@ -252,7 +252,12 @@ export const syncPremiumEmojis = createServerFn({ method: "POST" })
                   typeof ent.offset === "number" && typeof ent.length === "number"
                     ? text.substr(ent.offset, ent.length)
                     : null;
-                items.push({ custom_emoji_id: id, preview_char: preview, thumb_data_url: null });
+                items.push({
+                  custom_emoji_id: id,
+                  preview_char: preview,
+                  thumb_data_url: null,
+                  thumb_mime: null,
+                });
               }
             }
           }
@@ -260,7 +265,6 @@ export const syncPremiumEmojis = createServerFn({ method: "POST" })
           // ignora diálogos sem permissão de leitura
         }
       }
-      // Baixa o thumbnail real de cada custom emoji.
       if (items.length) {
         try {
           const { strippedPhotoToJpg } = await import("telegram/Utils");
@@ -270,6 +274,8 @@ export const syncPremiumEmojis = createServerFn({ method: "POST" })
             }),
           )) as unknown as Array<{
             id?: { toString(): string };
+            mimeType?: string;
+            size?: number | { toJSNumber(): number };
             thumbs?: Array<{ className?: string; type?: string; bytes?: Uint8Array }>;
           }>;
           for (const doc of docs ?? []) {
@@ -278,20 +284,34 @@ export const syncPremiumEmojis = createServerFn({ method: "POST" })
             const target = items.find((i) => i.custom_emoji_id === id);
             if (!target) continue;
 
-            const downloadableThumbs = (doc.thumbs ?? []).filter((t) => t.className !== "PhotoPathSize");
-            const downloaded = (await client.downloadMedia(doc as never, {
-              thumb: Math.max(downloadableThumbs.length - 1, 0),
-            }).catch(() => null)) as Buffer | null;
-            if (downloaded?.length) {
-              target.thumb_data_url = imageDataUrl(downloaded);
+            // Baixa o documento INTEIRO do custom emoji (WEBP / WebM / TGS).
+            // Documentos de custom emoji são pequenos (<100KB), seguro inlinar.
+            const fullBytes = (await client
+              .downloadMedia(doc as never)
+              .catch(() => null)) as Buffer | null;
+            if (fullBytes?.length) {
+              const detected = mediaDataUrl(fullBytes);
+              if (detected) {
+                target.thumb_data_url = detected.url;
+                target.thumb_mime = detected.mime;
+              }
             }
 
+            // Fallback: thumb estático embutido (PhotoStrippedSize/PhotoSize).
             if (!target.thumb_data_url) {
+              const downloadableThumbs = (doc.thumbs ?? []).filter(
+                (t) => t.className !== "PhotoPathSize",
+              );
               const embedded = downloadableThumbs.find((t) => t.bytes && t.bytes.length > 0);
               if (embedded?.bytes) {
                 const raw = Buffer.from(embedded.bytes);
-                const normalized = embedded.className === "PhotoStrippedSize" ? strippedPhotoToJpg(raw) : raw;
-                target.thumb_data_url = imageDataUrl(normalized);
+                const normalized =
+                  embedded.className === "PhotoStrippedSize" ? strippedPhotoToJpg(raw) : raw;
+                const detected = mediaDataUrl(normalized);
+                if (detected) {
+                  target.thumb_data_url = detected.url;
+                  target.thumb_mime = detected.mime;
+                }
               }
             }
           }
