@@ -5,9 +5,16 @@ import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
 import { syncPremiumEmojis } from "@/lib/premium-account.functions";
+import {
+  getCachedEmojis,
+  putCachedEmojis,
+  type CachedEmoji,
+} from "@/lib/emoji-cache";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -45,13 +52,33 @@ type Captured = {
 
 function EmojiPreview({
   item,
+  animate,
 }: {
   item: Pick<Captured, "thumb_data_url" | "thumb_mime" | "preview_char">;
+  animate: boolean;
 }) {
   const [failed, setFailed] = useState(false);
 
   if (item.thumb_data_url && !failed) {
     if (item.thumb_mime === "video/webm") {
+      if (!animate) {
+        // Modo estático: renderiza só o primeiro frame, sem decodificar o vídeo inteiro.
+        return (
+          <video
+            src={item.thumb_data_url}
+            muted
+            playsInline
+            preload="metadata"
+            className="size-12 object-contain"
+            onError={() => setFailed(true)}
+            onLoadedMetadata={(e) => {
+              const v = e.currentTarget;
+              v.currentTime = 0;
+              v.pause();
+            }}
+          />
+        );
+      }
       return (
         <video
           src={item.thumb_data_url}
@@ -74,7 +101,7 @@ function EmojiPreview({
         />
       );
     }
-    // TGS (Lottie gzipped) — sem player nativo, cai pro fallback unicode.
+    // TGS (Lottie gzipped) — sem player nativo no browser, cai pro fallback unicode.
   }
 
   if (item.thumb_data_url && !item.thumb_mime && !failed) {
@@ -106,7 +133,20 @@ function PremiumEmojisPage() {
   const [editEmojiId, setEditEmojiId] = useState("");
   const [captureStartedAt, setCaptureStartedAt] = useState<string | null>(null);
   const [captured, setCaptured] = useState<Captured[]>([]);
+  const [animate, setAnimate] = useState<boolean>(() => {
+    if (typeof window === "undefined") return true;
+    return localStorage.getItem("emoji-animate") !== "false";
+  });
+  const [savedThumbs, setSavedThumbs] = useState<Map<string, CachedEmoji>>(
+    new Map(),
+  );
   const syncEmojis = useServerFn(syncPremiumEmojis);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("emoji-animate", animate ? "true" : "false");
+    }
+  }, [animate]);
 
   const accounts = useQuery({
     queryKey: ["telegram-accounts", "premium"],
@@ -131,6 +171,13 @@ function PremiumEmojisPage() {
       return data;
     },
   });
+
+  // Hidrata thumbs dos emojis salvos a partir do IndexedDB.
+  useEffect(() => {
+    if (!list.data?.length) return;
+    const ids = list.data.map((e) => e.custom_emoji_id);
+    getCachedEmojis(ids).then(setSavedThumbs);
+  }, [list.data]);
 
   const updateMut = useMutation({
     mutationFn: async () => {
@@ -167,6 +214,15 @@ function PremiumEmojisPage() {
       thumb_mime?: string | null;
     }>,
   ) => {
+    // Persiste no cache local para não rebaixar.
+    void putCachedEmojis(
+      items.map((it) => ({
+        custom_emoji_id: it.custom_emoji_id,
+        preview_char: it.preview_char,
+        thumb_data_url: it.thumb_data_url ?? null,
+        thumb_mime: it.thumb_mime ?? null,
+      })),
+    );
     setCaptured((prev) => {
       const seen = new Set(prev.map((p) => p.custom_emoji_id));
       const merged = [...prev];
@@ -344,6 +400,14 @@ function PremiumEmojisPage() {
         />
       </div>
 
+      {/* Toggle animação vs estático */}
+      <div className="flex items-center justify-end gap-2">
+        <Switch id="animate-toggle" checked={animate} onCheckedChange={setAnimate} />
+        <Label htmlFor="animate-toggle" className="text-sm cursor-pointer">
+          {animate ? "Animado" : "Estático"}
+        </Label>
+      </div>
+
       {/* Emojis Capturados (pendentes) */}
       {captured.length > 0 && (
         <Card className="p-6">
@@ -372,7 +436,7 @@ function PremiumEmojisPage() {
                 key={item.custom_emoji_id}
                 className="rounded-lg border border-border bg-muted/20 p-5 flex flex-col items-center gap-3"
               >
-                <EmojiPreview item={item} />
+                <EmojiPreview item={item} animate={animate} />
                 <div className="text-xs text-muted-foreground break-all text-center">
                   ID: {item.custom_emoji_id}
                 </div>
@@ -424,7 +488,18 @@ function PremiumEmojisPage() {
               key={e.id}
               className="grid grid-cols-[100px_1fr_2fr_180px_100px] gap-4 px-6 py-3 border-b border-border last:border-0 items-center hover:bg-muted/20"
             >
-              <div className="text-3xl">{e.preview_char ?? "✨"}</div>
+              <div className="flex items-center justify-center size-12">
+                <EmojiPreview
+                  item={{
+                    preview_char: e.preview_char,
+                    thumb_data_url:
+                      savedThumbs.get(e.custom_emoji_id)?.thumb_data_url ?? null,
+                    thumb_mime:
+                      savedThumbs.get(e.custom_emoji_id)?.thumb_mime ?? null,
+                  }}
+                  animate={animate}
+                />
+              </div>
               <div>
                 {editingId === e.id ? (
                   <Input
