@@ -137,6 +137,7 @@ export const syncPremiumEmojis = createServerFn({ method: "POST" })
     if (error || !acc) throw new Error("Conta não encontrada");
     if (!acc.tg_session) throw new Error("Conecte a conta premium primeiro.");
     const { Api } = await import("telegram");
+    const { default: bigInt } = await import("big-integer");
     const client = await makeClient(
       acc.tg_api_id as number,
       acc.tg_api_hash as string,
@@ -160,7 +161,7 @@ export const syncPremiumEmojis = createServerFn({ method: "POST" })
           limit: 200,
           maxId: 0,
           minId: 0,
-          hash: 0 as unknown as bigint,
+          hash: bigInt(0),
         }),
       )) as unknown as {
         messages?: Array<{
