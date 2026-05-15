@@ -13,18 +13,6 @@ async function makeClient(apiId: number, apiHash: string, session = "") {
   return client;
 }
 
-function imageDataUrl(bytes: Buffer): string | null {
-  if (!bytes.length) return null;
-  const mime = bytes.subarray(0, 4).toString("hex").startsWith("ffd8")
-    ? "image/jpeg"
-    : bytes.subarray(0, 8).toString("hex") === "89504e470d0a1a0a"
-      ? "image/png"
-      : bytes.subarray(0, 4).toString("ascii") === "RIFF" && bytes.subarray(8, 12).toString("ascii") === "WEBP"
-        ? "image/webp"
-        : null;
-  return mime ? `data:${mime};base64,${bytes.toString("base64")}` : null;
-}
-
 function detectMime(bytes: Buffer): string | null {
   if (!bytes.length) return null;
   const hex4 = bytes.subarray(0, 4).toString("hex");
