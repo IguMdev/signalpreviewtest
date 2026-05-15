@@ -168,7 +168,10 @@ export const testSchedule = createServerFn({ method: "POST" })
     let failed = 0;
     let lastError: string | null = null;
     for (const c of chats) {
-      let r: { ok: boolean; result?: { message_id?: number }; description?: string };
+      let r: { ok: boolean; result?: { message_id?: number }; description?: string } = {
+        ok: false,
+        description: "no-op",
+      };
       const sAny = s as unknown as { button_text: string | null; button_url: string | null };
       const replyMarkup =
         sAny.button_text && sAny.button_url
