@@ -93,6 +93,7 @@ export const testWindow = createServerFn({ method: "POST" })
         userId: w.user_id,
         chatId: cid,
         text,
+        botToken,
       });
       if (premium.applied) {
         if (premium.ok && premium.messageId) ids[String(cid)] = premium.messageId;
