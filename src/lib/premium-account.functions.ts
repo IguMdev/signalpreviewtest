@@ -190,6 +190,7 @@ export const syncPremiumEmojis = createServerFn({ method: "POST" })
       custom_emoji_id: string;
       preview_char: string | null;
       thumb_data_url: string | null;
+      thumb_mime: string | null;
     }> = [];
     const sinceUnix = data.since ? Math.floor(new Date(data.since).getTime() / 1000) : 0;
     try {
