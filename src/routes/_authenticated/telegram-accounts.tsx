@@ -606,6 +606,15 @@ function TelegramAccountsPage() {
               </div>
               <Textarea value={testText} onChange={(e) => setTestText(e.target.value)} rows={4} />
             </div>
+            {testPremiumBlocked && (
+              <div className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
+                <p className="font-semibold">Envio premium bloqueado</p>
+                <p className="text-xs mt-0.5">{testBlockMessage}</p>
+                <p className="text-xs mt-1 opacity-80">
+                  Status atual: {testAccount?.status ?? "—"}. Verifique a conta antes de enviar emojis premium.
+                </p>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="ghost" onClick={() => setTestFor(null)}>Cancelar</Button>
@@ -619,10 +628,15 @@ function TelegramAccountsPage() {
                   toast.success("Mensagem enviada");
                   setTestFor(null);
                 } else {
-                  toast.error(r.error ?? "Falha");
+                  const reason = (r as { reason?: string }).reason;
+                  toast.error(r.error ?? "Falha", {
+                    description: reason
+                      ? `Motivo: ${reason} — ${reasonLabel(reason)}`
+                      : undefined,
+                  });
                 }
               }}
-              disabled={!testChat || !testText}
+              disabled={!testChat || !testText || testPremiumBlocked}
             >
               Enviar
             </Button>
