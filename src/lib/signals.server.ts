@@ -79,15 +79,21 @@ export function buildSlots(startHHMM: string, endHHMM: string, qty: number): str
   const end = toMin(endHHMM);
   const total = Math.max(0, end - start);
   if (qty <= 0 || total <= 0) return [];
-  const step = qty === 1 ? 0 : Math.floor(total / qty);
-  const slots: string[] = [];
-  for (let i = 0; i < qty; i++) {
-    const m = start + i * step;
+  // Disponibilidade real: cada minuto inteiro entre start e end (inclusive).
+  // Limita qty ao número de minutos disponíveis para evitar duplicatas.
+  const available = total + 1;
+  const effectiveQty = Math.min(qty, available);
+  const slots = new Set<string>();
+  for (let i = 0; i < effectiveQty; i++) {
+    // distribuição uniforme com arredondamento (cobre os extremos start e end)
+    const offset =
+      effectiveQty === 1 ? 0 : Math.round((i * total) / (effectiveQty - 1));
+    const m = start + offset;
     const hh = String(Math.floor(m / 60)).padStart(2, "0");
     const mm = String(m % 60).padStart(2, "0");
-    slots.push(`${hh}:${mm}`);
+    slots.add(`${hh}:${mm}`);
   }
-  return slots;
+  return Array.from(slots);
 }
 
 export function nowParts(tz: string) {
