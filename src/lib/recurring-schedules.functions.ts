@@ -4,6 +4,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { callTelegram } from "@/lib/telegram.server";
 import { dispatchVideoNote } from "@/lib/videos.functions";
+import { sendTextWithPremiumEmojis } from "@/lib/premium-send.server";
 
 const TimeRe = /^([01]\d|2[0-3]):[0-5]\d$/;
 
@@ -156,7 +157,20 @@ export const testSchedule = createServerFn({ method: "POST" })
     let failed = 0;
     let lastError: string | null = null;
     for (const c of chats) {
-      const r = s.image_path
+      let r: { ok: boolean; result?: { message_id?: number }; description?: string };
+      const premium =
+        !s.image_path && !video && s.content
+          ? await sendTextWithPremiumEmojis({
+              userId: s.user_id,
+              chatId: c.chat_id,
+              text: s.content,
+            })
+          : { applied: false as const, reason: "skip" };
+      if (premium.applied) {
+        r = premium.ok
+          ? { ok: true, result: { message_id: premium.messageId ?? undefined } }
+          : { ok: false, description: premium.error };
+      } else r = s.image_path
         ? await (async () => {
             const { data: pub } = supabaseAdmin.storage
               .from("room-images")
