@@ -1139,6 +1139,31 @@ function ScheduleDialog({
                             </SelectContent>
                           </Select>
                         </div>
+                        <div className="flex justify-end">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            disabled={testingPart === `fu-${idx}` || !roomId}
+                            onClick={() =>
+                              runPartTest(`fu-${idx}`, {
+                                content: f.content,
+                                videoId: f.videoId,
+                                imagePath: f.imagePath,
+                                imageMime: f.imageMime,
+                                buttonText: f.buttonText,
+                                buttonUrl: f.buttonUrl,
+                              })
+                            }
+                          >
+                            {testingPart === `fu-${idx}` ? (
+                              <Loader2 className="size-4 animate-spin" />
+                            ) : (
+                              <Send className="size-4" />
+                            )}
+                            Testar esta mensagem
+                          </Button>
+                        </div>
                       </div>
                     );
                   })}
