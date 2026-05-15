@@ -83,6 +83,55 @@ function renderTemplate(tpl: string, vars: Record<string, string>) {
   return tpl.replace(/\{(\w+)\}/g, (_, k) => vars[k] ?? "");
 }
 
+async function sendWelcomeBlock(opts: {
+  botToken: string;
+  chatId: number;
+  text: string;
+  parseMode: string;
+  buttonText: string | null | undefined;
+  buttonUrl: string | null | undefined;
+  imagePath: string | null | undefined;
+  videoId: string | null | undefined;
+}): Promise<{ ok: boolean; description?: string; mediaKind: "video_note" | "video" | "photo" | "text" }> {
+  const reply_markup = buildInlineButton(opts.buttonText, opts.buttonUrl);
+  const parse_mode = opts.parseMode || "HTML";
+
+  if (opts.videoId) {
+    const { data: vid } = await supabaseAdmin
+      .from("videos").select("storage_path, kind").eq("id", opts.videoId).maybeSingle();
+    if (vid?.storage_path) {
+      const url = publicUrl("videos", vid.storage_path);
+      const method = vid.kind === "round" ? "sendVideoNote" : "sendVideo";
+      const body: Record<string, unknown> = { chat_id: opts.chatId };
+      if (method === "sendVideoNote") body.video_note = url;
+      else { body.video = url; body.caption = opts.text; body.parse_mode = parse_mode; }
+      const resp = await callTelegram(opts.botToken, method, body);
+      if (method === "sendVideoNote") {
+        await callTelegram(opts.botToken, "sendMessage", { chat_id: opts.chatId, text: opts.text, parse_mode, reply_markup });
+      } else if (reply_markup) {
+        await callTelegram(opts.botToken, "sendMessage", { chat_id: opts.chatId, text: "\u2063", reply_markup });
+      }
+      return { ok: !!resp?.ok, description: resp?.description, mediaKind: method === "sendVideoNote" ? "video_note" : "video" };
+    }
+  }
+
+  if (opts.imagePath) {
+    const url = publicUrl("room-images", opts.imagePath);
+    const resp = await callTelegram(opts.botToken, "sendPhoto", {
+      chat_id: opts.chatId, photo: url, caption: opts.text, parse_mode, reply_markup,
+    });
+    return { ok: !!resp?.ok, description: resp?.description, mediaKind: "photo" };
+  }
+
+  const resp = await callTelegram(opts.botToken, "sendMessage", {
+    chat_id: opts.chatId, text: opts.text, parse_mode, reply_markup,
+    disable_web_page_preview: true,
+  });
+  return { ok: !!resp?.ok, description: resp?.description, mediaKind: "text" };
+}
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
 async function runWelcomeBot(opts: {
   userId: string;
   accountId: string;
@@ -144,67 +193,58 @@ async function runWelcomeBot(opts: {
 
   const reply_markup = buildInlineButton(cfg.welcome_button_text, cfg.welcome_button_url);
   const parse_mode = cfg.welcome_parse_mode ?? "HTML";
-  let mediaKind: "video_note" | "video" | "photo" | "text" = "text";
-  let resp: { ok: boolean; description?: string } | null = null;
+  void reply_markup;
 
-  // Video round (video_note) takes precedence > image > text
-  if (cfg.welcome_video_id) {
-    const { data: vid } = await supabaseAdmin
-      .from("videos")
-      .select("storage_path, kind")
-      .eq("id", cfg.welcome_video_id)
-      .maybeSingle();
-    if (vid?.storage_path) {
-      const url = publicUrl("videos", vid.storage_path);
-      const method = vid.kind === "round" ? "sendVideoNote" : "sendVideo";
-      const body: Record<string, unknown> = { chat_id: opts.chatId };
-      if (method === "sendVideoNote") body.video_note = url;
-      else { body.video = url; body.caption = text; body.parse_mode = parse_mode; }
-      mediaKind = method === "sendVideoNote" ? "video_note" : "video";
-      resp = await callTelegram(opts.botToken, method, body);
-      // companion text/button when video_note (no caption support)
-      if (method === "sendVideoNote") {
-        await callTelegram(opts.botToken, "sendMessage", { chat_id: opts.chatId, text, parse_mode, reply_markup });
-      } else if (reply_markup) {
-        await callTelegram(opts.botToken, "sendMessage", { chat_id: opts.chatId, text: "\u2063", reply_markup });
-      }
-      await logBot({
-        userId: opts.userId, accountId: opts.accountId, roomId: rc.room_id, botType: "boasvindas",
-        event: resp?.ok ? "sent" : "failed", chatId: opts.chatId, tgUserId: opts.user.id ?? null,
-        tgFirstName: opts.user.first_name ?? null, message: text,
-        error: resp?.ok ? null : (resp?.description ?? "telegram error"),
-        details: { media: mediaKind },
-      });
-      return;
-    }
-  }
-
-  if (cfg.welcome_image_path) {
-    const url = publicUrl("room-images", cfg.welcome_image_path);
-    resp = await callTelegram(opts.botToken, "sendPhoto", {
-      chat_id: opts.chatId, photo: url, caption: text, parse_mode, reply_markup,
-    });
-    await logBot({
-      userId: opts.userId, accountId: opts.accountId, roomId: rc.room_id, botType: "boasvindas",
-      event: resp?.ok ? "sent" : "failed", chatId: opts.chatId, tgUserId: opts.user.id ?? null,
-      tgFirstName: opts.user.first_name ?? null, message: text,
-      error: resp?.ok ? null : (resp?.description ?? "telegram error"),
-      details: { media: "photo" },
-    });
-    return;
-  }
-
-  resp = await callTelegram(opts.botToken, "sendMessage", {
-    chat_id: opts.chatId, text, parse_mode, reply_markup,
-    disable_web_page_preview: true,
+  const first = await sendWelcomeBlock({
+    botToken: opts.botToken,
+    chatId: opts.chatId,
+    text,
+    parseMode: parse_mode,
+    buttonText: cfg.welcome_button_text,
+    buttonUrl: cfg.welcome_button_url,
+    imagePath: cfg.welcome_image_path,
+    videoId: cfg.welcome_video_id,
   });
   await logBot({
     userId: opts.userId, accountId: opts.accountId, roomId: rc.room_id, botType: "boasvindas",
-    event: resp?.ok ? "sent" : "failed", chatId: opts.chatId, tgUserId: opts.user.id ?? null,
+    event: first.ok ? "sent" : "failed", chatId: opts.chatId, tgUserId: opts.user.id ?? null,
     tgFirstName: opts.user.first_name ?? null, message: text,
-    error: resp?.ok ? null : (resp?.description ?? "telegram error"),
-    details: { media: "text" },
+    error: first.ok ? null : (first.description ?? "telegram error"),
+    details: { media: first.mediaKind, step: 0 },
   });
+
+  // Sequência (mensagens extras)
+  const { data: extras } = await supabaseAdmin
+    .from("welcome_extra_messages" as never)
+    .select("*")
+    .eq("room_id", rc.room_id)
+    .order("sort_order", { ascending: true });
+  const list = (extras as any[] | null) ?? [];
+  for (let i = 0; i < list.length; i++) {
+    const ex = list[i];
+    const wait = Math.max(0, Math.min(300, Number(ex.delay_seconds ?? 2)));
+    if (wait > 0) await sleep(wait * 1000);
+    const body = renderTemplate(ex.content ?? "", {
+      name: mention, first_name: firstName, username: opts.user.username ?? "",
+    });
+    const r = await sendWelcomeBlock({
+      botToken: opts.botToken,
+      chatId: opts.chatId,
+      text: body,
+      parseMode: ex.parse_mode || "HTML",
+      buttonText: ex.button_text,
+      buttonUrl: ex.button_url,
+      imagePath: ex.image_path,
+      videoId: ex.video_id,
+    });
+    await logBot({
+      userId: opts.userId, accountId: opts.accountId, roomId: rc.room_id, botType: "boasvindas",
+      event: r.ok ? "sent" : "failed", chatId: opts.chatId, tgUserId: opts.user.id ?? null,
+      tgFirstName: opts.user.first_name ?? null, message: body,
+      error: r.ok ? null : (r.description ?? "telegram error"),
+      details: { media: r.mediaKind, step: i + 1 },
+    });
+  }
 }
 
 async function runForwarder(opts: {

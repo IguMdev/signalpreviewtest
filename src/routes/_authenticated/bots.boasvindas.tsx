@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { MessageCircle } from "lucide-react";
+import { MessageCircle, Plus, Trash2, ArrowUp, ArrowDown } from "lucide-react";
 import { toast } from "sonner";
 import { getWelcomeBotConfig, upsertWelcomeBotConfig } from "@/lib/engagement.functions";
 
@@ -205,6 +205,201 @@ function BoasVindasPage() {
           </CardContent>
         </Card>
       )}
+
+      {roomId && <ExtrasSection roomId={roomId} videos={videosQ.data ?? []} />}
+    </div>
+  );
+}
+
+type ExtraRow = {
+  id: string;
+  room_id: string;
+  user_id: string;
+  sort_order: number;
+  content: string | null;
+  image_path: string | null;
+  video_id: string | null;
+  button_text: string | null;
+  button_url: string | null;
+  delay_seconds: number;
+  parse_mode: string;
+};
+
+function ExtrasSection({ roomId, videos }: { roomId: string; videos: any[] }) {
+  const qc = useQueryClient();
+  const listQ = useQuery({
+    queryKey: ["welcome-extras", roomId],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from("welcome_extra_messages")
+        .select("*")
+        .eq("room_id", roomId)
+        .order("sort_order", { ascending: true });
+      if (error) throw new Error(error.message);
+      return (data ?? []) as ExtraRow[];
+    },
+  });
+
+  async function addExtra() {
+    const { data: u } = await supabase.auth.getUser();
+    const userId = u.user?.id;
+    if (!userId) return;
+    const nextOrder = (listQ.data?.length ?? 0) + 1;
+    const { error } = await (supabase as any).from("welcome_extra_messages").insert({
+      user_id: userId,
+      room_id: roomId,
+      sort_order: nextOrder,
+      content: "",
+      delay_seconds: 2,
+      parse_mode: "HTML",
+    });
+    if (error) { toast.error(error.message); return; }
+    qc.invalidateQueries({ queryKey: ["welcome-extras", roomId] });
+  }
+
+  async function removeExtra(id: string) {
+    const { error } = await (supabase as any).from("welcome_extra_messages").delete().eq("id", id);
+    if (error) { toast.error(error.message); return; }
+    qc.invalidateQueries({ queryKey: ["welcome-extras", roomId] });
+  }
+
+  async function move(id: string, dir: -1 | 1) {
+    const list = listQ.data ?? [];
+    const idx = list.findIndex((r) => r.id === id);
+    const swap = list[idx + dir];
+    if (!swap) return;
+    await (supabase as any).from("welcome_extra_messages").update({ sort_order: swap.sort_order }).eq("id", id);
+    await (supabase as any).from("welcome_extra_messages").update({ sort_order: list[idx].sort_order }).eq("id", swap.id);
+    qc.invalidateQueries({ queryKey: ["welcome-extras", roomId] });
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base flex items-center justify-between">
+          Sequência de mensagens
+          <Button size="sm" variant="outline" onClick={addExtra}>
+            <Plus className="size-4 mr-1" /> Adicionar mensagem
+          </Button>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {(listQ.data ?? []).length === 0 && (
+          <p className="text-sm text-muted-foreground">Nenhuma mensagem extra. A mensagem principal acima é enviada sozinha. Clique em "Adicionar mensagem" para criar uma sequência.</p>
+        )}
+        {(listQ.data ?? []).map((row, i) => (
+          <ExtraEditor
+            key={row.id}
+            row={row}
+            index={i}
+            total={(listQ.data ?? []).length}
+            videos={videos}
+            roomId={roomId}
+            onChanged={() => qc.invalidateQueries({ queryKey: ["welcome-extras", roomId] })}
+            onRemove={() => removeExtra(row.id)}
+            onMoveUp={() => move(row.id, -1)}
+            onMoveDown={() => move(row.id, 1)}
+          />
+        ))}
+      </CardContent>
+    </Card>
+  );
+}
+
+function ExtraEditor({
+  row, index, total, videos, roomId, onChanged, onRemove, onMoveUp, onMoveDown,
+}: {
+  row: ExtraRow;
+  index: number;
+  total: number;
+  videos: any[];
+  roomId: string;
+  onChanged: () => void;
+  onRemove: () => void;
+  onMoveUp: () => void;
+  onMoveDown: () => void;
+}) {
+  const [content, setContent] = useState(row.content ?? "");
+  const [imagePath, setImagePath] = useState(row.image_path ?? "");
+  const [videoId, setVideoId] = useState(row.video_id ?? "");
+  const [btnText, setBtnText] = useState(row.button_text ?? "");
+  const [btnUrl, setBtnUrl] = useState(row.button_url ?? "");
+  const [delay, setDelay] = useState(row.delay_seconds ?? 2);
+  const [saving, setSaving] = useState(false);
+
+  async function uploadImage(file: File) {
+    const ext = file.name.split(".").pop() ?? "jpg";
+    const path = `welcome/${roomId}/extra-${row.id}-${Date.now()}.${ext}`;
+    const { error } = await supabase.storage.from("room-images").upload(path, file, { upsert: true, contentType: file.type });
+    if (error) { toast.error(error.message); return; }
+    setImagePath(path);
+    toast.success("Imagem enviada");
+  }
+
+  async function save() {
+    setSaving(true);
+    const { error } = await (supabase as any).from("welcome_extra_messages").update({
+      content: content || null,
+      image_path: imagePath || null,
+      video_id: videoId || null,
+      button_text: btnText || null,
+      button_url: btnUrl || null,
+      delay_seconds: Math.max(0, Math.min(300, Number(delay) || 0)),
+    }).eq("id", row.id);
+    setSaving(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Salvo");
+    onChanged();
+  }
+
+  return (
+    <div className="rounded-xl border border-border/60 p-3 space-y-3 bg-muted/20">
+      <div className="flex items-center justify-between">
+        <div className="text-sm font-semibold">Mensagem #{index + 2}</div>
+        <div className="flex items-center gap-1">
+          <Button size="icon" variant="ghost" onClick={onMoveUp} disabled={index === 0}><ArrowUp className="size-4" /></Button>
+          <Button size="icon" variant="ghost" onClick={onMoveDown} disabled={index === total - 1}><ArrowDown className="size-4" /></Button>
+          <Button size="icon" variant="ghost" onClick={onRemove}><Trash2 className="size-4 text-destructive" /></Button>
+        </div>
+      </div>
+      <div className="grid grid-cols-[1fr_140px] gap-3 items-end">
+        <div className="space-y-1.5">
+          <Label>Texto</Label>
+          <Textarea value={content} onChange={(e) => setContent(e.target.value)} rows={3} maxLength={4000} />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Esperar (s)</Label>
+          <Input type="number" min={0} max={300} value={delay} onChange={(e) => setDelay(Number(e.target.value))} />
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1.5">
+          <Label>Imagem (opcional)</Label>
+          <Input type="file" accept="image/*" onChange={(e) => e.target.files?.[0] && uploadImage(e.target.files[0])} />
+          {imagePath && <p className="text-xs text-muted-foreground truncate">{imagePath} <button onClick={() => setImagePath("")} className="underline ml-2">remover</button></p>}
+        </div>
+        <div className="space-y-1.5">
+          <Label>Vídeo (opcional)</Label>
+          <Select value={videoId || "none"} onValueChange={(v) => setVideoId(v === "none" ? "" : v)}>
+            <SelectTrigger><SelectValue placeholder="Sem vídeo" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">Sem vídeo</SelectItem>
+              {videos.map((v: any) => <SelectItem key={v.id} value={v.id}>{v.title} {v.kind === "round" ? "(redondo)" : ""}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1.5">
+          <Label>Texto do botão</Label>
+          <Input value={btnText} onChange={(e) => setBtnText(e.target.value)} maxLength={100} />
+        </div>
+        <div className="space-y-1.5">
+          <Label>URL do botão</Label>
+          <Input value={btnUrl} onChange={(e) => setBtnUrl(e.target.value)} placeholder="https://..." />
+        </div>
+      </div>
+      <Button size="sm" onClick={save} disabled={saving}>{saving ? "Salvando..." : "Salvar mensagem"}</Button>
     </div>
   );
 }
