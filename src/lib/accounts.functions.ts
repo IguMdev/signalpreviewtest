@@ -153,7 +153,7 @@ export const sendRoomTest = createServerFn({ method: "POST" })
     z
       .object({
         roomId: z.string().uuid(),
-        templateKind: z.string().optional(),
+        templateKind: z.enum(["buy_direction", "entry", "event", "gain", "loss", "sell_direction", "signal", "win", "win_martingale"]).optional(),
         text: z.string().max(4000).optional(),
         imagePath: z.string().optional(),
         imageBucket: z.string().optional(),
