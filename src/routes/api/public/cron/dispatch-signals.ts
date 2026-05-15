@@ -25,6 +25,18 @@ type Template = {
   kind: string; content: string; parse_mode: string;
 };
 
+type TemplateButton = {
+  template_kind: string; label: string; url: string; sort_order: number;
+};
+
+function buildReplyMarkup(buttons: TemplateButton[], kind: string) {
+  const rows = buttons
+    .filter((b) => b.template_kind === kind && b.label && b.url)
+    .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+    .map((b) => [{ text: b.label, url: b.url }]);
+  return rows.length ? { inline_keyboard: rows } : undefined;
+}
+
 function fmtHHMM(d: Date, tz: string) {
   return new Intl.DateTimeFormat("en-GB", {
     timeZone: tz, hour: "2-digit", minute: "2-digit", hour12: false,
@@ -42,18 +54,24 @@ async function sendToRoom(opts: {
   text: string;
   parseMode: string;
   replyTo?: Record<string, number>; // chatId -> message_id
+  replyMarkup?: { inline_keyboard: { text: string; url: string }[][] };
 }): Promise<Record<string, number>> {
   const out: Record<string, number> = {};
   for (const cid of opts.chatIds) {
-    const premium = await sendTextWithPremiumEmojis({
-      userId: opts.userId,
-      chatId: cid,
-      text: opts.text,
-      replyToMessageId: opts.replyTo?.[String(cid)],
-    });
-    if (premium.applied) {
-      if (premium.ok && premium.messageId) out[String(cid)] = premium.messageId;
-      continue;
+    // Botões inline só funcionam via Bot API. Se houver botões, pula a rota
+    // premium MTProto (que não consegue anexar inline keyboard) e força o
+    // envio pelo bot — emojis premium ficam como caracteres normais.
+    if (!opts.replyMarkup) {
+      const premium = await sendTextWithPremiumEmojis({
+        userId: opts.userId,
+        chatId: cid,
+        text: opts.text,
+        replyToMessageId: opts.replyTo?.[String(cid)],
+      });
+      if (premium.applied) {
+        if (premium.ok && premium.messageId) out[String(cid)] = premium.messageId;
+        continue;
+      }
     }
     const r = await callTelegram<{ message_id: number }>(opts.botToken, "sendMessage", {
       chat_id: cid,
@@ -61,6 +79,7 @@ async function sendToRoom(opts: {
       parse_mode: opts.parseMode || "HTML",
       reply_to_message_id: opts.replyTo?.[String(cid)],
       allow_sending_without_reply: true,
+      reply_markup: opts.replyMarkup,
     });
     if (r.ok && r.result?.message_id) out[String(cid)] = r.result.message_id;
   }
@@ -78,6 +97,11 @@ async function getRoomContext(roomId: string) {
     .from("room_chats").select("chat_id").eq("room_id", roomId);
   const { data: tpls } = await supabaseAdmin
     .from("room_templates").select("kind, content, parse_mode").eq("room_id", roomId);
+  const { data: btns } = await supabaseAdmin
+    .from("room_template_buttons")
+    .select("template_kind, label, url, sort_order")
+    .eq("room_id", roomId)
+    .order("sort_order", { ascending: true });
   let botToken: string | null = null;
   if (room.default_account_id) {
     const { data: acc } = await supabaseAdmin
@@ -88,6 +112,7 @@ async function getRoomContext(roomId: string) {
     room: room as Room,
     chatIds: (chats ?? []).map((c) => Number(c.chat_id)),
     templates: (tpls ?? []) as Template[],
+    buttons: (btns ?? []) as TemplateButton[],
     botToken,
   };
 }
@@ -201,6 +226,7 @@ async function sendScheduled(): Promise<number> {
       chatIds: ctx.chatIds,
       text,
       parseMode: tpl.parse_mode,
+      replyMarkup: buildReplyMarkup(ctx.buttons, "signal"),
     });
 
     await supabaseAdmin.from("signal_events").update({
@@ -283,6 +309,7 @@ async function postResult(
     text,
     parseMode: tpl.parse_mode,
     replyTo,
+    replyMarkup: buildReplyMarkup(ctx.buttons, tplKind),
   });
 
   // se LOSS e ainda há gales disponíveis, encadeia próxima entrada
