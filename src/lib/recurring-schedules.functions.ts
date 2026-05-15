@@ -420,11 +420,7 @@ export const testMessage = createServerFn({ method: "POST" })
       video = v ?? null;
     }
 
-    const renderedBtnText = await renderButtonTextForUser(userId, data.buttonText ?? null);
-    const replyMarkup =
-      renderedBtnText && data.buttonUrl
-        ? { inline_keyboard: [[{ text: renderedBtnText, url: data.buttonUrl }]] }
-        : undefined;
+    const replyMarkup = undefined;
     const isNormalVideo = video && video.kind === "normal";
 
     // Auto-ativa caminho premium se houver tokens {NOME} no conteúdo,
