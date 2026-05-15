@@ -39,13 +39,45 @@ type Captured = {
   custom_emoji_id: string;
   preview_char: string | null;
   thumb_data_url: string | null;
+  thumb_mime: string | null;
   name: string;
 };
 
-function EmojiPreview({ item }: { item: Pick<Captured, "thumb_data_url" | "preview_char"> }) {
+function EmojiPreview({
+  item,
+}: {
+  item: Pick<Captured, "thumb_data_url" | "thumb_mime" | "preview_char">;
+}) {
   const [failed, setFailed] = useState(false);
 
   if (item.thumb_data_url && !failed) {
+    if (item.thumb_mime === "video/webm") {
+      return (
+        <video
+          src={item.thumb_data_url}
+          autoPlay
+          loop
+          muted
+          playsInline
+          className="size-12 object-contain"
+          onError={() => setFailed(true)}
+        />
+      );
+    }
+    if (item.thumb_mime && item.thumb_mime.startsWith("image/")) {
+      return (
+        <img
+          src={item.thumb_data_url}
+          alt="emoji"
+          className="size-12 object-contain"
+          onError={() => setFailed(true)}
+        />
+      );
+    }
+    // TGS (Lottie gzipped) — sem player nativo, cai pro fallback unicode.
+  }
+
+  if (item.thumb_data_url && !item.thumb_mime && !failed) {
     return (
       <img
         src={item.thumb_data_url}
@@ -132,6 +164,7 @@ function PremiumEmojisPage() {
       custom_emoji_id: string;
       preview_char: string | null;
       thumb_data_url?: string | null;
+      thumb_mime?: string | null;
     }>,
   ) => {
     setCaptured((prev) => {
@@ -143,6 +176,7 @@ function PremiumEmojisPage() {
             custom_emoji_id: it.custom_emoji_id,
             preview_char: it.preview_char,
             thumb_data_url: it.thumb_data_url ?? null,
+            thumb_mime: it.thumb_mime ?? null,
             name: "",
           });
         }

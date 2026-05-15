@@ -13,16 +13,28 @@ async function makeClient(apiId: number, apiHash: string, session = "") {
   return client;
 }
 
-function imageDataUrl(bytes: Buffer): string | null {
+function detectMime(bytes: Buffer): string | null {
   if (!bytes.length) return null;
-  const mime = bytes.subarray(0, 4).toString("hex").startsWith("ffd8")
-    ? "image/jpeg"
-    : bytes.subarray(0, 8).toString("hex") === "89504e470d0a1a0a"
-      ? "image/png"
-      : bytes.subarray(0, 4).toString("ascii") === "RIFF" && bytes.subarray(8, 12).toString("ascii") === "WEBP"
-        ? "image/webp"
-        : null;
-  return mime ? `data:${mime};base64,${bytes.toString("base64")}` : null;
+  const hex4 = bytes.subarray(0, 4).toString("hex");
+  const hex8 = bytes.subarray(0, 8).toString("hex");
+  if (hex4.startsWith("ffd8")) return "image/jpeg";
+  if (hex8 === "89504e470d0a1a0a") return "image/png";
+  if (
+    bytes.subarray(0, 4).toString("ascii") === "RIFF" &&
+    bytes.subarray(8, 12).toString("ascii") === "WEBP"
+  )
+    return "image/webp";
+  // WebM / Matroska EBML header: 1A 45 DF A3
+  if (hex4 === "1a45dfa3") return "video/webm";
+  // GZIP (TGS = gzipped Lottie JSON)
+  if (bytes[0] === 0x1f && bytes[1] === 0x8b) return "application/x-tgsticker";
+  return null;
+}
+
+function mediaDataUrl(bytes: Buffer): { url: string; mime: string } | null {
+  const mime = detectMime(bytes);
+  if (!mime) return null;
+  return { url: `data:${mime};base64,${bytes.toString("base64")}`, mime };
 }
 
 export const requestPremiumCode = createServerFn({ method: "POST" })
@@ -166,6 +178,7 @@ export const syncPremiumEmojis = createServerFn({ method: "POST" })
       custom_emoji_id: string;
       preview_char: string | null;
       thumb_data_url: string | null;
+      thumb_mime: string | null;
     }> = [];
     const sinceUnix = data.since ? Math.floor(new Date(data.since).getTime() / 1000) : 0;
     try {
@@ -227,7 +240,12 @@ export const syncPremiumEmojis = createServerFn({ method: "POST" })
                   typeof ent.offset === "number" && typeof ent.length === "number"
                     ? text.substr(ent.offset, ent.length)
                     : null;
-                items.push({ custom_emoji_id: id, preview_char: preview, thumb_data_url: null });
+                items.push({
+                  custom_emoji_id: id,
+                  preview_char: preview,
+                  thumb_data_url: null,
+                  thumb_mime: null,
+                });
               }
             }
           }
@@ -235,7 +253,6 @@ export const syncPremiumEmojis = createServerFn({ method: "POST" })
           // ignora diálogos sem permissão de leitura
         }
       }
-      // Baixa o thumbnail real de cada custom emoji.
       if (items.length) {
         try {
           const { strippedPhotoToJpg } = await import("telegram/Utils");
@@ -245,6 +262,8 @@ export const syncPremiumEmojis = createServerFn({ method: "POST" })
             }),
           )) as unknown as Array<{
             id?: { toString(): string };
+            mimeType?: string;
+            size?: number | { toJSNumber(): number };
             thumbs?: Array<{ className?: string; type?: string; bytes?: Uint8Array }>;
           }>;
           for (const doc of docs ?? []) {
@@ -253,20 +272,34 @@ export const syncPremiumEmojis = createServerFn({ method: "POST" })
             const target = items.find((i) => i.custom_emoji_id === id);
             if (!target) continue;
 
-            const downloadableThumbs = (doc.thumbs ?? []).filter((t) => t.className !== "PhotoPathSize");
-            const downloaded = (await client.downloadMedia(doc as never, {
-              thumb: Math.max(downloadableThumbs.length - 1, 0),
-            }).catch(() => null)) as Buffer | null;
-            if (downloaded?.length) {
-              target.thumb_data_url = imageDataUrl(downloaded);
+            // Baixa o documento INTEIRO do custom emoji (WEBP / WebM / TGS).
+            // Documentos de custom emoji são pequenos (<100KB), seguro inlinar.
+            const fullBytes = (await client
+              .downloadMedia(doc as never)
+              .catch(() => null)) as Buffer | null;
+            if (fullBytes?.length) {
+              const detected = mediaDataUrl(fullBytes);
+              if (detected) {
+                target.thumb_data_url = detected.url;
+                target.thumb_mime = detected.mime;
+              }
             }
 
+            // Fallback: thumb estático embutido (PhotoStrippedSize/PhotoSize).
             if (!target.thumb_data_url) {
+              const downloadableThumbs = (doc.thumbs ?? []).filter(
+                (t) => t.className !== "PhotoPathSize",
+              );
               const embedded = downloadableThumbs.find((t) => t.bytes && t.bytes.length > 0);
               if (embedded?.bytes) {
                 const raw = Buffer.from(embedded.bytes);
-                const normalized = embedded.className === "PhotoStrippedSize" ? strippedPhotoToJpg(raw) : raw;
-                target.thumb_data_url = imageDataUrl(normalized);
+                const normalized =
+                  embedded.className === "PhotoStrippedSize" ? strippedPhotoToJpg(raw) : raw;
+                const detected = mediaDataUrl(normalized);
+                if (detected) {
+                  target.thumb_data_url = detected.url;
+                  target.thumb_mime = detected.mime;
+                }
               }
             }
           }
