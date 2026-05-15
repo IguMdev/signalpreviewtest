@@ -394,17 +394,19 @@ function MensagensPage() {
                           onCheckedChange={(v) => toggleMut.mutate({ id: s.id, isActive: v })}
                         />
                         <Button
-                          size="icon"
-                          variant="ghost"
+                          size="sm"
+                          variant="outline"
                           title="Enviar teste agora"
                           onClick={() => testMut.mutate(s.id)}
                           disabled={testMut.isPending && testMut.variables === s.id}
+                          className="h-8"
                         >
                           {testMut.isPending && testMut.variables === s.id ? (
                             <Loader2 className="size-4 animate-spin" />
                           ) : (
                             <Send className="size-4" />
                           )}
+                          Testar
                         </Button>
                         <Button size="icon" variant="ghost" onClick={() => setEditing(s)}>
                           <Pencil className="size-4" />
