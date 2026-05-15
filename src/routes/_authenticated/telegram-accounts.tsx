@@ -256,6 +256,62 @@ function TelegramAccountsPage() {
   const [testChat, setTestChat] = useState("");
   const [testText, setTestText] = useState("Mensagem de teste do TelesinAIs - Automação Telegram 🚀");
 
+  // Verificação automática de Premium (configurável). Persistido em localStorage.
+  const [autoCheckMin, setAutoCheckMin] = useState<number>(() => {
+    if (typeof window === "undefined") return 5;
+    const stored = Number(window.localStorage.getItem(AUTO_CHECK_KEY));
+    return Number.isFinite(stored) && stored >= 1 ? stored : 5;
+  });
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(AUTO_CHECK_KEY, String(autoCheckMin));
+    }
+  }, [autoCheckMin]);
+
+  const premiumAccountIds = useMemo(
+    () =>
+      (accounts.data ?? [])
+        .filter((a) => a.account_type === "premium")
+        .map((a) => a.id as string),
+    [accounts.data],
+  );
+
+  useEffect(() => {
+    if (!premiumAccountIds.length || autoCheckMin <= 0) return;
+    let cancelled = false;
+    const run = async () => {
+      for (const id of premiumAccountIds) {
+        if (cancelled) return;
+        try {
+          await verify({ data: { accountId: id } });
+        } catch {
+          /* ignora — verify já grava last_error no DB */
+        }
+      }
+      if (!cancelled) qc.invalidateQueries({ queryKey: ["telegram-accounts"] });
+    };
+    const handle = window.setInterval(run, autoCheckMin * 60_000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(handle);
+    };
+  }, [premiumAccountIds, autoCheckMin, verify, qc]);
+
+  const testAccount = useMemo(
+    () => (testFor ? accounts.data?.find((a) => a.id === testFor) : undefined),
+    [testFor, accounts.data],
+  );
+  const testHasTokens = HAS_TOKEN_RE.test(testText);
+  const testIsPremium = testAccount?.account_type === "premium";
+  const testPremiumBlocked =
+    Boolean(testIsPremium) &&
+    testHasTokens &&
+    (testAccount?.status !== "ok" || Boolean(testAccount?.last_error));
+  const testBlockMessage = testPremiumBlocked
+    ? testAccount?.last_error ??
+      "Status Premium não está OK. Clique em Verificar antes de enviar."
+    : null;
+
   return (
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4 flex-wrap">
