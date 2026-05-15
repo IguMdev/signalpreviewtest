@@ -97,7 +97,7 @@ export async function renderPremiumEmojiTokensForBotApi(userId: string, text: st
 }
 
 async function normalizeCustomEmojiAlts(
-  client: { invoke: (request: unknown) => Promise<unknown> },
+  client: Awaited<ReturnType<typeof connectAndAssertPremium>>["client"],
   rendered: { text: string; entities: RenderedEntity[] },
 ) {
   if (!rendered.entities.length) return rendered;
@@ -260,6 +260,7 @@ export async function sendTextWithPremiumEmojis(opts: {
 
 export async function sendPhotoWithPremiumEmojiCaption(opts: {
   userId: string;
+  accountId?: string;
   chatId: number | string;
   photoUrl: string;
   caption: string | null | undefined;
@@ -279,7 +280,7 @@ export async function sendPhotoWithPremiumEmojiCaption(opts: {
     return { applied: false, reason: "no-known-emojis" };
   }
 
-  const acc = await getActivePremiumAccount(opts.userId);
+  const acc = await getActivePremiumAccount(opts.userId, opts.accountId);
   if (!acc) {
     if (opts.strict) {
       return { applied: true, ok: false, error: "Conecte uma conta Telegram Premium ativa para enviar emojis premium animados." };
@@ -306,11 +307,12 @@ export async function sendPhotoWithPremiumEmojiCaption(opts: {
   }
 
   try {
+    const normalized = await normalizeCustomEmojiAlts(client, rendered);
     const target = resolveTelegramTarget(opts.chatId);
     const msg = await client.sendFile(target as never, {
       file: opts.photoUrl,
-      caption: rendered.text,
-      formattingEntities: rendered.entities.map(
+      caption: normalized.text,
+      formattingEntities: normalized.entities.map(
         (entity) =>
           new Api.MessageEntityCustomEmoji({
             offset: entity.offset,
