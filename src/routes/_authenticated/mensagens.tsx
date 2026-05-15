@@ -126,7 +126,7 @@ function MensagensPage() {
   const videos = useQuery({
     queryKey: ["videos-min"],
     queryFn: async () =>
-      (await supabase.from("videos").select("id, title")).data ?? [],
+      (await supabase.from("videos").select("id, title, kind")).data ?? [],
   });
 
   const list = useQuery({
