@@ -18,6 +18,7 @@ import {
   Video,
   UserPlus,
   GraduationCap,
+  Megaphone,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -37,6 +38,7 @@ const navItems = [
   { to: "/mensagens", label: "Agendamentos", icon: CalendarClock, tour: "nav-mensagens" },
   { to: "/videos", label: "Vídeos", icon: Video, tour: "nav-videos" },
   { to: "/recarga", label: "Recarga", icon: Wallet, tour: "nav-recarga" },
+  { to: "/integracoes/meta", label: "Meta Pixel", icon: Megaphone, tour: "nav-meta" },
   { to: "/perfil", label: "Minha conta", icon: UserCircle, tour: "nav-perfil" },
 ] as const;
 

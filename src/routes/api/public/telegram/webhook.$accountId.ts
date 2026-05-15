@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createHash, timingSafeEqual } from "crypto";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { sendMetaEvent } from "@/lib/meta-capi.server";
 
 function safeEqual(a: string, b: string): boolean {
   const left = Buffer.from(a);
@@ -61,6 +62,26 @@ export const Route = createFileRoute("/api/public/telegram/webhook/$accountId")(
               new_status: cm.new_chat_member?.status ?? null,
               occurred_at: new Date((cm.date ?? Math.floor(Date.now() / 1000)) * 1000).toISOString(),
             });
+
+            // Dispara CompleteRegistration no Meta CAPI quando alguém entra
+            if (eventType === "join" && u.id) {
+              await sendMetaEvent({
+                userId: acc.user_id,
+                eventName: "CompleteRegistration",
+                eventId: `tg-join-${cm.chat.id}-${u.id}-${cm.date ?? Math.floor(Date.now() / 1000)}`,
+                actionSource: "system_generated",
+                userData: {
+                  externalId: u.id,
+                  firstName: u.first_name ?? null,
+                  lastName: u.last_name ?? null,
+                },
+                customData: {
+                  content_name: cm.chat.title ?? "Telegram group",
+                  content_ids: [String(cm.chat.id)],
+                  content_type: "telegram_group",
+                },
+              });
+            }
           }
         }
 
