@@ -127,7 +127,19 @@ export const testWindow = createServerFn({ method: "POST" })
         buttonRows: signalButtons.length ? signalButtons : undefined,
       });
       if (premium.applied) {
-        if (premium.ok && premium.messageId) ids[String(cid)] = premium.messageId;
+        if (premium.ok && premium.messageId) {
+          ids[String(cid)] = premium.messageId;
+          if (replyMarkup) {
+            await callTelegram<{ message_id: number }>(botToken, "sendMessage", {
+              chat_id: cid,
+              text: "👇",
+              parse_mode: "HTML",
+              reply_to_message_id: premium.messageId,
+              allow_sending_without_reply: true,
+              reply_markup: replyMarkup,
+            });
+          }
+        }
         else errors.push(`chat ${cid}: ${premium.ok ? "erro" : premium.error}`);
         continue;
       }
