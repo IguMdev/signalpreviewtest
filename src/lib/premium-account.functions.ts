@@ -150,44 +150,65 @@ export const syncPremiumEmojis = createServerFn({ method: "POST" })
       preview_char: string | null;
     }> = [];
     try {
-      // Lê as últimas mensagens de "Mensagens Salvas" (Saved Messages = peer "me")
-      // e extrai todos os custom emojis enviados pelo usuário.
-      const history = (await client.invoke(
-        new Api.messages.GetHistory({
-          peer: new Api.InputPeerSelf(),
-          offsetId: 0,
-          offsetDate: 0,
-          addOffset: 0,
-          limit: 200,
-          maxId: 0,
-          minId: 0,
-          hash: bigInt(0),
-        }),
-      )) as unknown as {
-        messages?: Array<{
-          message?: string;
-          entities?: Array<{ className?: string; documentId?: { toString(): string }; offset?: number; length?: number }>;
-        }>;
-      };
       const seen = new Set<string>();
-      for (const msg of history.messages ?? []) {
-        const text = msg.message ?? "";
-        for (const ent of msg.entities ?? []) {
-          if (ent.className === "MessageEntityCustomEmoji" && ent.documentId) {
-            const id = String(ent.documentId);
-            if (seen.has(id)) continue;
-            seen.add(id);
-            const preview =
-              typeof ent.offset === "number" && typeof ent.length === "number"
-                ? text.substr(ent.offset, ent.length)
-                : null;
-            rows.push({
-              user_id: userId,
-              custom_emoji_id: id,
-              name: preview || id,
-              preview_char: preview,
-            });
+
+      // Itera por todos os diálogos recentes (grupos, canais, privados, saved)
+      // e coleta custom emojis das últimas mensagens de cada um.
+      const dialogs = (await client.getDialogs({ limit: 50 })) as unknown as Array<{
+        inputEntity?: unknown;
+      }>;
+
+      const peers: unknown[] = [new Api.InputPeerSelf()];
+      for (const d of dialogs) {
+        if (d.inputEntity) peers.push(d.inputEntity);
+      }
+
+      for (const peer of peers) {
+        try {
+          const history = (await client.invoke(
+            new Api.messages.GetHistory({
+              peer: peer as never,
+              offsetId: 0,
+              offsetDate: 0,
+              addOffset: 0,
+              limit: 100,
+              maxId: 0,
+              minId: 0,
+              hash: bigInt(0),
+            }),
+          )) as unknown as {
+            messages?: Array<{
+              message?: string;
+              entities?: Array<{
+                className?: string;
+                documentId?: { toString(): string };
+                offset?: number;
+                length?: number;
+              }>;
+            }>;
+          };
+          for (const msg of history.messages ?? []) {
+            const text = msg.message ?? "";
+            for (const ent of msg.entities ?? []) {
+              if (ent.className === "MessageEntityCustomEmoji" && ent.documentId) {
+                const id = String(ent.documentId);
+                if (seen.has(id)) continue;
+                seen.add(id);
+                const preview =
+                  typeof ent.offset === "number" && typeof ent.length === "number"
+                    ? text.substr(ent.offset, ent.length)
+                    : null;
+                rows.push({
+                  user_id: userId,
+                  custom_emoji_id: id,
+                  name: preview || id,
+                  preview_char: preview,
+                });
+              }
+            }
           }
+        } catch {
+          // ignora diálogos sem permissão de leitura
         }
       }
     } finally {
