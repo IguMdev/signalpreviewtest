@@ -421,6 +421,16 @@ function MensagensPage() {
                           )}
                           Testar
                         </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          title="Duplicar agendamento"
+                          onClick={() => openDuplicate(s)}
+                          className="h-8"
+                        >
+                          <Copy className="size-4" />
+                          Duplicar
+                        </Button>
                         <Button size="icon" variant="ghost" onClick={() => setEditing(s)}>
                           <Pencil className="size-4" />
                         </Button>
