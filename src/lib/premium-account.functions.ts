@@ -150,10 +150,8 @@ export const syncPremiumEmojis = createServerFn({ method: "POST" })
       acc.tg_api_hash as string,
       acc.tg_session as string,
     );
-    const rows: Array<{
-      user_id: string;
+    const items: Array<{
       custom_emoji_id: string;
-      name: string;
       preview_char: string | null;
     }> = [];
     const sinceUnix = data.since ? Math.floor(new Date(data.since).getTime() / 1000) : 0;
@@ -216,12 +214,7 @@ export const syncPremiumEmojis = createServerFn({ method: "POST" })
                   typeof ent.offset === "number" && typeof ent.length === "number"
                     ? text.substr(ent.offset, ent.length)
                     : null;
-                rows.push({
-                  user_id: userId,
-                  custom_emoji_id: id,
-                  name: preview || id,
-                  preview_char: preview,
-                });
+                items.push({ custom_emoji_id: id, preview_char: preview });
               }
             }
           }
@@ -232,12 +225,14 @@ export const syncPremiumEmojis = createServerFn({ method: "POST" })
     } finally {
       await client.disconnect().catch(() => {});
     }
-    if (rows.length === 0) return { ok: true, count: 0 };
-    // upsert por (user_id, custom_emoji_id) — sem unique, fazemos delete+insert simples
-    await supabase.from("premium_emojis").delete().eq("user_id", userId);
-    const { error: insErr } = await supabase.from("premium_emojis").insert(rows);
-    if (insErr) throw new Error(insErr.message);
-    return { ok: true, count: rows.length };
+    // Filtra IDs que o usuário já salvou — não retorna duplicados
+    const { data: existing } = await supabase
+      .from("premium_emojis")
+      .select("custom_emoji_id")
+      .eq("user_id", userId);
+    const known = new Set((existing ?? []).map((r) => r.custom_emoji_id));
+    const fresh = items.filter((i) => !known.has(i.custom_emoji_id));
+    return { ok: true, items: fresh, count: fresh.length };
   });
 
 export const sendPremiumMessage = createServerFn({ method: "POST" })
