@@ -529,6 +529,8 @@ function ScheduleDialog({
   const [title, setTitle] = useState("");
   const testFn = useServerFn(testSchedule);
   const [testing, setTesting] = useState(false);
+  const testMsgFn = useServerFn(testMessage);
+  const [testingPart, setTestingPart] = useState<string | null>(null);
   const [roomId, setRoomId] = useState("");
   const [accountId, setAccountId] = useState<string>("");
   const [content, setContent] = useState("");
