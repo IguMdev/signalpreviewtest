@@ -36,7 +36,9 @@ import {
   Loader2,
   ImageIcon,
   X,
+  Sparkles,
 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 
 export type QuickTemplate = {
   id: string;
@@ -414,12 +416,18 @@ function QuickSendDialog({
     content: string;
     parseMode: "HTML" | "Markdown" | "MarkdownV2";
     premium: boolean;
+    imagePathOverride?: string | null;
+    removeImage?: boolean;
   }) => Promise<void>;
 }) {
   const [content, setContent] = useState(tpl.content);
   const [roomId, setRoomId] = useState<string>(tpl.default_room_id ?? "");
   const [accountId, setAccountId] = useState<string>(tpl.default_account_id ?? "");
   const [submitting, setSubmitting] = useState(false);
+  const [premium, setPremium] = useState(false);
+  const [imagePath, setImagePath] = useState<string | null>(tpl.image_path);
+  const [uploading, setUploading] = useState(false);
+  const removed = imagePath === null && tpl.image_path !== null;
 
   useEffect(() => {
     if (!roomId) return;
@@ -427,9 +435,30 @@ function QuickSendDialog({
     if (r?.default_account_id && !accountId) setAccountId(r.default_account_id);
   }, [roomId, rooms, accountId]);
 
-  const previewUrl = tpl.image_path
-    ? supabase.storage.from("room-images").getPublicUrl(tpl.image_path).data.publicUrl
+  const previewUrl = imagePath
+    ? supabase.storage.from("room-images").getPublicUrl(imagePath).data.publicUrl
     : null;
+
+  async function handleUpload(file: File) {
+    setUploading(true);
+    try {
+      const { data: u } = await supabase.auth.getUser();
+      const uid = u.user?.id;
+      if (!uid) throw new Error("Sessão expirada");
+      const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
+      const path = `quick/${uid}/${Date.now()}.${ext}`;
+      const { error } = await supabase.storage
+        .from("room-images")
+        .upload(path, file, { contentType: file.type, upsert: false });
+      if (error) throw error;
+      setImagePath(path);
+      toast.success("Imagem carregada");
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setUploading(false);
+    }
+  }
 
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
@@ -475,16 +504,57 @@ function QuickSendDialog({
             </div>
           </div>
 
-          {previewUrl && (
-            <div>
-              <Label>Imagem do modelo</Label>
-              <img
-                src={previewUrl}
-                alt=""
-                className="rounded-md max-h-40 border border-border mt-1"
-              />
+          <div>
+            <Label>Imagem</Label>
+            {previewUrl ? (
+              <div className="relative inline-block mt-1">
+                <img
+                  src={previewUrl}
+                  alt=""
+                  className="rounded-md max-h-40 border border-border"
+                />
+                <button
+                  type="button"
+                  onClick={() => setImagePath(null)}
+                  className="absolute -top-2 -right-2 bg-background border border-border rounded-full p-1"
+                  title="Remover imagem deste envio"
+                >
+                  <X className="size-3" />
+                </button>
+              </div>
+            ) : (
+              <label className="inline-flex items-center gap-2 px-3 py-2 rounded-md border border-dashed border-border/70 text-sm cursor-pointer hover:bg-secondary/40 mt-1">
+                {uploading ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <ImageIcon className="size-4" />
+                )}
+                <span>{uploading ? "Enviando..." : "Selecionar imagem"}</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) handleUpload(f);
+                  }}
+                />
+              </label>
+            )}
+          </div>
+
+          <div className="flex items-center justify-between rounded-md border border-border/60 px-3 py-2">
+            <div className="flex items-center gap-2 text-sm">
+              <Sparkles className="size-4 text-primary" />
+              <div>
+                <div className="font-medium">Emojis premium</div>
+                <div className="text-xs text-muted-foreground">
+                  Renderiza emojis premium via conta MTProto (se configurada).
+                </div>
+              </div>
             </div>
-          )}
+            <Switch checked={premium} onCheckedChange={setPremium} />
+          </div>
 
           <div>
             <Label>Conteúdo</Label>
@@ -517,7 +587,9 @@ function QuickSendDialog({
                   accountId,
                   content,
                   parseMode: (tpl.parse_mode as "HTML" | "Markdown" | "MarkdownV2") || "HTML",
-                  premium: false,
+                  premium,
+                  imagePathOverride: imagePath,
+                  removeImage: removed,
                 });
               } finally {
                 setSubmitting(false);
