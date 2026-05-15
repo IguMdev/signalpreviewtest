@@ -153,6 +153,7 @@ export const syncPremiumEmojis = createServerFn({ method: "POST" })
     const items: Array<{
       custom_emoji_id: string;
       preview_char: string | null;
+      thumb_data_url: string | null;
     }> = [];
     const sinceUnix = data.since ? Math.floor(new Date(data.since).getTime() / 1000) : 0;
     try {
@@ -214,12 +215,40 @@ export const syncPremiumEmojis = createServerFn({ method: "POST" })
                   typeof ent.offset === "number" && typeof ent.length === "number"
                     ? text.substr(ent.offset, ent.length)
                     : null;
-                items.push({ custom_emoji_id: id, preview_char: preview });
+                items.push({ custom_emoji_id: id, preview_char: preview, thumb_data_url: null });
               }
             }
           }
         } catch {
           // ignora diálogos sem permissão de leitura
+        }
+      }
+      // Baixa o thumbnail (preview estático) de cada custom emoji
+      if (items.length) {
+        try {
+          const docs = (await client.invoke(
+            new Api.messages.GetCustomEmojiDocuments({
+              documentId: items.map((i) => bigInt(i.custom_emoji_id) as never),
+            }),
+          )) as unknown as Array<{
+            id?: { toString(): string };
+            mimeType?: string;
+            thumbs?: Array<{ type?: string; bytes?: Uint8Array }>;
+          }>;
+          for (const doc of docs ?? []) {
+            const id = doc.id ? String(doc.id) : null;
+            if (!id) continue;
+            const target = items.find((i) => i.custom_emoji_id === id);
+            if (!target) continue;
+            // Pega thumb estático (geralmente WEBP) embutido no Document
+            const thumb = (doc.thumbs ?? []).find((t) => t.bytes && t.bytes.length > 0);
+            if (thumb?.bytes) {
+              const b64 = Buffer.from(thumb.bytes).toString("base64");
+              target.thumb_data_url = `data:image/webp;base64,${b64}`;
+            }
+          }
+        } catch {
+          // se falhar, segue sem thumb
         }
       }
     } finally {
