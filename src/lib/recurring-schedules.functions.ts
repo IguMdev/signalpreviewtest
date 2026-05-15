@@ -4,7 +4,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { callTelegram } from "@/lib/telegram.server";
 import { dispatchVideoNote } from "@/lib/videos.functions";
-import { sendTextWithPremiumEmojis } from "@/lib/premium-send.server";
+import { renderPremiumEmojiTokensForBotApi, sendTextWithPremiumEmojis } from "@/lib/premium-send.server";
 
 const TimeRe = /^([01]\d|2[0-3]):[0-5]\d$/;
 
@@ -113,7 +113,7 @@ export const testSchedule = createServerFn({ method: "POST" })
     const { data: s, error } = await supabaseAdmin
       .from("recurring_schedules")
       .select(
-        "id, user_id, room_id, account_id, content, video_id, image_path, image_mime, parse_mode",
+        "id, user_id, room_id, account_id, content, video_id, image_path, image_mime, parse_mode, is_premium",
       )
       .eq("id", data.id)
       .maybeSingle();
@@ -159,7 +159,7 @@ export const testSchedule = createServerFn({ method: "POST" })
     for (const c of chats) {
       let r: { ok: boolean; result?: { message_id?: number }; description?: string };
       const premium =
-        !s.image_path && !video && s.content
+        s.is_premium && !s.image_path && !video && s.content
           ? await sendTextWithPremiumEmojis({
               userId: s.user_id,
               chatId: c.chat_id,
@@ -175,14 +175,17 @@ export const testSchedule = createServerFn({ method: "POST" })
             const { data: pub } = supabaseAdmin.storage
               .from("room-images")
               .getPublicUrl(s.image_path!);
+            const caption = s.is_premium
+              ? await renderPremiumEmojiTokensForBotApi(s.user_id, s.content)
+              : { text: s.content, replaced: false };
             return await callTelegram<{ message_id: number }>(
               acc.bot_token,
               "sendPhoto",
               {
                 chat_id: c.chat_id,
                 photo: pub.publicUrl,
-                caption: s.content ?? undefined,
-                parse_mode: s.content ? s.parse_mode : undefined,
+                caption: caption.text ?? undefined,
+                parse_mode: caption.text ? "HTML" : undefined,
               },
             );
           })()

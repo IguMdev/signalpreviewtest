@@ -3,7 +3,7 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { callTelegram } from "@/lib/telegram.server";
 import { dispatchVideoNote } from "@/lib/videos.functions";
 import { triggerSignalReactions } from "@/lib/engagement.functions";
-import { sendTextWithPremiumEmojis } from "@/lib/premium-send.server";
+import { renderPremiumEmojiTokensForBotApi, sendTextWithPremiumEmojis } from "@/lib/premium-send.server";
 
 function nowParts(tz: string) {
   const fmt = new Intl.DateTimeFormat("en-GB", {
@@ -34,6 +34,7 @@ type Schedule = {
   image_path: string | null;
   image_mime: string | null;
   parse_mode: string;
+  is_premium: boolean;
   times: string[];
   weekdays: number[];
   weekday_overrides: Record<string, string[]> | null;
@@ -50,6 +51,7 @@ type Schedule = {
 
 type PendingFollowup = {
   id: string;
+  schedule_id: string | null;
   user_id: string;
   room_id: string;
   account_id: string | null;
@@ -63,9 +65,9 @@ type PendingFollowup = {
 async function sendOne(
   botToken: string | null | undefined,
   chatId: number | string,
-  msg: { content: string | null; image_path: string | null; parse_mode: string; user_id?: string },
+  msg: { content: string | null; image_path: string | null; parse_mode: string; user_id?: string; is_premium?: boolean },
 ): Promise<{ ok: boolean; result?: { message_id?: number }; description?: string }> {
-  if (!msg.image_path && msg.content && msg.user_id) {
+  if (!msg.image_path && msg.content && msg.user_id && msg.is_premium) {
     const premium = await sendTextWithPremiumEmojis({
       userId: msg.user_id,
       chatId,
@@ -79,11 +81,14 @@ async function sendOne(
   }
   if (msg.image_path) {
     const { data: pub } = supabaseAdmin.storage.from("room-images").getPublicUrl(msg.image_path);
+    const caption = msg.is_premium && msg.user_id
+      ? await renderPremiumEmojiTokensForBotApi(msg.user_id, msg.content)
+      : { text: msg.content, replaced: false };
     return await callTelegram<{ message_id: number }>(botToken, "sendPhoto", {
       chat_id: chatId,
       photo: pub.publicUrl,
-      caption: msg.content ?? undefined,
-      parse_mode: msg.content ? msg.parse_mode : undefined,
+      caption: caption.text ?? undefined,
+      parse_mode: caption.text ? "HTML" : undefined,
     });
   }
   return await callTelegram<{ message_id: number }>(botToken, "sendMessage", {
@@ -100,7 +105,7 @@ export const Route = createFileRoute("/api/public/cron/dispatch-recurring")({
         const { data: schedules, error } = await supabaseAdmin
           .from("recurring_schedules")
           .select(
-            "id, user_id, room_id, account_id, content, video_id, image_path, image_mime, parse_mode, times, weekdays, weekday_overrides, follow_ups, timezone, last_fire_key",
+            "id, user_id, room_id, account_id, content, video_id, image_path, image_mime, parse_mode, is_premium, times, weekdays, weekday_overrides, follow_ups, timezone, last_fire_key",
           )
           .eq("is_active", true);
         if (error) {
@@ -169,7 +174,7 @@ export const Route = createFileRoute("/api/public/cron/dispatch-recurring")({
           for (const c of chats) {
             let r: { ok: boolean; result?: { message_id?: number }; description?: string };
             const premium =
-              !s.image_path && !video && s.content
+              s.is_premium && !s.image_path && !video && s.content
                 ? await sendTextWithPremiumEmojis({
                     userId: s.user_id,
                     chatId: c.chat_id,
@@ -185,14 +190,17 @@ export const Route = createFileRoute("/api/public/cron/dispatch-recurring")({
                   const { data: pub } = supabaseAdmin.storage
                     .from("room-images")
                     .getPublicUrl(s.image_path!);
+                const caption = s.is_premium
+                  ? await renderPremiumEmojiTokensForBotApi(s.user_id, s.content)
+                  : { text: s.content, replaced: false };
                   return await callTelegram<{ message_id: number }>(
                     acc.bot_token,
                     "sendPhoto",
                     {
                       chat_id: c.chat_id,
                       photo: pub.publicUrl,
-                      caption: s.content ?? undefined,
-                      parse_mode: s.content ? s.parse_mode : undefined,
+                    caption: caption.text ?? undefined,
+                    parse_mode: caption.text ? "HTML" : undefined,
                     },
                   );
                 })()
@@ -262,7 +270,7 @@ export const Route = createFileRoute("/api/public/cron/dispatch-recurring")({
         const nowIso = new Date().toISOString();
         const { data: pendings } = await supabaseAdmin
           .from("recurring_pending_followups")
-          .select("id, user_id, room_id, account_id, content, image_path, image_mime, video_id, parse_mode")
+          .select("id, schedule_id, user_id, room_id, account_id, content, image_path, image_mime, video_id, parse_mode")
           .eq("status", "pending")
           .lte("scheduled_at", nowIso)
           .limit(100);
@@ -323,6 +331,14 @@ export const Route = createFileRoute("/api/public/cron/dispatch-recurring")({
               .maybeSingle();
             video = v ?? null;
           }
+          const { data: parentSchedule } = p.schedule_id
+            ? await supabaseAdmin
+                .from("recurring_schedules")
+                .select("is_premium")
+                .eq("id", p.schedule_id)
+                .maybeSingle()
+            : { data: null };
+          const isPremium = Boolean(parentSchedule?.is_premium);
           for (const c of chats) {
             const r = video
               ? await dispatchVideoNote({
@@ -338,6 +354,7 @@ export const Route = createFileRoute("/api/public/cron/dispatch-recurring")({
                   image_path: p.image_path,
                   parse_mode: p.parse_mode,
                   user_id: p.user_id,
+                  is_premium: isPremium,
                 });
             await supabaseAdmin.from("message_logs").insert({
               user_id: p.user_id,
