@@ -17,19 +17,22 @@ export const verifyAccount = createServerFn({ method: "POST" })
     if (error || !acc) throw new Error("Conta não encontrada");
     if (acc.account_type === "premium") {
       const premium = await getPremiumAccountConnectionStatus(userId, acc.id);
+      const premiumUpdate = premium.ok
+        ? {
+            status: "ok",
+            last_check_at: new Date().toISOString(),
+            last_error: premium.isPremium ? null : "A conta conectada não tem Telegram Premium ativo.",
+            bot_username: premium.username ?? null,
+            bot_first_name: premium.firstName ?? null,
+          }
+        : {
+            status: "error",
+            last_check_at: new Date().toISOString(),
+            last_error: premium.error,
+          };
       await supabase
         .from("telegram_accounts")
-        .update({
-          status: premium.ok ? "ok" : "error",
-          last_check_at: new Date().toISOString(),
-          last_error: premium.ok
-            ? premium.isPremium
-              ? null
-              : "A conta conectada não tem Telegram Premium ativo."
-            : premium.error,
-          bot_username: premium.ok ? premium.username ?? null : undefined,
-          bot_first_name: premium.ok ? premium.firstName ?? null : undefined,
-        })
+        .update(premiumUpdate)
         .eq("id", acc.id);
       if (!premium.ok) return { ok: false, error: premium.error };
       if (!premium.isPremium) return { ok: false, error: "A conta conectada não tem Telegram Premium ativo." };
