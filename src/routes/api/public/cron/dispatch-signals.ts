@@ -117,7 +117,19 @@ async function sendToRoom(opts: {
       buttonRows: opts.replyMarkup?.inline_keyboard,
     });
     if (premium.applied) {
-      if (premium.ok && premium.messageId) out[String(cid)] = premium.messageId;
+      if (premium.ok && premium.messageId) {
+        out[String(cid)] = premium.messageId;
+        if (opts.replyMarkup) {
+          await callTelegram<{ message_id: number }>(opts.botToken, "sendMessage", {
+            chat_id: cid,
+            text: "👇",
+            parse_mode: "HTML",
+            reply_to_message_id: premium.messageId,
+            allow_sending_without_reply: true,
+            reply_markup: opts.replyMarkup,
+          });
+        }
+      }
       continue;
     }
     const botText = opts.replyMarkup ? await renderBotApiText(opts.userId, opts.text) : opts.text;
