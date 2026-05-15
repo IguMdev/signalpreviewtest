@@ -302,7 +302,20 @@ function RoomsPage() {
                         : <span className="text-muted-foreground">—</span>}
                     </TableCell>
                     <TableCell className="text-sm">
-                      {acc?.bot_first_name ?? acc?.label ?? <span className="text-muted-foreground">—</span>}
+                      {acc ? (
+                        <div className="flex items-center gap-2 min-w-0">
+                          <div
+                            className="size-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0"
+                            style={{ backgroundColor: stringToColor(acc.id) }}
+                            title={acc.label}
+                          >
+                            {getInitials(acc.bot_first_name || acc.label)}
+                          </div>
+                          <span className="truncate">{acc.bot_first_name ?? acc.label}</span>
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2 min-w-0">
