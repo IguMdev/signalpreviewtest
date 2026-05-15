@@ -476,20 +476,41 @@ function ExtraEditor({
           <Switch checked={premiumEnabled} onCheckedChange={setPremiumEnabled} />
         </div>
         {premiumEnabled && (
-          <Select value={premiumAccountId || "none"} onValueChange={(v) => setPremiumAccountId(v === "none" ? "" : v)}>
-            <SelectTrigger><SelectValue placeholder="Selecione uma conta premium" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">Selecione...</SelectItem>
-              {premiumAccounts.map((a: any) => {
-                const handle = a.bot_username ? `@${a.bot_username}` : a.phone || "";
-                return (
-                  <SelectItem key={a.id} value={a.id}>
-                    {a.label}{handle ? ` — ${handle}` : ""}{a.status !== "ok" ? ` (${a.status})` : ""}
-                  </SelectItem>
-                );
-              })}
-            </SelectContent>
-          </Select>
+          <div className="space-y-1.5">
+            <Select value={premiumAccountId || "none"} onValueChange={(v) => setPremiumAccountId(v === "none" ? "" : v)}>
+              <SelectTrigger><SelectValue placeholder="Selecione uma conta premium" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Selecione...</SelectItem>
+                {premiumAccounts.map((a: any) => {
+                  const handle = a.bot_username ? `@${a.bot_username}` : a.phone || "";
+                  return (
+                    <SelectItem key={a.id} value={a.id}>
+                      {a.label}{handle ? ` — ${handle}` : ""}{a.status !== "ok" ? ` (${a.status})` : ""}
+                    </SelectItem>
+                  );
+                })}
+              </SelectContent>
+            </Select>
+            {premiumAccountId && (() => {
+              const acc = premiumAccounts.find((a: any) => a.id === premiumAccountId) as any;
+              if (!acc) return null;
+              const handle = acc.bot_username ? `@${acc.bot_username}` : acc.phone || "";
+              return (
+                <div className="flex items-center gap-2 mt-1">
+                  <div
+                    className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0"
+                    style={{ backgroundColor: stringToColor(acc.id) }}
+                    title={acc.label}
+                  >
+                    {getInitials(acc.label)}
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">
+                    Conectada como <span className="font-medium text-foreground">{acc.label}</span>{handle ? ` (${handle})` : ""}.
+                  </p>
+                </div>
+              );
+            })()}
+          </div>
         )}
       </div>
       <Button size="sm" onClick={save} disabled={saving}>{saving ? "Salvando..." : "Salvar mensagem"}</Button>
