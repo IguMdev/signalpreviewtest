@@ -176,7 +176,7 @@ function DashboardPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Olá{stats.data?.name ? `, ${stats.data.name}` : ""}</h1>
-        <p className="text-muted-foreground text-sm">Visão geral da sua sala de sinais.</p>
+        <p className="text-muted-foreground text-sm">Visão geral da sua automação Telegram.</p>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

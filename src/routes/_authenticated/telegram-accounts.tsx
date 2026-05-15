@@ -229,7 +229,7 @@ function TelegramAccountsPage() {
 
   const [testFor, setTestFor] = useState<string | null>(null);
   const [testChat, setTestChat] = useState("");
-  const [testText, setTestText] = useState("Mensagem de teste do Sala de Sinais 🚀");
+  const [testText, setTestText] = useState("Mensagem de teste do TelesinAIs - Automação Telegram 🚀");
 
   return (
     <div className="space-y-6">
