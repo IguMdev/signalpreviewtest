@@ -217,6 +217,13 @@ export const testSchedule = createServerFn({ method: "POST" })
             text: s.content ?? "",
             parse_mode: s.parse_mode,
           });
+      if (video && r.ok && s.content && s.content.trim()) {
+        await callTelegram<{ message_id: number }>(acc.bot_token, "sendMessage", {
+          chat_id: c.chat_id,
+          text: s.content,
+          parse_mode: s.parse_mode,
+        });
+      }
       await supabaseAdmin.from("message_logs").insert({
         user_id: userId,
         account_id: accountId,
