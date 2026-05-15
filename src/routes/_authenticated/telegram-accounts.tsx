@@ -700,17 +700,34 @@ function AccountCard({
   const limit = a.daily_limit || 1000;
   const pct = Math.min(100, (used / limit) * 100);
 
+  const avatarQ = useQuery({
+    queryKey: ["premium-avatar", a.id],
+    queryFn: () => getPremiumAccountAvatar({ data: { accountId: a.id } }),
+    enabled: isPremium && a.status === "ok",
+    staleTime: 1000 * 60 * 60,
+    refetchOnWindowFocus: false,
+  });
+  const avatarUrl = avatarQ.data?.dataUrl ?? null;
+
   return (
     <div className="rounded-2xl border border-border bg-card p-5 space-y-4 hover:border-primary/40 transition">
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-2">
-          <div
-            className={`size-10 rounded-xl grid place-items-center ${
-              isPremium ? "bg-amber-500/10 text-amber-500" : "bg-primary/10 text-primary"
-            }`}
-          >
-            {isPremium ? <UserCircle className="size-5" /> : <Bot className="size-5" />}
-          </div>
+          {isPremium && avatarUrl ? (
+            <img
+              src={avatarUrl}
+              alt={a.label}
+              className="size-10 rounded-xl object-cover border border-amber-500/30"
+            />
+          ) : (
+            <div
+              className={`size-10 rounded-xl grid place-items-center ${
+                isPremium ? "bg-amber-500/10 text-amber-500" : "bg-primary/10 text-primary"
+              }`}
+            >
+              {isPremium ? <UserCircle className="size-5" /> : <Bot className="size-5" />}
+            </div>
+          )}
           <span
             className={`text-xs font-medium px-2 py-0.5 rounded-full ${
               isPremium
