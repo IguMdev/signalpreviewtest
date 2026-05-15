@@ -622,7 +622,13 @@ export type Database = {
           updated_at: string
           user_id: string
           welcome_bot_enabled: boolean
+          welcome_button_text: string | null
+          welcome_button_url: string | null
+          welcome_image_mime: string | null
+          welcome_image_path: string | null
           welcome_message: string | null
+          welcome_parse_mode: string
+          welcome_video_id: string | null
         }
         Insert: {
           auto_members_enabled?: boolean
@@ -641,7 +647,13 @@ export type Database = {
           updated_at?: string
           user_id: string
           welcome_bot_enabled?: boolean
+          welcome_button_text?: string | null
+          welcome_button_url?: string | null
+          welcome_image_mime?: string | null
+          welcome_image_path?: string | null
           welcome_message?: string | null
+          welcome_parse_mode?: string
+          welcome_video_id?: string | null
         }
         Update: {
           auto_members_enabled?: boolean
@@ -660,7 +672,13 @@ export type Database = {
           updated_at?: string
           user_id?: string
           welcome_bot_enabled?: boolean
+          welcome_button_text?: string | null
+          welcome_button_url?: string | null
+          welcome_image_mime?: string | null
+          welcome_image_path?: string | null
           welcome_message?: string | null
+          welcome_parse_mode?: string
+          welcome_video_id?: string | null
         }
         Relationships: []
       }
