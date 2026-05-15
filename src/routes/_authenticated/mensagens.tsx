@@ -880,6 +880,31 @@ function ScheduleDialog({
                   </SelectContent>
                 </Select>
               </div>
+              <div className="flex justify-end pt-1">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={testingPart === "main" || !roomId}
+                  onClick={() =>
+                    runPartTest("main", {
+                      content,
+                      videoId,
+                      imagePath,
+                      imageMime,
+                      buttonText,
+                      buttonUrl,
+                    })
+                  }
+                >
+                  {testingPart === "main" ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <Send className="size-4" />
+                  )}
+                  Testar esta mensagem
+                </Button>
+              </div>
             </Card>
 
             {/* Follow-ups */}
