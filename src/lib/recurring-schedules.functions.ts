@@ -424,9 +424,10 @@ export const testMessage = createServerFn({ method: "POST" })
       video = v ?? null;
     }
 
+    const renderedBtnText = await renderButtonTextForUser(userId, data.buttonText ?? null);
     const replyMarkup =
-      data.buttonText && data.buttonUrl
-        ? { inline_keyboard: [[{ text: data.buttonText, url: data.buttonUrl }]] }
+      renderedBtnText && data.buttonUrl
+        ? { inline_keyboard: [[{ text: renderedBtnText, url: data.buttonUrl }]] }
         : undefined;
     const isNormalVideo = video && video.kind === "normal";
 
