@@ -238,6 +238,7 @@ export type Database = {
         Row: {
           access_token: string
           created_at: string
+          event_mappings: Json
           id: string
           is_active: boolean
           pixel_id: string
@@ -248,6 +249,7 @@ export type Database = {
         Insert: {
           access_token: string
           created_at?: string
+          event_mappings?: Json
           id?: string
           is_active?: boolean
           pixel_id: string
@@ -258,6 +260,7 @@ export type Database = {
         Update: {
           access_token?: string
           created_at?: string
+          event_mappings?: Json
           id?: string
           is_active?: boolean
           pixel_id?: string

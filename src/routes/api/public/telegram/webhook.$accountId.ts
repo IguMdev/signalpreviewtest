@@ -64,23 +64,33 @@ export const Route = createFileRoute("/api/public/telegram/webhook/$accountId")(
             });
 
             // Dispara CompleteRegistration no Meta CAPI quando alguém entra
-            if (eventType === "join" && u.id) {
-              await sendMetaEvent({
-                userId: acc.user_id,
-                eventName: "CompleteRegistration",
-                eventId: `tg-join-${cm.chat.id}-${u.id}-${cm.date ?? Math.floor(Date.now() / 1000)}`,
-                actionSource: "system_generated",
-                userData: {
-                  externalId: u.id,
-                  firstName: u.first_name ?? null,
-                  lastName: u.last_name ?? null,
-                },
-                customData: {
-                  content_name: cm.chat.title ?? "Telegram group",
-                  content_ids: [String(cm.chat.id)],
-                  content_type: "telegram_group",
-                },
-              });
+            // Dispara evento configurado no Meta CAPI conforme escolha do usuário
+            if (u.id) {
+              const { data: integ } = await supabaseAdmin
+                .from("meta_integrations")
+                .select("event_mappings, is_active")
+                .eq("user_id", acc.user_id)
+                .maybeSingle();
+              const mappings = (integ?.event_mappings ?? {}) as Record<string, string>;
+              const chosen = mappings[eventType];
+              if (integ?.is_active && chosen && chosen !== "off") {
+                await sendMetaEvent({
+                  userId: acc.user_id,
+                  eventName: chosen,
+                  eventId: `tg-${eventType}-${cm.chat.id}-${u.id}-${cm.date ?? Math.floor(Date.now() / 1000)}`,
+                  actionSource: "system_generated",
+                  userData: {
+                    externalId: u.id,
+                    firstName: u.first_name ?? null,
+                    lastName: u.last_name ?? null,
+                  },
+                  customData: {
+                    content_name: cm.chat.title ?? "Telegram group",
+                    content_ids: [String(cm.chat.id)],
+                    content_type: "telegram_group",
+                  },
+                });
+              }
             }
           }
         }
