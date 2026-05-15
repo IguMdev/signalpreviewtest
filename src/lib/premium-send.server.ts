@@ -5,6 +5,7 @@ import {
   renderEmojiTokensToHtml,
   type EmojiLookup,
 } from "./premium-emoji-render";
+import { callTelegram } from "./telegram.server";
 
 export type PremiumSendResult =
   | { applied: true; ok: true; messageId: number | null }
@@ -43,6 +44,15 @@ async function getActivePremiumAccount(userId: string) {
 function resolveTelegramTarget(chatId: number | string) {
   const numeric = typeof chatId === "string" ? Number(chatId) : chatId;
   return Number.isFinite(numeric) ? (numeric as number) : chatId;
+}
+
+function toBotApiCustomEmojiEntities(entities: Array<{ offset: number; length: number; documentId: string }>) {
+  return entities.map((entity) => ({
+    type: "custom_emoji",
+    offset: entity.offset,
+    length: entity.length,
+    custom_emoji_id: entity.documentId,
+  }));
 }
 
 /**
@@ -101,6 +111,7 @@ export async function sendTextWithPremiumEmojis(opts: {
   userId: string;
   chatId: number | string;
   text: string;
+  botToken?: string | null;
   replyToMessageId?: number;
   strict?: boolean;
 }): Promise<PremiumSendResult> {
@@ -116,6 +127,19 @@ export async function sendTextWithPremiumEmojis(opts: {
       return { applied: true, ok: false, error: "Nenhum emoji premium salvo corresponde aos tokens da mensagem." };
     }
     return { applied: false, reason: "no-known-emojis" };
+  }
+
+  if (opts.botToken) {
+    const r = await callTelegram<{ message_id: number }>(opts.botToken, "sendMessage", {
+      chat_id: opts.chatId,
+      text: rendered.text,
+      entities: toBotApiCustomEmojiEntities(rendered.entities),
+      reply_to_message_id: opts.replyToMessageId,
+      allow_sending_without_reply: true,
+    });
+    return r.ok
+      ? { applied: true, ok: true, messageId: r.result?.message_id ?? null }
+      : { applied: true, ok: false, error: r.description ?? "Falha ao enviar emoji premium pelo Telegram." };
   }
 
   const acc = await getActivePremiumAccount(opts.userId);
@@ -175,6 +199,7 @@ export async function sendPhotoWithPremiumEmojiCaption(opts: {
   chatId: number | string;
   photoUrl: string;
   caption: string | null | undefined;
+  botToken?: string | null;
   replyToMessageId?: number;
   strict?: boolean;
 }): Promise<PremiumSendResult> {
@@ -189,6 +214,20 @@ export async function sendPhotoWithPremiumEmojiCaption(opts: {
       return { applied: true, ok: false, error: "Nenhum emoji premium salvo corresponde aos tokens da legenda." };
     }
     return { applied: false, reason: "no-known-emojis" };
+  }
+
+  if (opts.botToken) {
+    const r = await callTelegram<{ message_id: number }>(opts.botToken, "sendPhoto", {
+      chat_id: opts.chatId,
+      photo: opts.photoUrl,
+      caption: rendered.text,
+      caption_entities: toBotApiCustomEmojiEntities(rendered.entities),
+      reply_to_message_id: opts.replyToMessageId,
+      allow_sending_without_reply: true,
+    });
+    return r.ok
+      ? { applied: true, ok: true, messageId: r.result?.message_id ?? null }
+      : { applied: true, ok: false, error: r.description ?? "Falha ao enviar legenda com emoji premium pelo Telegram." };
   }
 
   const acc = await getActivePremiumAccount(opts.userId);
