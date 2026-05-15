@@ -137,10 +137,13 @@ export function PremiumEmojiPicker({ value, onChange, targetRef, size = "sm", cl
         return !item?.thumb_data_url || item.thumb_mime === "application/x-tgsticker";
       });
       if (!missing.length) return;
-      const fresh = await fetchThumbs({ data: { ids: missing } }).catch(() => null);
-      if (!fresh?.ok || !fresh.items.length) return;
-      await putCachedEmojis(fresh.items.map((it) => ({ custom_emoji_id: it.custom_emoji_id, preview_char: list.data.find((e) => e.custom_emoji_id === it.custom_emoji_id)?.preview_char ?? null, thumb_data_url: it.thumb_data_url, thumb_mime: it.thumb_mime })));
-      setThumbs(new Map([...cached, ...fresh.items.map((it) => [it.custom_emoji_id, { ...it, preview_char: list.data.find((e) => e.custom_emoji_id === it.custom_emoji_id)?.preview_char ?? null, cached_at: Date.now() } as CachedEmoji] as const)]));
+      const previewById = new Map(list.data.map((e) => [e.custom_emoji_id, e.preview_char] as const));
+      for (let i = 0; i < missing.length; i += 24) {
+        const fresh = await fetchThumbs({ data: { ids: missing.slice(i, i + 24) } }).catch(() => null);
+        if (!fresh?.ok || !fresh.items.length) continue;
+        await putCachedEmojis(fresh.items.map((it) => ({ custom_emoji_id: it.custom_emoji_id, preview_char: previewById.get(it.custom_emoji_id) ?? null, thumb_data_url: it.thumb_data_url, thumb_mime: it.thumb_mime })));
+        setThumbs((prev) => new Map([...prev, ...fresh.items.map((it) => [it.custom_emoji_id, { ...it, preview_char: previewById.get(it.custom_emoji_id) ?? null, cached_at: Date.now() } as CachedEmoji] as const)]));
+      }
     });
   }, [list.data, fetchThumbs]);
 
