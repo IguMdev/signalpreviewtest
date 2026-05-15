@@ -2,6 +2,7 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import {
   hasEmojiTokens,
   renderEmojiTokens,
+  renderEmojiTokensToHtml,
   type EmojiLookup,
 } from "./premium-emoji-render";
 
@@ -9,6 +10,26 @@ export type PremiumSendResult =
   | { applied: true; ok: true; messageId: number | null }
   | { applied: true; ok: false; error: string }
   | { applied: false; reason: string };
+
+async function getUserEmojiLookup(userId: string): Promise<EmojiLookup> {
+  const { data: emojiRows } = await supabaseAdmin
+    .from("premium_emojis")
+    .select("name, custom_emoji_id, preview_char")
+    .eq("user_id", userId);
+
+  return new Map(
+    (emojiRows ?? []).map((r) => [
+      r.name,
+      { custom_emoji_id: r.custom_emoji_id, preview_char: r.preview_char },
+    ]),
+  );
+}
+
+export async function renderPremiumEmojiTokensForBotApi(userId: string, text: string | null | undefined) {
+  if (!text || !hasEmojiTokens(text)) return { text: text ?? null, replaced: false };
+  const lookup = await getUserEmojiLookup(userId);
+  return renderEmojiTokensToHtml(text, lookup);
+}
 
 /**
  * Tenta enviar uma mensagem de texto via conta premium MTProto, substituindo
@@ -28,20 +49,11 @@ export async function sendTextWithPremiumEmojis(opts: {
     return { applied: false, reason: "no-tokens" };
   }
 
-  const { data: emojiRows } = await supabaseAdmin
-    .from("premium_emojis")
-    .select("name, custom_emoji_id, preview_char")
-    .eq("user_id", opts.userId);
+  const lookup = await getUserEmojiLookup(opts.userId);
 
-  const lookup: EmojiLookup = new Map(
-    (emojiRows ?? []).map((r) => [
-      r.name,
-      { custom_emoji_id: r.custom_emoji_id, preview_char: r.preview_char },
-    ]),
-  );
-
-  const { text, entities } = renderEmojiTokens(opts.text, lookup);
-  if (entities.length === 0) {
+  const rendered = renderEmojiTokensToHtml(opts.text, lookup);
+  const { entities } = renderEmojiTokens(opts.text, lookup);
+  if (!rendered.replaced) {
     return { applied: false, reason: "no-known-emojis" };
   }
 
@@ -59,9 +71,8 @@ export async function sendTextWithPremiumEmojis(opts: {
     return { applied: false, reason: "no-premium-account" };
   }
 
-  const { TelegramClient, Api } = await import("telegram");
+  const { TelegramClient } = await import("telegram");
   const { StringSession } = await import("telegram/sessions");
-  const { default: bigInt } = await import("big-integer");
 
   const client = new TelegramClient(
     new StringSession(acc.tg_session as string),
@@ -72,19 +83,11 @@ export async function sendTextWithPremiumEmojis(opts: {
   await client.connect();
 
   try {
-    const apiEntities = entities.map(
-      (e) =>
-        new Api.MessageEntityCustomEmoji({
-          offset: e.offset,
-          length: e.length,
-          documentId: bigInt(e.documentId) as never,
-        }),
-    );
     const numeric = typeof opts.chatId === "string" ? Number(opts.chatId) : opts.chatId;
     const target = Number.isFinite(numeric) ? (numeric as number) : opts.chatId;
     const msg = await client.sendMessage(target as never, {
-      message: text,
-      formattingEntities: apiEntities,
+      message: rendered.text,
+      parseMode: "html",
       replyTo: opts.replyToMessageId,
     });
     return { applied: true, ok: true, messageId: Number(msg.id) };
