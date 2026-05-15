@@ -85,11 +85,15 @@ type Schedule = {
     image_path: string | null;
     image_mime: string | null;
     video_id: string | null;
+    button_text?: string | null;
+    button_url?: string | null;
   }> | null;
   is_premium: boolean;
   is_active: boolean;
   timezone: string;
   last_sent_at: string | null;
+  button_text?: string | null;
+  button_url?: string | null;
 };
 
 type Room = {
