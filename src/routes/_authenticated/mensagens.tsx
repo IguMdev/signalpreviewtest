@@ -786,7 +786,7 @@ function ScheduleDialog({
                   onClick={() =>
                     setFollowUps([
                       ...followUps,
-                      { delayMinutes: 1, content: "", imagePath: "", imageMime: "" },
+                      { delayMinutes: 1, content: "", imagePath: "", imageMime: "", videoId: "" },
                     ])
                   }
                 >
@@ -807,6 +807,7 @@ function ScheduleDialog({
                         content: string;
                         imagePath: string;
                         imageMime: string;
+                        videoId: string;
                       }>,
                     ) => {
                       const next = [...followUps];
@@ -862,6 +863,7 @@ function ScheduleDialog({
                           value={f.content}
                           onChange={(e) => update({ content: e.target.value })}
                           placeholder="Texto desta mensagem (ou apenas legenda da imagem)"
+                          disabled={!!f.videoId}
                         />
                         {f.imagePath ? (
                           <div className="flex items-start gap-3">
@@ -880,7 +882,11 @@ function ScheduleDialog({
                             </Button>
                           </div>
                         ) : (
-                          <label className="flex items-center gap-2 px-3 py-2 rounded-md border border-dashed cursor-pointer hover:bg-muted/40 text-sm w-fit">
+                          <label
+                            className={`flex items-center gap-2 px-3 py-2 rounded-md border border-dashed cursor-pointer hover:bg-muted/40 text-sm w-fit ${
+                              f.videoId ? "opacity-50 pointer-events-none" : ""
+                            }`}
+                          >
                             {followUpUploading === idx ? (
                               <Loader2 className="size-4 animate-spin" />
                             ) : (
@@ -915,7 +921,7 @@ function ScheduleDialog({
                                       upsert: false,
                                     });
                                   if (error) throw error;
-                                  update({ imagePath: path, imageMime: file.type });
+                                  update({ imagePath: path, imageMime: file.type, videoId: "" });
                                   toast.success("Imagem carregada");
                                 } catch (err) {
                                   toast.error((err as Error).message);
@@ -926,6 +932,32 @@ function ScheduleDialog({
                             />
                           </label>
                         )}
+                        <div className="space-y-1">
+                          <Label className="text-xs">
+                            Vídeo da biblioteca (substitui texto/imagem)
+                          </Label>
+                          <Select
+                            value={f.videoId || "none"}
+                            onValueChange={(v) => {
+                              const next = v === "none" ? "" : v;
+                              if (next) {
+                                update({ videoId: next, imagePath: "", imageMime: "" });
+                              } else {
+                                update({ videoId: "" });
+                              }
+                            }}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Nenhum (enviar texto/imagem)" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="none">Nenhum (enviar texto/imagem)</SelectItem>
+                              {videos.map((v) => (
+                                <SelectItem key={v.id} value={v.id}>{v.title}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
                       </div>
                     );
                   })}
