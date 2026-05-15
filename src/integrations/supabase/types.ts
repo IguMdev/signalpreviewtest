@@ -252,6 +252,54 @@ export type Database = {
         }
         Relationships: []
       }
+      quick_send_templates: {
+        Row: {
+          content: string
+          created_at: string
+          default_account_id: string | null
+          default_room_id: string | null
+          id: string
+          image_ext: string | null
+          image_mime: string | null
+          image_path: string | null
+          name: string
+          parse_mode: string
+          sort_order: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content?: string
+          created_at?: string
+          default_account_id?: string | null
+          default_room_id?: string | null
+          id?: string
+          image_ext?: string | null
+          image_mime?: string | null
+          image_path?: string | null
+          name: string
+          parse_mode?: string
+          sort_order?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          default_account_id?: string | null
+          default_room_id?: string | null
+          id?: string
+          image_ext?: string | null
+          image_mime?: string | null
+          image_path?: string | null
+          name?: string
+          parse_mode?: string
+          sort_order?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       recurring_pending_followups: {
         Row: {
           account_id: string | null
