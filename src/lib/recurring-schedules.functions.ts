@@ -3,7 +3,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { callTelegram } from "@/lib/telegram.server";
-import { dispatchVideoNote } from "@/lib/videos.functions";
+import { dispatchVideoNote, dispatchVideo } from "@/lib/videos.functions";
 import { sendPhotoWithPremiumEmojiCaption, sendTextWithPremiumEmojis } from "@/lib/premium-send.server";
 
 const TimeRe = /^([01]\d|2[0-3]):[0-5]\d$/;
@@ -15,6 +15,8 @@ const FollowUpInput = z.object({
   imagePath: z.string().max(500).nullable().optional(),
   imageMime: z.string().max(100).nullable().optional(),
   videoId: z.string().uuid().nullable().optional(),
+  buttonText: z.string().max(64).nullable().optional(),
+  buttonUrl: z.string().url().max(2048).nullable().optional(),
 });
 
 const ScheduleInput = z.object({
@@ -36,6 +38,8 @@ const ScheduleInput = z.object({
   isPremium: z.boolean().default(false),
   isActive: z.boolean().default(true),
   timezone: z.string().default("America/Sao_Paulo"),
+  buttonText: z.string().max(64).nullable().optional(),
+  buttonUrl: z.string().url().max(2048).nullable().optional(),
 });
 
 export const upsertSchedule = createServerFn({ method: "POST" })
@@ -67,19 +71,23 @@ export const upsertSchedule = createServerFn({ method: "POST" })
         image_path: f.imagePath ?? null,
         image_mime: f.imageMime ?? null,
         video_id: f.videoId ?? null,
+        button_text: f.buttonText ?? null,
+        button_url: f.buttonUrl ?? null,
       })),
       is_premium: data.isPremium,
       is_active: data.isActive,
       timezone: data.timezone,
+      button_text: data.buttonText ?? null,
+      button_url: data.buttonUrl ?? null,
     };
     if (data.id) {
-      const { error } = await supabase.from("recurring_schedules").update(row).eq("id", data.id);
+      const { error } = await supabase.from("recurring_schedules").update(row as never).eq("id", data.id);
       if (error) throw new Error(error.message);
       return { id: data.id };
     }
     const { data: ins, error } = await supabase
       .from("recurring_schedules")
-      .insert(row)
+      .insert(row as never)
       .select("id")
       .single();
     if (error) throw new Error(error.message);
@@ -115,7 +123,7 @@ export const testSchedule = createServerFn({ method: "POST" })
     const { data: s, error } = await supabaseAdmin
       .from("recurring_schedules")
       .select(
-        "id, user_id, room_id, account_id, content, video_id, image_path, image_mime, parse_mode, is_premium",
+        "id, user_id, room_id, account_id, content, video_id, image_path, image_mime, parse_mode, is_premium, button_text, button_url",
       )
       .eq("id", data.id)
       .maybeSingle();
@@ -145,11 +153,11 @@ export const testSchedule = createServerFn({ method: "POST" })
     if (!acc) throw new Error("Bot não encontrado");
     if (!chats?.length) throw new Error("Nenhum grupo vinculado a esta sala");
 
-    let video: { storage_path: string; mime_type: string | null; duration_seconds: number | null; title: string } | null = null;
+    let video: { storage_path: string; mime_type: string | null; duration_seconds: number | null; title: string; kind: string | null } | null = null;
     if (s.video_id) {
       const { data: v } = await supabaseAdmin
         .from("videos")
-        .select("storage_path, mime_type, duration_seconds, title")
+        .select("storage_path, mime_type, duration_seconds, title, kind")
         .eq("id", s.video_id)
         .maybeSingle();
       video = v ?? null;
@@ -160,6 +168,12 @@ export const testSchedule = createServerFn({ method: "POST" })
     let lastError: string | null = null;
     for (const c of chats) {
       let r: { ok: boolean; result?: { message_id?: number }; description?: string };
+      const sAny = s as unknown as { button_text: string | null; button_url: string | null };
+      const replyMarkup =
+        sAny.button_text && sAny.button_url
+          ? { inline_keyboard: [[{ text: sAny.button_text, url: sAny.button_url }]] }
+          : undefined;
+      const isNormalVideo = video && video.kind === "normal";
       const premium =
         s.is_premium && !s.image_path && !video && s.content
           ? await sendTextWithPremiumEmojis({
@@ -200,11 +214,24 @@ export const testSchedule = createServerFn({ method: "POST" })
                 photo: pub.publicUrl,
                 caption: s.content ?? undefined,
                 parse_mode: s.content ? s.parse_mode : undefined,
+                reply_markup: replyMarkup,
               },
             );
           })()
         : video
-        ? await dispatchVideoNote({
+        ? isNormalVideo
+          ? await dispatchVideo({
+              botToken: acc.bot_token,
+              storagePath: video!.storage_path,
+              chatId: c.chat_id,
+              duration: video!.duration_seconds,
+              mimeType: video!.mime_type,
+              filename: (video!.title || "video").replace(/[^\w.-]+/g, "_") + ".mp4",
+              caption: s.content,
+              parseMode: s.parse_mode,
+              replyMarkup,
+            })
+          : await dispatchVideoNote({
             botToken: acc.bot_token,
             storagePath: video.storage_path,
             chatId: c.chat_id,
@@ -216,14 +243,8 @@ export const testSchedule = createServerFn({ method: "POST" })
             chat_id: c.chat_id,
             text: s.content ?? "",
             parse_mode: s.parse_mode,
+            reply_markup: replyMarkup,
           });
-      if (video && r.ok && s.content && s.content.trim()) {
-        await callTelegram<{ message_id: number }>(acc.bot_token, "sendMessage", {
-          chat_id: c.chat_id,
-          text: s.content,
-          parse_mode: s.parse_mode,
-        });
-      }
       await supabaseAdmin.from("message_logs").insert({
         user_id: userId,
         account_id: accountId,

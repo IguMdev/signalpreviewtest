@@ -85,11 +85,15 @@ type Schedule = {
     image_path: string | null;
     image_mime: string | null;
     video_id: string | null;
+    button_text?: string | null;
+    button_url?: string | null;
   }> | null;
   is_premium: boolean;
   is_active: boolean;
   timezone: string;
   last_sent_at: string | null;
+  button_text?: string | null;
+  button_url?: string | null;
 };
 
 type Room = {
@@ -126,7 +130,7 @@ function MensagensPage() {
   const videos = useQuery({
     queryKey: ["videos-min"],
     queryFn: async () =>
-      (await supabase.from("videos").select("id, title")).data ?? [],
+      (await supabase.from("videos").select("id, title, kind")).data ?? [],
   });
 
   const list = useQuery({
@@ -486,7 +490,7 @@ function ScheduleDialog({
   editing: Schedule | null;
   rooms: Room[];
   accounts: { id: string; label: string }[];
-  videos: { id: string; title: string }[];
+  videos: { id: string; title: string; kind?: string | null }[];
   presetRoomId: string | null;
   onClose: () => void;
   onSave: (data: {
@@ -509,10 +513,14 @@ function ScheduleDialog({
       imagePath: string | null;
       imageMime: string | null;
       videoId: string | null;
+      buttonText?: string | null;
+      buttonUrl?: string | null;
     }>;
     isPremium: boolean;
     isActive: boolean;
     timezone: string;
+    buttonText?: string | null;
+    buttonUrl?: string | null;
   }) => void;
 }) {
   const [title, setTitle] = useState("");
@@ -528,14 +536,23 @@ function ScheduleDialog({
   const [weekdayOverrides, setWeekdayOverrides] = useState<Record<string, string[]>>({});
   const [overrideInputs, setOverrideInputs] = useState<Record<string, string>>({});
   const [followUps, setFollowUps] = useState<
-    Array<{ delayValue: number; delayUnit: "seconds" | "minutes"; content: string; imagePath: string; imageMime: string; videoId: string }>
+    Array<{ delayValue: number; delayUnit: "seconds" | "minutes"; content: string; imagePath: string; imageMime: string; videoId: string; buttonText: string; buttonUrl: string }>
   >([]);
   const [followUpUploading, setFollowUpUploading] = useState<number | null>(null);
   const [isPremium, setIsPremium] = useState(false);
   const [isActive, setIsActive] = useState(true);
   const [newTime, setNewTime] = useState("");
+  const [buttonText, setButtonText] = useState("");
+  const [buttonUrl, setButtonUrl] = useState("");
 
   const open = !!editing;
+  const videoKindById = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const v of videos) m.set(v.id, (v.kind ?? "round") as string);
+    return m;
+  }, [videos]);
+  const isRoundVideo = (vid: string) =>
+    !!vid && (videoKindById.get(vid) ?? "round") === "round";
 
   useMemo(() => {
     if (editing) {
@@ -560,11 +577,18 @@ function ScheduleDialog({
           imagePath: f.image_path ?? "",
           imageMime: f.image_mime ?? "",
           videoId: f.video_id ?? "",
+          buttonText: f.button_text ?? "",
+          buttonUrl: f.button_url ?? "",
         })),
       );
       setIsPremium(editing.is_premium);
       setIsActive(editing.is_active);
       setNewTime("");
+      setButtonText(editing.button_text ?? "");
+      setButtonUrl(editing.button_url ?? "");
+    } else {
+      setButtonText("");
+      setButtonUrl("");
     }
   }, [editing, presetRoomId]);
 
@@ -710,10 +734,33 @@ function ScheduleDialog({
                     imagePath
                       ? "Legenda da imagem (opcional)"
                       : videoId
-                      ? "Texto enviado como mensagem separada após o vídeo (opcional)"
+                      ? isRoundVideo(videoId)
+                        ? "Vídeos redondos não suportam texto"
+                        : "Legenda do vídeo (opcional)"
                       : "Texto da mensagem. Use {NOME} para emojis premium."
                   }
+                  disabled={!!videoId && isRoundVideo(videoId)}
                 />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <div className="space-y-1">
+                    <Label className="text-xs">Botão (texto)</Label>
+                    <Input
+                      value={buttonText}
+                      onChange={(e) => setButtonText(e.target.value)}
+                      placeholder="Ex.: Acessar"
+                      maxLength={64}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Botão (URL)</Label>
+                    <Input
+                      value={buttonUrl}
+                      onChange={(e) => setButtonUrl(e.target.value)}
+                      placeholder="https://..."
+                      maxLength={2048}
+                    />
+                  </div>
+                </div>
                 <p className="text-xs text-muted-foreground">
                   Suporta HTML do Telegram: &lt;b&gt;, &lt;i&gt;, &lt;u&gt;, &lt;code&gt;. Para emojis premium, use{" "}
                   <code className="px-1 py-0.5 rounded bg-muted">{"{NOME}"}</code>.
@@ -806,7 +853,7 @@ function ScheduleDialog({
                   onClick={() =>
                     setFollowUps([
                       ...followUps,
-                      { delayValue: 1, delayUnit: "minutes", content: "", imagePath: "", imageMime: "", videoId: "" },
+                      { delayValue: 1, delayUnit: "minutes", content: "", imagePath: "", imageMime: "", videoId: "", buttonText: "", buttonUrl: "" },
                     ])
                   }
                 >
@@ -829,6 +876,8 @@ function ScheduleDialog({
                         imagePath: string;
                         imageMime: string;
                         videoId: string;
+                        buttonText: string;
+                        buttonUrl: string;
                       }>,
                     ) => {
                       const next = [...followUps];
@@ -905,10 +954,27 @@ function ScheduleDialog({
                           onChange={(e) => update({ content: e.target.value })}
                           placeholder={
                             f.videoId
-                              ? "Texto enviado após o vídeo (opcional)"
+                              ? isRoundVideo(f.videoId)
+                                ? "Vídeos redondos não suportam texto"
+                                : "Legenda do vídeo (opcional)"
                               : "Texto desta mensagem (ou legenda da imagem)"
                           }
+                          disabled={!!f.videoId && isRoundVideo(f.videoId)}
                         />
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          <Input
+                            value={f.buttonText}
+                            onChange={(e) => update({ buttonText: e.target.value })}
+                            placeholder="Botão (texto)"
+                            maxLength={64}
+                          />
+                          <Input
+                            value={f.buttonUrl}
+                            onChange={(e) => update({ buttonUrl: e.target.value })}
+                            placeholder="Botão (URL)"
+                            maxLength={2048}
+                          />
+                        </div>
                         {f.imagePath ? (
                           <div className="flex items-start gap-3">
                             <img
@@ -1201,10 +1267,14 @@ function ScheduleDialog({
                   imagePath: f.imagePath || null,
                   imageMime: f.imageMime || null,
                   videoId: f.videoId || null,
+                  buttonText: f.buttonText?.trim() || null,
+                  buttonUrl: f.buttonUrl?.trim() || null,
                 })),
                 isPremium,
                 isActive,
                 timezone: "America/Sao_Paulo",
+                buttonText: buttonText.trim() || null,
+                buttonUrl: buttonUrl.trim() || null,
               })
             }
           >
