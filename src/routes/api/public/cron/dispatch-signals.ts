@@ -134,10 +134,11 @@ async function sendToRoom(opts: {
         replyToMessageId: opts.replyTo?.[String(cid)],
         buttonRows: opts.replyMarkup?.inline_keyboard,
       });
-      if (premiumPhoto.applied) {
-        if (premiumPhoto.ok && premiumPhoto.messageId) out[String(cid)] = premiumPhoto.messageId;
+      if (premiumPhoto.applied && premiumPhoto.ok && premiumPhoto.messageId) {
+        out[String(cid)] = premiumPhoto.messageId;
         continue;
       }
+      // Premium não aplicável ou falhou → garante envio via Bot API com a imagem.
       const botText = await renderBotApiText(opts.userId, opts.text);
       const r = await callTelegram<{ message_id: number }>(opts.botToken, "sendPhoto", {
         chat_id: cid,
@@ -290,7 +291,9 @@ async function scheduleSignals(): Promise<number> {
 /* ============ STEP 2: enviar sinais agendados ============ */
 async function sendScheduled(): Promise<number> {
   const now = new Date();
-  const horizon = new Date(now.getTime() + 75_000).toISOString(); // até 75s no futuro
+  // Dispara apenas quando o horário do sinal já chegou (com tolerância de 5s)
+  // para que o envio aconteça exatamente no minuto configurado.
+  const horizon = new Date(now.getTime() + 5_000).toISOString();
   const { data: list } = await supabaseAdmin
     .from("signal_events")
     .select("*")
@@ -505,13 +508,35 @@ async function sendDueReports(): Promise<number> {
         .maybeSingle();
       if (!claim) continue;
 
+      // Agrega apenas operações do CICLO DE HOJE da janela (no timezone da sala)
+      // e conta apenas eventos terminais para evitar duplicar pais cujo gale venceu.
+      const tz = ctx.room.timezone;
+      const todayKey = reportDateKey(now, tz);
+      const dayStartUtc = new Date(
+        new Date(`${todayKey}T00:00:00`).toLocaleString("en-US", { timeZone: "UTC" }),
+      );
+      // entry_at ~ início do dia no tz: usamos um filtro amplo (24h) baseado no "agora"
+      const since = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
       const { data: stats } = await supabaseAdmin
         .from("signal_events")
-        .select("status")
+        .select("status, gale_level, max_gales, entry_at")
         .eq("room_id", report.room_id)
-        .eq("window_id", w.id);
-      const totalWins = (stats ?? []).filter((s) => ["win", "win_g1", "win_g2"].includes(String(s.status))).length;
-      const totalLosses = (stats ?? []).filter((s) => String(s.status) === "loss").length;
+        .eq("window_id", w.id)
+        .gte("entry_at", since);
+      const inToday = (stats ?? []).filter(
+        (s) => reportDateKey(new Date(String(s.entry_at)), tz) === todayKey,
+      );
+      const terminal = inToday.filter((s) => {
+        const st = String(s.status);
+        if (st === "win" || st === "win_g1" || st === "win_g2") return true;
+        if (st === "loss" && Number(s.gale_level ?? 0) >= Number(s.max_gales ?? 0)) return true;
+        return false;
+      });
+      const totalWins = terminal.filter((s) =>
+        ["win", "win_g1", "win_g2"].includes(String(s.status)),
+      ).length;
+      const totalLosses = terminal.filter((s) => String(s.status) === "loss").length;
+      void dayStartUtc; // mantido para futura expansão
       const total = totalWins + totalLosses;
       const winRate = total ? Math.round((totalWins / total) * 100) : 0;
       const text = String(report.template || "📊 RELATÓRIO {SESSAO_NOME}\n✅ Wins: {TOTAL_WINS}\n🔴 Losses: {TOTAL_LOSSES}\n📈 Operações: {TOTAL_OPERACOES}\n🎯 Win rate: {WIN_RATE}%")
