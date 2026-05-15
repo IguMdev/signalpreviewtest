@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { MessageCircle, Plus, Trash2, ArrowUp, ArrowDown } from "lucide-react";
+import { MessageCircle, Plus, Trash2, ArrowUp, ArrowDown, ImageIcon } from "lucide-react";
 import { toast } from "sonner";
 import { getWelcomeBotConfig, upsertWelcomeBotConfig } from "@/lib/engagement.functions";
 import { PremiumEmojiPicker } from "@/components/PremiumEmojiPicker";
@@ -63,7 +63,10 @@ function BoasVindasPage() {
   const [videoId, setVideoId] = useState<string>("");
   const [premiumEnabled, setPremiumEnabled] = useState(false);
   const [premiumAccountId, setPremiumAccountId] = useState<string>("");
+  const [roomPhotoError, setRoomPhotoError] = useState(false);
   const messageRef = useRef<HTMLTextAreaElement | null>(null);
+
+  useEffect(() => { setRoomPhotoError(false); }, [roomId]);
 
   useEffect(() => {
     const c = cfgQ.data;
@@ -112,16 +115,22 @@ function BoasVindasPage() {
         <CardHeader><CardTitle className="text-base">Sala</CardTitle></CardHeader>
         <CardContent>
           <div className="flex items-center gap-3">
-            {selectedRoom?.photo_url ? (
+            {selectedRoom?.photo_url && !roomPhotoError ? (
               <img
                 src={selectedRoom.photo_url}
                 alt={selectedRoom.name}
                 className="size-14 rounded-md object-cover border border-border/60 shrink-0"
+                onError={() => setRoomPhotoError(true)}
               />
             ) : (
-              <div className="size-14 rounded-md border border-border/60 bg-muted shrink-0" />
+              <div className="size-14 rounded-md border border-border/60 bg-muted shrink-0 flex items-center justify-center">
+                <ImageIcon className="size-6 text-muted-foreground" />
+              </div>
             )}
-            <div className="flex-1">
+            <div className="flex-1 min-w-0">
+              {selectedRoom && (
+                <p className="text-sm font-medium truncate mb-1">{selectedRoom.name}</p>
+              )}
               <Select value={roomId} onValueChange={setRoomId}>
                 <SelectTrigger><SelectValue placeholder="Selecione a sala" /></SelectTrigger>
                 <SelectContent>
