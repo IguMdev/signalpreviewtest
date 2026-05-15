@@ -81,6 +81,7 @@ type Schedule = {
     content: string | null;
     image_path: string | null;
     image_mime: string | null;
+    video_id: string | null;
   }> | null;
   is_premium: boolean;
   is_active: boolean;
@@ -494,6 +495,7 @@ function ScheduleDialog({
       content: string | null;
       imagePath: string | null;
       imageMime: string | null;
+      videoId: string | null;
     }>;
     isPremium: boolean;
     isActive: boolean;
@@ -513,7 +515,7 @@ function ScheduleDialog({
   const [weekdayOverrides, setWeekdayOverrides] = useState<Record<string, string[]>>({});
   const [overrideInputs, setOverrideInputs] = useState<Record<string, string>>({});
   const [followUps, setFollowUps] = useState<
-    Array<{ delayMinutes: number; content: string; imagePath: string; imageMime: string }>
+    Array<{ delayMinutes: number; content: string; imagePath: string; imageMime: string; videoId: string }>
   >([]);
   const [followUpUploading, setFollowUpUploading] = useState<number | null>(null);
   const [isPremium, setIsPremium] = useState(false);
@@ -541,6 +543,7 @@ function ScheduleDialog({
           content: f.content ?? "",
           imagePath: f.image_path ?? "",
           imageMime: f.image_mime ?? "",
+          videoId: f.video_id ?? "",
         })),
       );
       setIsPremium(editing.is_premium);
