@@ -186,11 +186,12 @@ export const Route = createFileRoute("/api/public/cron/dispatch-recurring")({
                 });
             await supabaseAdmin.from("message_logs").insert({
               user_id: s.user_id,
+              account_id: accountId,
               chat_id: c.chat_id,
               ok: r.ok,
               telegram_message_id: r.result?.message_id ?? null,
               error: r.ok ? null : r.description ?? "erro",
-            });
+            } as never);
             if (r.ok) okAny = true;
             if (r.ok && r.result?.message_id) {
               await triggerSignalReactions({
@@ -313,11 +314,12 @@ export const Route = createFileRoute("/api/public/cron/dispatch-recurring")({
                 });
             await supabaseAdmin.from("message_logs").insert({
               user_id: p.user_id,
+              account_id: accountId,
               chat_id: c.chat_id,
               ok: r.ok,
               telegram_message_id: r.result?.message_id ?? null,
               error: r.ok ? null : r.description ?? "erro",
-            });
+            } as never);
             if (r.ok) okAny = true;
             else lastErr = r.description ?? "erro";
             if (r.ok && r.result?.message_id) {
