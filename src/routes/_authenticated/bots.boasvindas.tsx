@@ -14,6 +14,14 @@ import { MessageCircle } from "lucide-react";
 import { toast } from "sonner";
 import { getWelcomeBotConfig, upsertWelcomeBotConfig } from "@/lib/engagement.functions";
 
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
+function publicUrl(bucket: string, path: string) {
+  return `${SUPABASE_URL.replace(/\/$/, "")}/storage/v1/object/public/${bucket}/${path}`;
+}
+function renderTemplate(tpl: string, vars: Record<string, string>) {
+  return tpl.replace(/\{(\w+)\}/g, (_, k) => vars[k] ?? "");
+}
+
 export const Route = createFileRoute("/_authenticated/bots/boasvindas")({
   component: BoasVindasPage,
 });
@@ -29,7 +37,7 @@ function BoasVindasPage() {
   });
   const videosQ = useQuery({
     queryKey: ["videos-pick"],
-    queryFn: async () => (await supabase.from("videos").select("id, title, kind").order("created_at", { ascending: false })).data ?? [],
+    queryFn: async () => (await supabase.from("videos").select("id, title, kind, storage_path").order("created_at", { ascending: false })).data ?? [],
   });
 
   const [roomId, setRoomId] = useState<string>("");
@@ -148,6 +156,52 @@ function BoasVindasPage() {
             </div>
 
             <Button onClick={() => save.mutate()} disabled={save.isPending}>{save.isPending ? "Salvando..." : "Salvar"}</Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {roomId && (
+        <Card>
+          <CardHeader><CardTitle className="text-base">Pré-visualização</CardTitle></CardHeader>
+          <CardContent>
+            <div className="max-w-md rounded-2xl border border-border/60 bg-muted/30 p-3 space-y-2">
+              {(() => {
+                const selectedVideo = (videosQ.data ?? []).find((v: any) => v.id === videoId) as any;
+                if (selectedVideo?.storage_path) {
+                  const url = publicUrl("videos", selectedVideo.storage_path);
+                  return selectedVideo.kind === "round" ? (
+                    <video src={url} controls className="size-48 rounded-full object-cover mx-auto" />
+                  ) : (
+                    <video src={url} controls className="w-full rounded-lg" />
+                  );
+                }
+                if (imagePath) {
+                  return <img src={publicUrl("room-images", imagePath)} alt="prévia" className="w-full rounded-lg" />;
+                }
+                return null;
+              })()}
+              <div
+                className="text-sm whitespace-pre-wrap"
+                dangerouslySetInnerHTML={{
+                  __html: renderTemplate(message || "", {
+                    name: '<a class="text-primary underline">Novo Membro</a>',
+                    first_name: "Novo Membro",
+                    username: "novomembro",
+                  }),
+                }}
+              />
+              {btnText && btnUrl && (
+                <a
+                  href={btnUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="block text-center text-sm font-medium rounded-lg bg-primary text-primary-foreground py-2"
+                >
+                  {btnText}
+                </a>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">Aproximação visual — o Telegram pode renderizar com pequenas diferenças.</p>
           </CardContent>
         </Card>
       )}
