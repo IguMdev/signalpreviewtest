@@ -34,6 +34,18 @@ export const Route = createFileRoute("/_authenticated/rooms/")({
   component: RoomsPage,
 });
 
+function getInitials(name?: string | null) {
+  if (!name) return "?";
+  return name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase();
+}
+function stringToColor(str?: string | null) {
+  if (!str) return "#64748b";
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  const c = (hash & 0x00ffffff).toString(16).padStart(6, "0");
+  return `#${c}`;
+}
+
 type RoomRow = {
   id: string;
   name: string;
@@ -302,7 +314,20 @@ function RoomsPage() {
                         : <span className="text-muted-foreground">—</span>}
                     </TableCell>
                     <TableCell className="text-sm">
-                      {acc?.bot_first_name ?? acc?.label ?? <span className="text-muted-foreground">—</span>}
+                      {acc ? (
+                        <div className="flex items-center gap-2 min-w-0">
+                          <div
+                            className="size-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0"
+                            style={{ backgroundColor: stringToColor(acc.id) }}
+                            title={acc.label}
+                          >
+                            {getInitials(acc.bot_first_name || acc.label)}
+                          </div>
+                          <span className="truncate">{acc.bot_first_name ?? acc.label}</span>
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2 min-w-0">
