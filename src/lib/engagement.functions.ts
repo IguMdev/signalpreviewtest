@@ -211,7 +211,7 @@ export const getWelcomeBotConfig = createServerFn({ method: "GET" })
     const { supabase } = context;
     const { data: row } = await supabase
       .from("room_engagement_settings")
-      .select("welcome_bot_enabled, welcome_message, welcome_image_path, welcome_image_mime, welcome_video_id, welcome_parse_mode, welcome_button_text, welcome_button_url")
+      .select("welcome_bot_enabled, welcome_message, welcome_image_path, welcome_image_mime, welcome_video_id, welcome_parse_mode, welcome_premium_enabled, welcome_premium_account_id")
       .eq("room_id", data.roomId)
       .maybeSingle();
     return row;
@@ -228,8 +228,8 @@ export const upsertWelcomeBotConfig = createServerFn({ method: "POST" })
       imageMime: z.string().max(100).nullable().optional(),
       videoId: z.string().uuid().nullable().optional(),
       parseMode: z.enum(["HTML", "MarkdownV2", "Markdown"]).optional(),
-      buttonText: z.string().max(100).nullable().optional(),
-      buttonUrl: z.string().url().max(500).nullable().optional(),
+      premiumEnabled: z.boolean().optional(),
+      premiumAccountId: z.string().uuid().nullable().optional(),
     }).parse(d),
   )
   .handler(async ({ data, context }) => {
@@ -247,9 +247,9 @@ export const upsertWelcomeBotConfig = createServerFn({ method: "POST" })
           welcome_image_mime: data.imageMime ?? null,
           welcome_video_id: data.videoId ?? null,
           welcome_parse_mode: data.parseMode ?? "HTML",
-          welcome_button_text: data.buttonText ?? null,
-          welcome_button_url: data.buttonUrl ?? null,
-        },
+          welcome_premium_enabled: data.premiumEnabled ?? false,
+          welcome_premium_account_id: data.premiumAccountId ?? null,
+        } as never,
         { onConflict: "room_id" },
       );
     if (error) throw new Error(error.message);
