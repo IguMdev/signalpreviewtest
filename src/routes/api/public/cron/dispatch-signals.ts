@@ -62,8 +62,12 @@ type SignalEvent = {
   expires_at: string;
   gale_level: number;
   max_gales: number | null;
-  signal_message_ids: Record<string, number> | null;
+  signal_message_ids: unknown;
 };
+
+function asMessageIds(value: unknown): Record<string, number> {
+  return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, number>) : {};
+}
 
 async function buildReplyMarkup(userId: string, buttons: TemplateButton[], kind: string) {
   const lookup = await getUserEmojiLookup(userId);
@@ -378,7 +382,7 @@ async function postResult(
     ENTRADA: "",
   });
 
-  const replyTo = (s.signal_message_ids ?? {}) as Record<string, number>;
+  const replyTo = asMessageIds(s.signal_message_ids);
   const ids = await sendToRoom({
     userId: ctx.room.user_id,
     botToken: ctx.botToken,
@@ -404,7 +408,7 @@ async function postResult(
       entry_at: nextEntry.toISOString(),
       expires_at: nextExpires.toISOString(),
       gale_level: s.gale_level + 1,
-      max_gales: s.max_gales,
+      max_gales: s.max_gales ?? 0,
       status: "sent", // já consideramos enviado pois é continuação
       signal_message_ids: replyTo,
     });
