@@ -190,14 +190,17 @@ export const Route = createFileRoute("/api/public/cron/dispatch-recurring")({
                   const { data: pub } = supabaseAdmin.storage
                     .from("room-images")
                     .getPublicUrl(s.image_path!);
+                const caption = s.is_premium
+                  ? await renderPremiumEmojiTokensForBotApi(s.user_id, s.content)
+                  : { text: s.content, replaced: false };
                   return await callTelegram<{ message_id: number }>(
                     acc.bot_token,
                     "sendPhoto",
                     {
                       chat_id: c.chat_id,
                       photo: pub.publicUrl,
-                      caption: s.content ?? undefined,
-                      parse_mode: s.content ? s.parse_mode : undefined,
+                    caption: caption.text ?? undefined,
+                    parse_mode: caption.text ? "HTML" : undefined,
                     },
                   );
                 })()
