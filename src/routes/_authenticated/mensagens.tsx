@@ -80,6 +80,7 @@ type Schedule = {
   weekday_overrides: Record<string, string[]> | null;
   follow_ups: Array<{
     delay_minutes: number;
+    delay_seconds?: number | null;
     content: string | null;
     image_path: string | null;
     image_mime: string | null;
