@@ -1247,29 +1247,6 @@ function ScheduleDialog({
           </div>
         </div>
         <DialogFooter className="gap-2 sm:gap-2">
-          {editing?.id && (
-            <Button
-              type="button"
-              variant="outline"
-              disabled={testing}
-              onClick={async () => {
-                setTesting(true);
-                try {
-                  const res = await testFn({ data: { id: editing.id } });
-                  if (res.ok)
-                    toast.success(`Teste enviado (${res.sent} grupo${res.sent === 1 ? "" : "s"})`);
-                  else toast.error(res.error ?? "Falha ao enviar teste");
-                } catch (e) {
-                  toast.error((e as Error).message);
-                } finally {
-                  setTesting(false);
-                }
-              }}
-            >
-              {testing ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
-              Testar agora
-            </Button>
-          )}
           <Button
             disabled={!canSave}
             onClick={() =>
