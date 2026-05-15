@@ -51,13 +51,13 @@ async function hydrateEmojiDocuments(
     }),
   )) as unknown as Array<{
     id?: { toString(): string };
-    thumbs?: Array<{ className?: string; bytes?: Uint8Array }>;
+    thumbs?: Array<{ className?: string; bytes?: Uint8Array; size?: number }>;
   }>;
-  for (const doc of docs ?? []) {
+  const hydrateOne = async (doc: (typeof docs)[number]) => {
     const id = doc.id ? String(doc.id) : null;
-    if (!id) continue;
+    if (!id) return;
     const target = items.find((i) => i.custom_emoji_id === id);
-    if (!target) continue;
+    if (!target) return;
     const webpThumb = (doc.thumbs ?? [])
       .filter((t) => t.className !== "PhotoPathSize")
       .sort((a, b) => ((b as { size?: number }).size ?? 0) - ((a as { size?: number }).size ?? 0))[0];
@@ -91,6 +91,9 @@ async function hydrateEmojiDocuments(
         }
       }
     }
+  };
+  for (let i = 0; i < (docs ?? []).length; i += 6) {
+    await Promise.all((docs ?? []).slice(i, i + 6).map((doc) => hydrateOne(doc)));
   }
 }
 
