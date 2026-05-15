@@ -513,10 +513,14 @@ function ScheduleDialog({
       imagePath: string | null;
       imageMime: string | null;
       videoId: string | null;
+      buttonText?: string | null;
+      buttonUrl?: string | null;
     }>;
     isPremium: boolean;
     isActive: boolean;
     timezone: string;
+    buttonText?: string | null;
+    buttonUrl?: string | null;
   }) => void;
 }) {
   const [title, setTitle] = useState("");
