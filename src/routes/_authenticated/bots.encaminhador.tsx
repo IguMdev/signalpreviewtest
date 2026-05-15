@@ -25,12 +25,16 @@ function EncaminhadorPage() {
 
   const roomsQ = useQuery({
     queryKey: ["rooms-pick"],
-    queryFn: async () => (await supabase.from("rooms").select("id, name").order("created_at", { ascending: false })).data ?? [],
+    queryFn: async () => (await supabase.from("rooms").select("id, name, photo_url").order("created_at", { ascending: false })).data ?? [],
   });
   const chatsQ = useQuery({ queryKey: ["account-chats"], queryFn: () => listChats() });
 
   const [roomId, setRoomId] = useState("");
   useEffect(() => { if (!roomId && roomsQ.data?.[0]?.id) setRoomId(roomsQ.data[0].id); }, [roomsQ.data, roomId]);
+
+  const selectedRoom = (roomsQ.data ?? []).find((r: any) => r.id === roomId);
+  const [roomPhotoError, setRoomPhotoError] = useState(false);
+  useEffect(() => { setRoomPhotoError(false); }, [roomId]);
 
   const cfgQ = useQuery({ queryKey: ["fwd-cfg", roomId], enabled: !!roomId, queryFn: () => get({ data: { roomId } }) });
 
