@@ -29,12 +29,14 @@ export const requestPremiumCode = createServerFn({ method: "POST" })
     const { supabase } = context;
     const client = await makeClient(data.apiId, data.apiHash);
     let phoneCodeHash: string;
+    let sessionString: string;
     try {
       const r = await client.sendCode(
         { apiId: data.apiId, apiHash: data.apiHash },
         data.phone,
       );
       phoneCodeHash = r.phoneCodeHash;
+      sessionString = (client.session.save() as unknown as string) ?? "";
     } finally {
       await client.disconnect().catch(() => {});
     }
@@ -45,6 +47,7 @@ export const requestPremiumCode = createServerFn({ method: "POST" })
         tg_api_hash: data.apiHash,
         phone: data.phone,
         tg_phone_code_hash: phoneCodeHash,
+        tg_session: sessionString,
         status: "unknown",
         last_error: null,
       })
