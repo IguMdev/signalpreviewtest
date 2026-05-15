@@ -74,6 +74,8 @@ const SendInput = z.object({
   content: z.string().max(4000),
   parseMode: z.enum(["HTML", "Markdown", "MarkdownV2"]).default("HTML"),
   premium: z.boolean().default(false),
+  imagePathOverride: z.string().max(500).nullable().optional(),
+  removeImage: z.boolean().default(false),
 });
 
 export const sendQuickTemplate = createServerFn({ method: "POST" })
@@ -107,7 +109,9 @@ export const sendQuickTemplate = createServerFn({ method: "POST" })
     let failed = 0;
     let lastError: string | null = null;
 
-    const imagePath = tpl.image_path as string | null;
+    const imagePath = data.removeImage
+      ? null
+      : (data.imagePathOverride ?? (tpl.image_path as string | null));
     const publicUrl = imagePath
       ? supabaseAdmin.storage.from("room-images").getPublicUrl(imagePath).data.publicUrl
       : null;
