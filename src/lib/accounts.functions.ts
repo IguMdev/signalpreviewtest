@@ -91,15 +91,20 @@ export const sendTestMessage = createServerFn({ method: "POST" })
       strict: acc.account_type === "premium",
     });
     if (premium.applied) {
-      if (!premium.ok) return { ok: false, error: premium.error };
+      if (!premium.ok) return { ok: false, error: premium.error, reason: "premium-send-failed" };
       return { ok: true, messageId: premium.messageId ?? undefined };
+    }
+    // Premium não se aplicou. Para contas premium isso só ocorre quando strict
+    // está desligado — ainda assim devolvemos a razão para o frontend.
+    if (acc.account_type === "premium") {
+      return { ok: false, error: "Envio premium não aplicado.", reason: premium.reason };
     }
     const r = await callTelegram<{ message_id: number }>(acc.bot_token, "sendMessage", {
       chat_id: data.chatId,
       text: data.text,
       parse_mode: "HTML",
     });
-    if (!r.ok) return { ok: false, error: r.description };
+    if (!r.ok) return { ok: false, error: r.description, reason: premium.reason };
     return { ok: true, messageId: r.result?.message_id };
   });
 
