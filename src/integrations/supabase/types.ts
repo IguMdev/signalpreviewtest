@@ -14,6 +14,60 @@ export type Database = {
   }
   public: {
     Tables: {
+      bot_execution_logs: {
+        Row: {
+          account_id: string | null
+          bot_type: string
+          chat_id: number | null
+          created_at: string
+          details: Json | null
+          error: string | null
+          event: string
+          id: string
+          message: string | null
+          room_id: string | null
+          target_chat_id: number | null
+          tg_first_name: string | null
+          tg_user_id: number | null
+          tg_username: string | null
+          user_id: string
+        }
+        Insert: {
+          account_id?: string | null
+          bot_type: string
+          chat_id?: number | null
+          created_at?: string
+          details?: Json | null
+          error?: string | null
+          event: string
+          id?: string
+          message?: string | null
+          room_id?: string | null
+          target_chat_id?: number | null
+          tg_first_name?: string | null
+          tg_user_id?: number | null
+          tg_username?: string | null
+          user_id: string
+        }
+        Update: {
+          account_id?: string | null
+          bot_type?: string
+          chat_id?: number | null
+          created_at?: string
+          details?: Json | null
+          error?: string | null
+          event?: string
+          id?: string
+          message?: string | null
+          room_id?: string | null
+          target_chat_id?: number | null
+          tg_first_name?: string | null
+          tg_user_id?: number | null
+          tg_username?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       credit_transactions: {
         Row: {
           created_at: string
