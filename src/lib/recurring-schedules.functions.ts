@@ -294,10 +294,6 @@ export const testSchedule = createServerFn({ method: "POST" })
                         duration: video!.duration_seconds,
                         caption: s.content,
                         strict: true,
-                        buttonRows:
-                          sAny.button_text && sAny.button_url
-                            ? [[{ text: sAny.button_text, url: sAny.button_url }]]
-                            : undefined,
                       });
                       if (pv.applied) {
                         return await withCompanionButton(
@@ -417,10 +413,6 @@ export const testMessage = createServerFn({ method: "POST" })
       data.buttonText && data.buttonUrl
         ? { inline_keyboard: [[{ text: data.buttonText, url: data.buttonUrl }]] }
         : undefined;
-    const buttonRows =
-      data.buttonText && data.buttonUrl
-        ? [[{ text: data.buttonText, url: data.buttonUrl }]]
-        : undefined;
     const isNormalVideo = video && video.kind === "normal";
 
     // Auto-ativa caminho premium se houver tokens {NOME} no conteúdo,
@@ -454,7 +446,6 @@ export const testMessage = createServerFn({ method: "POST" })
               chatId: c.chat_id,
               text: data.content,
               strict: true,
-              buttonRows,
             })
           : { applied: false as const, reason: "skip" };
       if (premium.applied) {
