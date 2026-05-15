@@ -323,6 +323,9 @@ function QuickTemplateDialog({
 
           <div>
             <Label>Conteúdo (HTML)</Label>
+            <div className="flex justify-end -mb-1">
+              <PremiumEmojiPicker value={content} onChange={setContent} />
+            </div>
             <Textarea
               value={content}
               onChange={(e) => setContent(e.target.value)}
@@ -559,6 +562,9 @@ function QuickSendDialog({
 
           <div>
             <Label>Conteúdo</Label>
+            <div className="flex justify-end -mb-1">
+              <PremiumEmojiPicker value={content} onChange={setContent} />
+            </div>
             <Textarea
               value={content}
               onChange={(e) => setContent(e.target.value)}
