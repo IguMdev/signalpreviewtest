@@ -326,6 +326,10 @@ export const testMessage = createServerFn({ method: "POST" })
         : undefined;
     const isNormalVideo = video && video.kind === "normal";
 
+    // Auto-ativa caminho premium se houver tokens {NOME} no conteúdo,
+    // mesmo que o toggle "Usar emoji premium" esteja desligado no diálogo.
+    const wantsPremium = data.isPremium || hasEmojiTokens(data.content ?? "");
+
     // Pre-render emoji tokens to HTML for caption-bearing sends (photo/video).
     let captionForMedia: string | null = data.content ?? null;
     let captionParseMode: string = data.parseMode;
@@ -344,7 +348,7 @@ export const testMessage = createServerFn({ method: "POST" })
     for (const c of chats) {
       let r: { ok: boolean; result?: { message_id?: number }; description?: string };
       const premium =
-        data.isPremium && !data.imagePath && !video && data.content
+        wantsPremium && !data.imagePath && !video && data.content
           ? await sendTextWithPremiumEmojis({
               userId,
               chatId: c.chat_id,
@@ -361,7 +365,7 @@ export const testMessage = createServerFn({ method: "POST" })
         const { data: pub } = supabaseAdmin.storage
           .from("room-images")
           .getPublicUrl(data.imagePath);
-        if (data.isPremium) {
+        if (wantsPremium) {
           const premiumPhoto = await sendPhotoWithPremiumEmojiCaption({
             userId,
             chatId: c.chat_id,
