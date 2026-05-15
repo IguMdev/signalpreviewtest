@@ -150,6 +150,12 @@ export const upsertRoomEngagementSettings = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
+    if (data.welcomeBotEnabled) {
+      await assertActiveBotSub(userId, "boasvindas");
+    }
+    if (data.forwarderEnabled) {
+      await assertActiveBotSub(userId, "encaminhador");
+    }
     const { error } = await supabase
       .from("room_engagement_settings")
       .upsert(
@@ -173,6 +179,143 @@ export const upsertRoomEngagementSettings = createServerFn({ method: "POST" })
       );
     if (error) throw new Error(error.message);
     return { ok: true };
+  });
+
+// =====================================================================
+// Active subscription gate (BotBoasVindas / BotEncaminhador)
+// =====================================================================
+
+async function assertActiveBotSub(userId: string, botType: "boasvindas" | "encaminhador") {
+  const { data } = await supabaseAdmin
+    .from("user_engagement_subscriptions")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("bot_type", botType)
+    .eq("status", "active")
+    .limit(1)
+    .maybeSingle();
+  if (!data) {
+    const label = botType === "boasvindas" ? "BotBoasVindas" : "BotEncaminhador";
+    throw new Error(`Você não tem assinatura ativa de ${label}. Adquira na aba Recarga.`);
+  }
+}
+
+// =====================================================================
+// BotBoasVindas — config por sala
+// =====================================================================
+
+export const getWelcomeBotConfig = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ roomId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    const { data: row } = await supabase
+      .from("room_engagement_settings")
+      .select("welcome_bot_enabled, welcome_message, welcome_image_path, welcome_image_mime, welcome_video_id, welcome_parse_mode, welcome_button_text, welcome_button_url")
+      .eq("room_id", data.roomId)
+      .maybeSingle();
+    return row;
+  });
+
+export const upsertWelcomeBotConfig = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) =>
+    z.object({
+      roomId: z.string().uuid(),
+      enabled: z.boolean(),
+      message: z.string().max(4000).nullable().optional(),
+      imagePath: z.string().max(500).nullable().optional(),
+      imageMime: z.string().max(100).nullable().optional(),
+      videoId: z.string().uuid().nullable().optional(),
+      parseMode: z.enum(["HTML", "MarkdownV2", "Markdown"]).optional(),
+      buttonText: z.string().max(100).nullable().optional(),
+      buttonUrl: z.string().url().max(500).nullable().optional(),
+    }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    if (data.enabled) await assertActiveBotSub(userId, "boasvindas");
+    const { error } = await supabase
+      .from("room_engagement_settings")
+      .upsert(
+        {
+          room_id: data.roomId,
+          user_id: userId,
+          welcome_bot_enabled: data.enabled,
+          welcome_message: data.message ?? null,
+          welcome_image_path: data.imagePath ?? null,
+          welcome_image_mime: data.imageMime ?? null,
+          welcome_video_id: data.videoId ?? null,
+          welcome_parse_mode: data.parseMode ?? "HTML",
+          welcome_button_text: data.buttonText ?? null,
+          welcome_button_url: data.buttonUrl ?? null,
+        },
+        { onConflict: "room_id" },
+      );
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+// =====================================================================
+// BotEncaminhador — config por sala
+// =====================================================================
+
+export const getForwarderConfig = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ roomId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    const { data: row } = await supabase
+      .from("room_engagement_settings")
+      .select("forwarder_enabled, forwarder_source_chat_id, forwarder_target_chat_ids")
+      .eq("room_id", data.roomId)
+      .maybeSingle();
+    return row;
+  });
+
+export const upsertForwarderConfig = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) =>
+    z.object({
+      roomId: z.string().uuid(),
+      enabled: z.boolean(),
+      sourceChatId: z.number().int().nullable().optional(),
+      targetChatIds: z.array(z.number().int()).max(50).optional(),
+    }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    if (data.enabled) await assertActiveBotSub(userId, "encaminhador");
+    const { error } = await supabase
+      .from("room_engagement_settings")
+      .upsert(
+        {
+          room_id: data.roomId,
+          user_id: userId,
+          forwarder_enabled: data.enabled,
+          forwarder_source_chat_id: data.sourceChatId ?? null,
+          forwarder_target_chat_ids: data.targetChatIds ?? [],
+        },
+        { onConflict: "room_id" },
+      );
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+// =====================================================================
+// Cached chats por conta — para selecionar origem/destinos do encaminhador
+// =====================================================================
+
+export const listAccountChats = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabase } = context;
+    const { data, error } = await supabase
+      .from("telegram_chats")
+      .select("account_id, chat_id, title, username, type")
+      .order("title", { ascending: true });
+    if (error) throw new Error(error.message);
+    return data ?? [];
   });
 
 async function callSmmPanel(params: Record<string, string | number>) {

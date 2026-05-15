@@ -29,7 +29,7 @@ export const enableMemberTracking = createServerFn({ method: "POST" })
     const r = await callTelegram<boolean>(acc.bot_token, "setWebhook", {
       url,
       secret_token: secret,
-      allowed_updates: ["chat_member", "my_chat_member", "message"],
+      allowed_updates: ["chat_member", "my_chat_member", "message", "channel_post"],
       drop_pending_updates: false,
     });
     if (!r.ok) throw new Error(r.description ?? "Falha ao registrar webhook");
