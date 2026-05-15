@@ -4,7 +4,8 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { callTelegram } from "@/lib/telegram.server";
 import { dispatchVideoNote, dispatchVideo } from "@/lib/videos.functions";
-import { sendPhotoWithPremiumEmojiCaption, sendTextWithPremiumEmojis } from "@/lib/premium-send.server";
+import { sendPhotoWithPremiumEmojiCaption, sendTextWithPremiumEmojis, getUserEmojiLookup } from "@/lib/premium-send.server";
+import { renderEmojiTokensToHtml, hasEmojiTokens } from "@/lib/premium-emoji-render";
 
 const TimeRe = /^([01]\d|2[0-3]):[0-5]\d$/;
 
@@ -319,7 +320,23 @@ export const testMessage = createServerFn({ method: "POST" })
       data.buttonText && data.buttonUrl
         ? { inline_keyboard: [[{ text: data.buttonText, url: data.buttonUrl }]] }
         : undefined;
+    const buttonRows =
+      data.buttonText && data.buttonUrl
+        ? [[{ text: data.buttonText, url: data.buttonUrl }]]
+        : undefined;
     const isNormalVideo = video && video.kind === "normal";
+
+    // Pre-render emoji tokens to HTML for caption-bearing sends (photo/video).
+    let captionForMedia: string | null = data.content ?? null;
+    let captionParseMode: string = data.parseMode;
+    if (captionForMedia && hasEmojiTokens(captionForMedia)) {
+      const lookup = await getUserEmojiLookup(userId);
+      const rendered = renderEmojiTokensToHtml(captionForMedia, lookup);
+      if (rendered.replaced) {
+        captionForMedia = rendered.text;
+        captionParseMode = "HTML";
+      }
+    }
 
     let sent = 0;
     let failed = 0;
@@ -333,6 +350,7 @@ export const testMessage = createServerFn({ method: "POST" })
               chatId: c.chat_id,
               text: data.content,
               strict: true,
+              buttonRows,
             })
           : { applied: false as const, reason: "skip" };
       if (premium.applied) {
@@ -350,6 +368,7 @@ export const testMessage = createServerFn({ method: "POST" })
             photoUrl: pub.publicUrl,
             caption: data.content ?? null,
             strict: true,
+            buttonRows,
           });
           if (premiumPhoto.applied) {
             r = premiumPhoto.ok
@@ -359,8 +378,8 @@ export const testMessage = createServerFn({ method: "POST" })
             r = await callTelegram<{ message_id: number }>(acc.bot_token, "sendPhoto", {
               chat_id: c.chat_id,
               photo: pub.publicUrl,
-              caption: data.content ?? undefined,
-              parse_mode: data.content ? data.parseMode : undefined,
+              caption: captionForMedia ?? undefined,
+              parse_mode: captionForMedia ? captionParseMode : undefined,
               reply_markup: replyMarkup,
             });
           }
@@ -368,8 +387,8 @@ export const testMessage = createServerFn({ method: "POST" })
           r = await callTelegram<{ message_id: number }>(acc.bot_token, "sendPhoto", {
             chat_id: c.chat_id,
             photo: pub.publicUrl,
-            caption: data.content ?? undefined,
-            parse_mode: data.content ? data.parseMode : undefined,
+            caption: captionForMedia ?? undefined,
+            parse_mode: captionForMedia ? captionParseMode : undefined,
             reply_markup: replyMarkup,
           });
         }
@@ -382,8 +401,8 @@ export const testMessage = createServerFn({ method: "POST" })
             duration: video.duration_seconds,
             mimeType: video.mime_type,
             filename: (video.title || "video").replace(/[^\w.-]+/g, "_") + ".mp4",
-            caption: data.content ?? null,
-            parseMode: data.parseMode,
+            caption: captionForMedia,
+            parseMode: captionParseMode,
             replyMarkup,
           });
         } else {
