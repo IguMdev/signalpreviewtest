@@ -4,10 +4,48 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { callTelegram } from "@/lib/telegram.server";
 import { dispatchVideoNote, dispatchVideo } from "@/lib/videos.functions";
-import { sendPhotoWithPremiumEmojiCaption, sendTextWithPremiumEmojis, sendVideoWithPremiumEmojiCaption, getUserEmojiLookup } from "@/lib/premium-send.server";
+import {
+  sendPhotoWithPremiumEmojiCaption,
+  sendTextWithPremiumEmojis,
+  sendVideoWithPremiumEmojiCaption,
+  getUserEmojiLookup,
+} from "@/lib/premium-send.server";
 import { renderEmojiTokensToHtml, hasEmojiTokens } from "@/lib/premium-emoji-render";
 
 const TimeRe = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+type TelegramResult = { ok: boolean; result?: { message_id?: number }; description?: string };
+
+async function sendCompanionButtonMessage(
+  botToken: string | null | undefined,
+  chatId: number | string,
+  replyMarkup: unknown,
+): Promise<TelegramResult> {
+  if (!replyMarkup) return { ok: true };
+  return await callTelegram<{ message_id: number }>(botToken, "sendMessage", {
+    chat_id: chatId,
+    text: "\u2063",
+    reply_markup: replyMarkup,
+  });
+}
+
+async function withCompanionButton(
+  primary: TelegramResult,
+  botToken: string | null | undefined,
+  chatId: number | string,
+  replyMarkup: unknown,
+): Promise<TelegramResult> {
+  if (!primary.ok || !replyMarkup) return primary;
+  const button = await sendCompanionButtonMessage(botToken, chatId, replyMarkup);
+  if (!button.ok) {
+    return {
+      ok: false,
+      result: primary.result,
+      description: `Mensagem enviada, mas o botão falhou: ${button.description ?? "erro"}`,
+    };
+  }
+  return primary;
+}
 
 const FollowUpInput = z.object({
   delayMinutes: z.number().int().min(1).max(1440),
@@ -82,7 +120,10 @@ export const upsertSchedule = createServerFn({ method: "POST" })
       button_url: data.buttonUrl ?? null,
     };
     if (data.id) {
-      const { error } = await supabase.from("recurring_schedules").update(row as never).eq("id", data.id);
+      const { error } = await supabase
+        .from("recurring_schedules")
+        .update(row as never)
+        .eq("id", data.id);
       if (error) throw new Error(error.message);
       return { id: data.id };
     }
@@ -154,7 +195,13 @@ export const testSchedule = createServerFn({ method: "POST" })
     if (!acc) throw new Error("Bot não encontrado");
     if (!chats?.length) throw new Error("Nenhum grupo vinculado a esta sala");
 
-    let video: { storage_path: string; mime_type: string | null; duration_seconds: number | null; title: string; kind: string | null } | null = null;
+    let video: {
+      storage_path: string;
+      mime_type: string | null;
+      duration_seconds: number | null;
+      title: string;
+      kind: string | null;
+    } | null = null;
     if (s.video_id) {
       const { data: v } = await supabaseAdmin
         .from("videos")
@@ -184,104 +231,115 @@ export const testSchedule = createServerFn({ method: "POST" })
               userId: s.user_id,
               chatId: c.chat_id,
               text: s.content,
-                  strict: true,
+              strict: true,
             })
           : { applied: false as const, reason: "skip" };
       if (premium.applied) {
-        r = premium.ok
-          ? { ok: true, result: { message_id: premium.messageId ?? undefined } }
-          : { ok: false, description: premium.error };
-      } else r = s.image_path
-        ? await (async () => {
-            const { data: pub } = supabaseAdmin.storage
-              .from("room-images")
-              .getPublicUrl(s.image_path!);
-            if (s.is_premium) {
-              const premiumPhoto = await sendPhotoWithPremiumEmojiCaption({
-                userId: s.user_id,
-                chatId: c.chat_id,
-                photoUrl: pub.publicUrl,
-                caption: s.content,
-                strict: true,
-              });
-              if (premiumPhoto.applied) {
-                return premiumPhoto.ok
-                  ? { ok: true, result: { message_id: premiumPhoto.messageId ?? undefined } }
-                  : { ok: false, description: premiumPhoto.error };
+        r = await withCompanionButton(
+          premium.ok
+            ? { ok: true, result: { message_id: premium.messageId ?? undefined } }
+            : { ok: false, description: premium.error },
+          acc.bot_token,
+          c.chat_id,
+          replyMarkup,
+        );
+      } else
+        r = s.image_path
+          ? await (async () => {
+              const { data: pub } = supabaseAdmin.storage
+                .from("room-images")
+                .getPublicUrl(s.image_path!);
+              if (s.is_premium) {
+                const premiumPhoto = await sendPhotoWithPremiumEmojiCaption({
+                  userId: s.user_id,
+                  chatId: c.chat_id,
+                  photoUrl: pub.publicUrl,
+                  caption: s.content,
+                  strict: true,
+                });
+                if (premiumPhoto.applied) {
+                  return await withCompanionButton(
+                    premiumPhoto.ok
+                      ? { ok: true, result: { message_id: premiumPhoto.messageId ?? undefined } }
+                      : { ok: false, description: premiumPhoto.error },
+                    acc.bot_token,
+                    c.chat_id,
+                    replyMarkup,
+                  );
+                }
               }
-            }
-            return await callTelegram<{ message_id: number }>(
-              acc.bot_token,
-              "sendPhoto",
-              {
+              return await callTelegram<{ message_id: number }>(acc.bot_token, "sendPhoto", {
                 chat_id: c.chat_id,
                 photo: pub.publicUrl,
                 caption: s.content ?? undefined,
                 parse_mode: s.content ? s.parse_mode : undefined,
                 reply_markup: replyMarkup,
-              },
-            );
-          })()
-        : video
-        ? isNormalVideo
-          ? await (async () => {
-              if (s.is_premium && s.content && hasEmojiTokens(s.content)) {
-                const { data: file } = await supabaseAdmin.storage
-                  .from("videos")
-                  .download(video!.storage_path);
-                if (file) {
-                  const bytes = await file.arrayBuffer();
-                  const pv = await sendVideoWithPremiumEmojiCaption({
-                    userId: s.user_id,
-                    chatId: c.chat_id,
-                    videoBytes: bytes,
-                    filename: (video!.title || "video").replace(/[^\w.-]+/g, "_") + ".mp4",
-                    mimeType: video!.mime_type ?? "video/mp4",
-                    duration: video!.duration_seconds,
-                    caption: s.content,
-                    strict: true,
-                    buttonRows: sAny.button_text && sAny.button_url ? [[{ text: sAny.button_text, url: sAny.button_url }]] : undefined,
-                  });
-                  if (pv.applied) {
-                    return pv.ok
-                      ? { ok: true, result: { message_id: pv.messageId ?? undefined } }
-                      : { ok: false, description: pv.error };
-                  }
-                }
-              }
-              return await dispatchVideo({
-                botToken: acc.bot_token,
-                storagePath: video!.storage_path,
-                chatId: c.chat_id,
-                duration: video!.duration_seconds,
-                mimeType: video!.mime_type,
-                filename: (video!.title || "video").replace(/[^\w.-]+/g, "_") + ".mp4",
-                caption: s.content,
-                parseMode: s.parse_mode,
-                replyMarkup,
               });
             })()
-          : await dispatchVideoNote({
-            botToken: acc.bot_token,
-            storagePath: video.storage_path,
-            chatId: c.chat_id,
-            duration: video.duration_seconds,
-            mimeType: video.mime_type,
-            filename: (video.title || "video").replace(/[^\w.-]+/g, "_") + ".mp4",
-          })
-        : await callTelegram<{ message_id: number }>(acc.bot_token, "sendMessage", {
-            chat_id: c.chat_id,
-            text: s.content ?? "",
-            parse_mode: s.parse_mode,
-            reply_markup: replyMarkup,
-          });
+          : video
+            ? isNormalVideo
+              ? await (async () => {
+                  if (s.is_premium && s.content && hasEmojiTokens(s.content)) {
+                    const { data: file } = await supabaseAdmin.storage
+                      .from("videos")
+                      .download(video!.storage_path);
+                    if (file) {
+                      const bytes = await file.arrayBuffer();
+                      const pv = await sendVideoWithPremiumEmojiCaption({
+                        userId: s.user_id,
+                        chatId: c.chat_id,
+                        videoBytes: bytes,
+                        filename: (video!.title || "video").replace(/[^\w.-]+/g, "_") + ".mp4",
+                        mimeType: video!.mime_type ?? "video/mp4",
+                        duration: video!.duration_seconds,
+                        caption: s.content,
+                        strict: true,
+                      });
+                      if (pv.applied) {
+                        return await withCompanionButton(
+                          pv.ok
+                            ? { ok: true, result: { message_id: pv.messageId ?? undefined } }
+                            : { ok: false, description: pv.error },
+                          acc.bot_token,
+                          c.chat_id,
+                          replyMarkup,
+                        );
+                      }
+                    }
+                  }
+                  return await dispatchVideo({
+                    botToken: acc.bot_token,
+                    storagePath: video!.storage_path,
+                    chatId: c.chat_id,
+                    duration: video!.duration_seconds,
+                    mimeType: video!.mime_type,
+                    filename: (video!.title || "video").replace(/[^\w.-]+/g, "_") + ".mp4",
+                    caption: s.content,
+                    parseMode: s.parse_mode,
+                    replyMarkup,
+                  });
+                })()
+              : await dispatchVideoNote({
+                  botToken: acc.bot_token,
+                  storagePath: video.storage_path,
+                  chatId: c.chat_id,
+                  duration: video.duration_seconds,
+                  mimeType: video.mime_type,
+                  filename: (video.title || "video").replace(/[^\w.-]+/g, "_") + ".mp4",
+                })
+            : await callTelegram<{ message_id: number }>(acc.bot_token, "sendMessage", {
+                chat_id: c.chat_id,
+                text: s.content ?? "",
+                parse_mode: s.parse_mode,
+                reply_markup: replyMarkup,
+              });
       await supabaseAdmin.from("message_logs").insert({
         user_id: userId,
         account_id: accountId,
         chat_id: c.chat_id,
         ok: r.ok,
         telegram_message_id: r.result?.message_id ?? null,
-        error: r.ok ? null : r.description ?? "erro",
+        error: r.ok ? null : (r.description ?? "erro"),
       } as never);
       if (r.ok) sent++;
       else {
@@ -335,7 +393,13 @@ export const testMessage = createServerFn({ method: "POST" })
     if (!acc) throw new Error("Bot não encontrado");
     if (!chats?.length) throw new Error("Nenhum grupo vinculado a esta sala");
 
-    let video: { storage_path: string; mime_type: string | null; duration_seconds: number | null; title: string; kind: string | null } | null = null;
+    let video: {
+      storage_path: string;
+      mime_type: string | null;
+      duration_seconds: number | null;
+      title: string;
+      kind: string | null;
+    } | null = null;
     if (data.videoId) {
       const { data: v } = await supabaseAdmin
         .from("videos")
@@ -348,10 +412,6 @@ export const testMessage = createServerFn({ method: "POST" })
     const replyMarkup =
       data.buttonText && data.buttonUrl
         ? { inline_keyboard: [[{ text: data.buttonText, url: data.buttonUrl }]] }
-        : undefined;
-    const buttonRows =
-      data.buttonText && data.buttonUrl
-        ? [[{ text: data.buttonText, url: data.buttonUrl }]]
         : undefined;
     const isNormalVideo = video && video.kind === "normal";
 
@@ -386,13 +446,17 @@ export const testMessage = createServerFn({ method: "POST" })
               chatId: c.chat_id,
               text: data.content,
               strict: true,
-              buttonRows,
             })
           : { applied: false as const, reason: "skip" };
       if (premium.applied) {
-        r = premium.ok
-          ? { ok: true, result: { message_id: premium.messageId ?? undefined } }
-          : { ok: false, description: premium.error };
+        r = await withCompanionButton(
+          premium.ok
+            ? { ok: true, result: { message_id: premium.messageId ?? undefined } }
+            : { ok: false, description: premium.error },
+          acc.bot_token,
+          c.chat_id,
+          replyMarkup,
+        );
       } else if (data.imagePath) {
         const { data: pub } = supabaseAdmin.storage
           .from("room-images")
@@ -404,12 +468,16 @@ export const testMessage = createServerFn({ method: "POST" })
             photoUrl: pub.publicUrl,
             caption: data.content ?? null,
             strict: true,
-            buttonRows,
           });
           if (premiumPhoto.applied) {
-            r = premiumPhoto.ok
-              ? { ok: true, result: { message_id: premiumPhoto.messageId ?? undefined } }
-              : { ok: false, description: premiumPhoto.error };
+            r = await withCompanionButton(
+              premiumPhoto.ok
+                ? { ok: true, result: { message_id: premiumPhoto.messageId ?? undefined } }
+                : { ok: false, description: premiumPhoto.error },
+              acc.bot_token,
+              c.chat_id,
+              replyMarkup,
+            );
           } else {
             r = await callTelegram<{ message_id: number }>(acc.bot_token, "sendPhoto", {
               chat_id: c.chat_id,
@@ -446,12 +514,16 @@ export const testMessage = createServerFn({ method: "POST" })
                 duration: video.duration_seconds,
                 caption: data.content,
                 strict: true,
-                buttonRows,
               });
               if (pv.applied) {
-                r = pv.ok
-                  ? { ok: true, result: { message_id: pv.messageId ?? undefined } }
-                  : { ok: false, description: pv.error };
+                r = await withCompanionButton(
+                  pv.ok
+                    ? { ok: true, result: { message_id: pv.messageId ?? undefined } }
+                    : { ok: false, description: pv.error },
+                  acc.bot_token,
+                  c.chat_id,
+                  replyMarkup,
+                );
                 premiumVideoOk = true;
               }
             }
@@ -493,7 +565,7 @@ export const testMessage = createServerFn({ method: "POST" })
         chat_id: c.chat_id,
         ok: r.ok,
         telegram_message_id: r.result?.message_id ?? null,
-        error: r.ok ? null : r.description ?? "erro",
+        error: r.ok ? null : (r.description ?? "erro"),
       } as never);
       if (r.ok) sent++;
       else {
