@@ -1151,6 +1151,7 @@ function ScheduleDialog({
                   content: f.content || null,
                   imagePath: f.imagePath || null,
                   imageMime: f.imageMime || null,
+                  videoId: f.videoId || null,
                 })),
                 isPremium,
                 isActive,
