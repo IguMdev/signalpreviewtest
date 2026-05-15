@@ -9,6 +9,39 @@ import { renderEmojiTokensToHtml, hasEmojiTokens } from "@/lib/premium-emoji-ren
 
 const TimeRe = /^([01]\d|2[0-3]):[0-5]\d$/;
 
+type TelegramResult = { ok: boolean; result?: { message_id?: number }; description?: string };
+
+async function sendCompanionButtonMessage(
+  botToken: string | null | undefined,
+  chatId: number | string,
+  replyMarkup: unknown,
+): Promise<TelegramResult> {
+  if (!replyMarkup) return { ok: true };
+  return await callTelegram<{ message_id: number }>(botToken, "sendMessage", {
+    chat_id: chatId,
+    text: "\u2063",
+    reply_markup: replyMarkup,
+  });
+}
+
+async function withCompanionButton(
+  primary: TelegramResult,
+  botToken: string | null | undefined,
+  chatId: number | string,
+  replyMarkup: unknown,
+): Promise<TelegramResult> {
+  if (!primary.ok || !replyMarkup) return primary;
+  const button = await sendCompanionButtonMessage(botToken, chatId, replyMarkup);
+  if (!button.ok) {
+    return {
+      ok: false,
+      result: primary.result,
+      description: `Mensagem enviada, mas o botão falhou: ${button.description ?? "erro"}`,
+    };
+  }
+  return primary;
+}
+
 const FollowUpInput = z.object({
   delayMinutes: z.number().int().min(1).max(1440),
   delaySeconds: z.number().int().min(1).max(86400).nullable().optional(),
