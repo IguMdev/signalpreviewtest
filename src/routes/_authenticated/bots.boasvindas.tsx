@@ -460,9 +460,14 @@ function ExtraEditor({
             <SelectTrigger><SelectValue placeholder="Selecione uma conta premium" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="none">Selecione...</SelectItem>
-              {premiumAccounts.map((a: any) => (
-                <SelectItem key={a.id} value={a.id}>{a.label} {a.status !== "ok" ? `(${a.status})` : ""}</SelectItem>
-              ))}
+              {premiumAccounts.map((a: any) => {
+                const handle = a.bot_username ? `@${a.bot_username}` : a.phone || "";
+                return (
+                  <SelectItem key={a.id} value={a.id}>
+                    {a.label}{handle ? ` — ${handle}` : ""}{a.status !== "ok" ? ` (${a.status})` : ""}
+                  </SelectItem>
+                );
+              })}
             </SelectContent>
           </Select>
         )}
