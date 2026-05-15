@@ -665,6 +665,7 @@ export type Database = {
           created_at: string
           delay_seconds_max: number
           delay_seconds_min: number
+          forwarder_allowed_types: string[]
           forwarder_enabled: boolean
           forwarder_source_chat_id: number | null
           forwarder_target_chat_ids: number[]
@@ -690,6 +691,7 @@ export type Database = {
           created_at?: string
           delay_seconds_max?: number
           delay_seconds_min?: number
+          forwarder_allowed_types?: string[]
           forwarder_enabled?: boolean
           forwarder_source_chat_id?: number | null
           forwarder_target_chat_ids?: number[]
@@ -715,6 +717,7 @@ export type Database = {
           created_at?: string
           delay_seconds_max?: number
           delay_seconds_min?: number
+          forwarder_allowed_types?: string[]
           forwarder_enabled?: boolean
           forwarder_source_chat_id?: number | null
           forwarder_target_chat_ids?: number[]
