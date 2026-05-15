@@ -34,7 +34,7 @@ function BoasVindasPage() {
 
   const roomsQ = useQuery({
     queryKey: ["rooms-pick"],
-    queryFn: async () => (await supabase.from("rooms").select("id, name").order("created_at", { ascending: false })).data ?? [],
+    queryFn: async () => (await supabase.from("rooms").select("id, name, photo_url").order("created_at", { ascending: false })).data ?? [],
   });
   const videosQ = useQuery({
     queryKey: ["videos-pick"],
@@ -48,6 +48,8 @@ function BoasVindasPage() {
 
   const [roomId, setRoomId] = useState<string>("");
   useEffect(() => { if (!roomId && roomsQ.data?.[0]?.id) setRoomId(roomsQ.data[0].id); }, [roomsQ.data, roomId]);
+
+  const selectedRoom = (roomsQ.data ?? []).find((r: any) => r.id === roomId);
 
   const cfgQ = useQuery({
     queryKey: ["welcome-cfg", roomId],
@@ -109,12 +111,25 @@ function BoasVindasPage() {
       <Card>
         <CardHeader><CardTitle className="text-base">Sala</CardTitle></CardHeader>
         <CardContent>
-          <Select value={roomId} onValueChange={setRoomId}>
-            <SelectTrigger><SelectValue placeholder="Selecione a sala" /></SelectTrigger>
-            <SelectContent>
-              {(roomsQ.data ?? []).map((r) => <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>)}
-            </SelectContent>
-          </Select>
+          <div className="flex items-center gap-3">
+            {selectedRoom?.photo_url ? (
+              <img
+                src={selectedRoom.photo_url}
+                alt={selectedRoom.name}
+                className="size-14 rounded-md object-cover border border-border/60 shrink-0"
+              />
+            ) : (
+              <div className="size-14 rounded-md border border-border/60 bg-muted shrink-0" />
+            )}
+            <div className="flex-1">
+              <Select value={roomId} onValueChange={setRoomId}>
+                <SelectTrigger><SelectValue placeholder="Selecione a sala" /></SelectTrigger>
+                <SelectContent>
+                  {(roomsQ.data ?? []).map((r: any) => <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
         </CardContent>
       </Card>
 
