@@ -45,6 +45,8 @@ type Schedule = {
     image_path: string | null;
     image_mime: string | null;
     video_id: string | null;
+    button_text?: string | null;
+    button_url?: string | null;
   }> | null;
   timezone: string;
   last_fire_key: string | null;
@@ -63,6 +65,8 @@ type PendingFollowup = {
   image_mime: string | null;
   video_id: string | null;
   parse_mode: string;
+  button_text?: string | null;
+  button_url?: string | null;
 };
 
 async function sendOne(
@@ -312,9 +316,11 @@ export const Route = createFileRoute("/api/public/cron/dispatch-recurring")({
                 image_mime: f.image_mime ?? null,
                 video_id: f.video_id ?? null,
                 parse_mode: s.parse_mode,
+                button_text: f.button_text ?? null,
+                button_url: f.button_url ?? null,
               };
             });
-            await supabaseAdmin.from("recurring_pending_followups").insert(rows);
+            await supabaseAdmin.from("recurring_pending_followups").insert(rows as never);
           }
         }
 
@@ -322,7 +328,7 @@ export const Route = createFileRoute("/api/public/cron/dispatch-recurring")({
         const nowIso = new Date().toISOString();
         const { data: pendings } = await supabaseAdmin
           .from("recurring_pending_followups")
-          .select("id, schedule_id, user_id, room_id, account_id, content, image_path, image_mime, video_id, parse_mode")
+          .select("id, schedule_id, user_id, room_id, account_id, content, image_path, image_mime, video_id, parse_mode, button_text, button_url")
           .eq("status", "pending")
           .lte("scheduled_at", nowIso)
           .limit(100);
@@ -374,11 +380,11 @@ export const Route = createFileRoute("/api/public/cron/dispatch-recurring")({
 
           let okAny = false;
           let lastErr: string | null = null;
-          let video: { storage_path: string; mime_type: string | null; duration_seconds: number | null; title: string } | null = null;
+          let video: { storage_path: string; mime_type: string | null; duration_seconds: number | null; title: string; kind: string | null } | null = null;
           if (p.video_id) {
             const { data: v } = await supabaseAdmin
               .from("videos")
-              .select("storage_path, mime_type, duration_seconds, title")
+              .select("storage_path, mime_type, duration_seconds, title, kind")
               .eq("id", p.video_id)
               .maybeSingle();
             video = v ?? null;
@@ -391,9 +397,26 @@ export const Route = createFileRoute("/api/public/cron/dispatch-recurring")({
                 .maybeSingle()
             : { data: null };
           const isPremium = Boolean(parentSchedule?.is_premium);
+          const pReplyMarkup =
+            p.button_text && p.button_url
+              ? { inline_keyboard: [[{ text: p.button_text, url: p.button_url }]] }
+              : undefined;
+          const pIsNormalVideo = video && video.kind === "normal";
           for (const c of chats) {
             const r = video
-              ? await dispatchVideoNote({
+              ? pIsNormalVideo
+                ? await dispatchVideo({
+                    botToken: acc.bot_token,
+                    storagePath: video!.storage_path,
+                    chatId: c.chat_id,
+                    duration: video!.duration_seconds,
+                    mimeType: video!.mime_type,
+                    filename: (video!.title || "video").replace(/[^\w.-]+/g, "_") + ".mp4",
+                    caption: p.content,
+                    parseMode: p.parse_mode,
+                    replyMarkup: pReplyMarkup,
+                  })
+                : await dispatchVideoNote({
                   botToken: acc.bot_token,
                   storagePath: video.storage_path,
                   chatId: c.chat_id,
@@ -407,14 +430,8 @@ export const Route = createFileRoute("/api/public/cron/dispatch-recurring")({
                   parse_mode: p.parse_mode,
                   user_id: p.user_id,
                   is_premium: isPremium,
+                  reply_markup: pReplyMarkup,
                 });
-            if (video && r.ok && p.content && p.content.trim()) {
-              await callTelegram<{ message_id: number }>(acc.bot_token, "sendMessage", {
-                chat_id: c.chat_id,
-                text: p.content,
-                parse_mode: p.parse_mode,
-              });
-            }
             await supabaseAdmin.from("message_logs").insert({
               user_id: p.user_id,
               account_id: accountId,
