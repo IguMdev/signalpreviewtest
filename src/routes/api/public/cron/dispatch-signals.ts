@@ -2,6 +2,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { callTelegram } from "@/lib/telegram.server";
 import { sendTextWithPremiumEmojis } from "@/lib/premium-send.server";
+import { getUserEmojiLookup } from "@/lib/premium-send.server";
+import { renderEmojiTokensToHtml } from "@/lib/premium-emoji-render";
 import {
   buildSlots, categoryFor, getBinanceM1Candle, nowParts,
   pickRandom, renderTemplate, resolveBinary,
@@ -35,6 +37,11 @@ function buildReplyMarkup(buttons: TemplateButton[], kind: string) {
     .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
     .map((b) => [{ text: b.label, url: b.url }]);
   return rows.length ? { inline_keyboard: rows } : undefined;
+}
+
+async function renderBotApiText(userId: string, text: string) {
+  const lookup = await getUserEmojiLookup(userId);
+  return renderEmojiTokensToHtml(text, lookup).text;
 }
 
 function fmtHHMM(d: Date, tz: string) {
@@ -73,9 +80,10 @@ async function sendToRoom(opts: {
         continue;
       }
     }
+    const botText = opts.replyMarkup ? await renderBotApiText(opts.userId, opts.text) : opts.text;
     const r = await callTelegram<{ message_id: number }>(opts.botToken, "sendMessage", {
       chat_id: cid,
-      text: opts.text,
+      text: botText,
       parse_mode: opts.parseMode || "HTML",
       reply_to_message_id: opts.replyTo?.[String(cid)],
       allow_sending_without_reply: true,
