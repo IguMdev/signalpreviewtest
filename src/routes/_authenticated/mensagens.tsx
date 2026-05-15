@@ -639,6 +639,47 @@ function ScheduleDialog({
 
   const canSave = title.trim() && roomId && times.length > 0 && weekdays.length > 0;
 
+  async function runPartTest(
+    key: string,
+    payload: {
+      content: string;
+      videoId: string;
+      imagePath: string;
+      imageMime: string;
+      buttonText: string;
+      buttonUrl: string;
+    },
+  ) {
+    if (!roomId) {
+      toast.error("Selecione uma sala antes de testar");
+      return;
+    }
+    setTestingPart(key);
+    try {
+      const res = await testMsgFn({
+        data: {
+          roomId,
+          accountId: accountId || null,
+          content: payload.content || null,
+          videoId: payload.videoId || null,
+          imagePath: payload.videoId ? null : payload.imagePath || null,
+          imageMime: payload.videoId ? null : payload.imageMime || null,
+          parseMode: "HTML",
+          isPremium,
+          buttonText: payload.buttonText?.trim() || null,
+          buttonUrl: payload.buttonUrl?.trim() || null,
+        },
+      });
+      if (res.ok)
+        toast.success(`Teste enviado (${res.sent} grupo${res.sent === 1 ? "" : "s"})`);
+      else toast.error(res.error ?? "Falha ao enviar teste");
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setTestingPart(null);
+    }
+  }
+
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
