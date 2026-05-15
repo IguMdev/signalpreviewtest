@@ -9,11 +9,14 @@ import {
   deleteMetaIntegration,
   sendMetaTestEvent,
   listMetaEventLogs,
+  META_EVENT_OPTIONS,
+  type MetaEventOption,
 } from "@/lib/meta-capi.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle2, XCircle, ExternalLink } from "lucide-react";
@@ -37,6 +40,9 @@ function MetaIntegrationPage() {
   const [accessToken, setAccessToken] = useState("");
   const [testEventCode, setTestEventCode] = useState("");
   const [isActive, setIsActive] = useState(true);
+  const [joinEvent, setJoinEvent] = useState<MetaEventOption>("CompleteRegistration");
+  const [leaveEvent, setLeaveEvent] = useState<MetaEventOption>("off");
+  const [kickedEvent, setKickedEvent] = useState<MetaEventOption>("off");
 
   useEffect(() => {
     if (integ.data) {
@@ -44,11 +50,18 @@ function MetaIntegrationPage() {
       setAccessToken(integ.data.access_token ?? "");
       setTestEventCode(integ.data.test_event_code ?? "");
       setIsActive(integ.data.is_active ?? true);
+      const m = (integ.data.event_mappings ?? {}) as Record<string, string>;
+      setJoinEvent((m.join as MetaEventOption) ?? "CompleteRegistration");
+      setLeaveEvent((m.leave as MetaEventOption) ?? "off");
+      setKickedEvent((m.kicked as MetaEventOption) ?? "off");
     }
   }, [integ.data]);
 
   const save = useMutation({
-    mutationFn: () => upsertFn({ data: { pixelId, accessToken, testEventCode: testEventCode || null, isActive } }),
+    mutationFn: () => upsertFn({ data: {
+      pixelId, accessToken, testEventCode: testEventCode || null, isActive,
+      eventMappings: { join: joinEvent, leave: leaveEvent, kicked: kickedEvent },
+    } }),
     onSuccess: () => {
       toast.success("Integração salva");
       qc.invalidateQueries({ queryKey: ["meta-integ"] });
@@ -133,13 +146,31 @@ function MetaIntegrationPage() {
         <CardHeader>
           <CardTitle>Eventos disparados automaticamente</CardTitle>
           <CardDescription>
-            Estes eventos são enviados ao seu Pixel quando ocorrem na plataforma:
+            Escolha qual evento padrão do Meta enviar para cada acontecimento no Telegram. Selecione "Desativado" para não enviar.
           </CardDescription>
         </CardHeader>
-        <CardContent className="text-sm space-y-2">
-          <div className="flex justify-between border-b pb-2"><span>Novo membro entra no grupo do Telegram</span><Badge variant="outline">CompleteRegistration</Badge></div>
-          <div className="flex justify-between border-b pb-2"><span>Venda aprovada (Kirvano)</span><Badge variant="outline">Purchase</Badge></div>
-          <div className="flex justify-between"><span>Cancelamento / reembolso</span><Badge variant="outline">Subscribe (canceled)</Badge></div>
+        <CardContent className="space-y-4">
+          <EventMappingRow
+            label="Novo membro entra no grupo / canal"
+            description="Disparado quando alguém entra em um grupo ou canal monitorado pelo bot."
+            value={joinEvent}
+            onChange={setJoinEvent}
+          />
+          <EventMappingRow
+            label="Membro sai do grupo / canal"
+            description="Disparado quando alguém sai voluntariamente."
+            value={leaveEvent}
+            onChange={setLeaveEvent}
+          />
+          <EventMappingRow
+            label="Membro removido / banido"
+            description="Disparado quando um membro é expulso ou banido."
+            value={kickedEvent}
+            onChange={setKickedEvent}
+          />
+          <p className="text-xs text-muted-foreground">
+            Lembre de clicar em <strong>Salvar</strong> acima após alterar.
+          </p>
         </CardContent>
       </Card>
 
@@ -166,6 +197,39 @@ function MetaIntegrationPage() {
           )}
         </CardContent>
       </Card>
+    </div>
+  );
+}
+
+function EventMappingRow({
+  label,
+  description,
+  value,
+  onChange,
+}: {
+  label: string;
+  description: string;
+  value: MetaEventOption;
+  onChange: (v: MetaEventOption) => void;
+}) {
+  return (
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b pb-3 last:border-b-0 last:pb-0">
+      <div className="min-w-0">
+        <p className="text-sm font-medium">{label}</p>
+        <p className="text-xs text-muted-foreground">{description}</p>
+      </div>
+      <Select value={value} onValueChange={(v) => onChange(v as MetaEventOption)}>
+        <SelectTrigger className="w-full sm:w-56">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {META_EVENT_OPTIONS.map((opt) => (
+            <SelectItem key={opt} value={opt}>
+              {opt === "off" ? "Desativado" : opt}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     </div>
   );
 }
