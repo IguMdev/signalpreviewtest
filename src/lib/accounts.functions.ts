@@ -3,7 +3,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { callTelegram, type TelegramUser, type TelegramUpdate } from "./telegram.server";
 import { getPremiumAccountConnectionStatus, getUserEmojiLookup, sendPhotoWithPremiumEmojiCaption, sendTextWithPremiumEmojis } from "./premium-send.server";
-import { renderEmojiTokensToHtml } from "./premium-emoji-render";
+import { renderEmojiTokens, renderEmojiTokensToHtml } from "./premium-emoji-render";
 
 export const verifyAccount = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -153,6 +153,7 @@ export const sendRoomTest = createServerFn({ method: "POST" })
     z
       .object({
         roomId: z.string().uuid(),
+        templateKind: z.string().optional(),
         text: z.string().max(4000).optional(),
         imagePath: z.string().optional(),
         imageBucket: z.string().optional(),
@@ -187,18 +188,19 @@ export const sendRoomTest = createServerFn({ method: "POST" })
     if (!acc) throw new Error("Bot da sala não encontrado");
 
     const text = data.text?.trim() || "";
+    const emojiLookup = await getUserEmojiLookup(userId);
     const { data: buttons } = await supabase
       .from("room_template_buttons")
       .select("label, url, sort_order")
       .eq("room_id", room.id)
-      .eq("template_kind", "signal")
+      .eq("template_kind", data.templateKind || "signal")
       .order("sort_order", { ascending: true });
     const buttonRows = (buttons ?? [])
       .filter((b) => b.label && b.url)
-      .map((b) => [{ text: b.label, url: b.url }]);
+      .map((b) => [{ text: renderEmojiTokens(b.label, emojiLookup).text, url: b.url }]);
     const replyMarkup = buttonRows.length ? { inline_keyboard: buttonRows } : undefined;
     const botText = replyMarkup
-      ? renderEmojiTokensToHtml(text, await getUserEmojiLookup(userId)).text
+      ? renderEmojiTokensToHtml(text, emojiLookup).text
       : text;
     let r;
     if (data.imagePath) {
