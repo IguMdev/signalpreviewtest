@@ -16,30 +16,6 @@ type SavedEmoji = {
   preview_char: string | null;
 };
 
-function Thumb({ cached, fallback }: { cached?: CachedEmoji; fallback: string | null }) {
-  if (cached?.thumb_data_url) {
-    if (cached.thumb_mime === "video/webm") {
-      return (
-        <video
-          src={cached.thumb_data_url}
-          muted
-          playsInline
-          preload="metadata"
-          className="size-7 object-contain"
-          onLoadedMetadata={(e) => {
-            e.currentTarget.currentTime = 0;
-            e.currentTarget.pause();
-          }}
-        />
-      );
-    }
-    if (cached.thumb_mime?.startsWith("image/")) {
-      return <img src={cached.thumb_data_url} alt="" className="size-7 object-contain" />;
-    }
-  }
-  return <span className="text-xl leading-none">{fallback ?? "✨"}</span>;
-}
-
 /**
  * Insere texto na posição do cursor de um textarea/input controlado
  * e mantém o cursor após a inserção.
