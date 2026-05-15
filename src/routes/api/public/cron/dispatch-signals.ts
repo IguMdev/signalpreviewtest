@@ -49,6 +49,22 @@ type TemplateButton = {
   sort_order: number;
 };
 
+type SignalEvent = {
+  id: string;
+  user_id: string;
+  room_id: string;
+  window_id: string;
+  asset_code: string;
+  asset_category: string | null;
+  direction: string;
+  timeframe: string;
+  entry_at: string;
+  expires_at: string;
+  gale_level: number;
+  max_gales: number | null;
+  signal_message_ids: Record<string, number> | null;
+};
+
 async function buildReplyMarkup(userId: string, buttons: TemplateButton[], kind: string) {
   const lookup = await getUserEmojiLookup(userId);
   const rows = buttons
@@ -329,7 +345,7 @@ async function resolveExpired(): Promise<number> {
 }
 
 async function postResult(
-  s: any,
+  s: SignalEvent,
   outcome: "win" | "loss",
   candle?: { open: number; close: number },
 ) {
