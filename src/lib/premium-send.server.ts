@@ -22,6 +22,7 @@ export async function sendTextWithPremiumEmojis(opts: {
   userId: string;
   chatId: number | string;
   text: string;
+  replyToMessageId?: number;
 }): Promise<PremiumSendResult> {
   if (!hasEmojiTokens(opts.text)) {
     return { applied: false, reason: "no-tokens" };
@@ -84,6 +85,7 @@ export async function sendTextWithPremiumEmojis(opts: {
     const msg = await client.sendMessage(target as never, {
       message: text,
       formattingEntities: apiEntities,
+      replyTo: opts.replyToMessageId,
     });
     return { applied: true, ok: true, messageId: Number(msg.id) };
   } catch (e) {
