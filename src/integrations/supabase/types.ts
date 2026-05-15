@@ -1559,6 +1559,57 @@ export type Database = {
         }
         Relationships: []
       }
+      welcome_extra_messages: {
+        Row: {
+          button_text: string | null
+          button_url: string | null
+          content: string | null
+          created_at: string
+          delay_seconds: number
+          id: string
+          image_mime: string | null
+          image_path: string | null
+          parse_mode: string
+          room_id: string
+          sort_order: number
+          updated_at: string
+          user_id: string
+          video_id: string | null
+        }
+        Insert: {
+          button_text?: string | null
+          button_url?: string | null
+          content?: string | null
+          created_at?: string
+          delay_seconds?: number
+          id?: string
+          image_mime?: string | null
+          image_path?: string | null
+          parse_mode?: string
+          room_id: string
+          sort_order?: number
+          updated_at?: string
+          user_id: string
+          video_id?: string | null
+        }
+        Update: {
+          button_text?: string | null
+          button_url?: string | null
+          content?: string | null
+          created_at?: string
+          delay_seconds?: number
+          id?: string
+          image_mime?: string | null
+          image_path?: string | null
+          parse_mode?: string
+          room_id?: string
+          sort_order?: number
+          updated_at?: string
+          user_id?: string
+          video_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
