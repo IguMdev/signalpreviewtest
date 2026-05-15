@@ -1034,20 +1034,6 @@ function ScheduleDialog({
                           }
                           disabled={!!f.videoId && isRoundVideo(f.videoId)}
                         />
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                          <Input
-                            value={f.buttonText}
-                            onChange={(e) => update({ buttonText: e.target.value })}
-                            placeholder="Botão (texto)"
-                            maxLength={64}
-                          />
-                          <Input
-                            value={f.buttonUrl}
-                            onChange={(e) => update({ buttonUrl: e.target.value })}
-                            placeholder="Botão (URL)"
-                            maxLength={2048}
-                          />
-                        </div>
                         {f.imagePath ? (
                           <div className="flex items-start gap-3">
                             <img
