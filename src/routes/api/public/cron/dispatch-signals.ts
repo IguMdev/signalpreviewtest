@@ -68,6 +68,17 @@ type SignalEvent = {
   signal_message_ids: unknown;
 };
 
+function reportDateKey(date: Date, tz: string) {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: tz,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+  const get = (type: string) => parts.find((p) => p.type === type)?.value ?? "";
+  return `${get("year")}-${get("month")}-${get("day")}`;
+}
+
 function asMessageIds(value: unknown): Record<string, number> {
   return value && typeof value === "object" && !Array.isArray(value)
     ? (value as Record<string, number>)
@@ -420,6 +431,7 @@ async function postResult(
     chatIds: ctx.chatIds,
     text,
     parseMode: tpl.parse_mode,
+    imagePath: tpl.image_path,
     replyTo,
     replyMarkup: await buildReplyMarkup(ctx.room.user_id, ctx.buttons, tplKind),
   });
@@ -465,18 +477,77 @@ async function postResult(
     .eq("id", s.id);
 }
 
+async function sendDueReports(): Promise<number> {
+  const { data: reports } = await supabaseAdmin
+    .from("room_reports")
+    .select("user_id, room_id, enabled, delay_minutes, template, image_path")
+    .eq("enabled", true);
+  if (!reports?.length) return 0;
+
+  let sent = 0;
+  const now = new Date();
+  for (const report of reports) {
+    const ctx = await getRoomContext(report.room_id);
+    if (!ctx?.botToken || !ctx.chatIds.length) continue;
+    const { data: windows } = await supabaseAdmin
+      .from("room_windows")
+      .select("id, name, end_time")
+      .eq("room_id", report.room_id)
+      .eq("is_active", true);
+    for (const w of windows ?? []) {
+      const key = `${reportDateKey(now, ctx.room.timezone)}:${String(w.end_time).slice(0, 5)}`;
+      const dueHHMM = fmtHHMM(new Date(now.getTime() - Math.max(0, Number(report.delay_minutes) || 0) * 60_000), ctx.room.timezone);
+      if (dueHHMM < String(w.end_time).slice(0, 5)) continue;
+      const { data: claim } = await supabaseAdmin
+        .from("room_report_runs")
+        .insert({ user_id: report.user_id, room_id: report.room_id, window_id: w.id, report_key: key })
+        .select("id")
+        .maybeSingle();
+      if (!claim) continue;
+
+      const { data: stats } = await supabaseAdmin
+        .from("signal_events")
+        .select("status")
+        .eq("room_id", report.room_id)
+        .eq("window_id", w.id);
+      const totalWins = (stats ?? []).filter((s) => ["win", "win_g1", "win_g2"].includes(String(s.status))).length;
+      const totalLosses = (stats ?? []).filter((s) => String(s.status) === "loss").length;
+      const total = totalWins + totalLosses;
+      const winRate = total ? Math.round((totalWins / total) * 100) : 0;
+      const text = String(report.template || "📊 RELATÓRIO {SESSAO_NOME}\n✅ Wins: {TOTAL_WINS}\n🔴 Losses: {TOTAL_LOSSES}\n📈 Operações: {TOTAL_OPERACOES}\n🎯 Win rate: {WIN_RATE}%")
+        .replaceAll("{SESSAO_NOME}", w.name ?? "Sessão")
+        .replaceAll("{TOTAL_WINS}", String(totalWins))
+        .replaceAll("{TOTAL_LOSSES}", String(totalLosses))
+        .replaceAll("{TOTAL_OPERACOES}", String(total))
+        .replaceAll("{WIN_RATE}", String(winRate));
+      const ids = await sendToRoom({
+        userId: report.user_id,
+        botToken: ctx.botToken,
+        chatIds: ctx.chatIds,
+        text,
+        parseMode: "HTML",
+        imagePath: report.image_path,
+      });
+      await supabaseAdmin.from("room_report_runs").update({ message_ids: ids }).eq("id", claim.id);
+      if (Object.keys(ids).length) sent++;
+    }
+  }
+  return sent;
+}
+
 /* ============ HANDLER ============ */
 export const Route = createFileRoute("/api/public/cron/dispatch-signals")({
   server: {
     handlers: {
       POST: async () => {
         try {
-          const [scheduled, sent, resolved] = [
+          const [scheduled, sent, resolved, reports] = [
             await scheduleSignals(),
             await sendScheduled(),
             await resolveExpired(),
+            await sendDueReports(),
           ];
-          return Response.json({ ok: true, scheduled, sent, resolved });
+          return Response.json({ ok: true, scheduled, sent, resolved, reports });
         } catch (e) {
           const msg = e instanceof Error ? e.message : String(e);
           return Response.json({ ok: false, error: msg }, { status: 500 });
