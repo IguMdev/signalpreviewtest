@@ -243,6 +243,14 @@ export const Route = createFileRoute("/api/public/cron/dispatch-recurring")({
                   text: s.content ?? "",
                   parse_mode: s.parse_mode,
                 });
+            // Vídeo (note) não suporta legenda — envia texto como mensagem separada
+            if (video && r.ok && s.content && s.content.trim()) {
+              await callTelegram<{ message_id: number }>(acc.bot_token, "sendMessage", {
+                chat_id: c.chat_id,
+                text: s.content,
+                parse_mode: s.parse_mode,
+              });
+            }
             await supabaseAdmin.from("message_logs").insert({
               user_id: s.user_id,
               account_id: accountId,
