@@ -19,12 +19,15 @@ import {
   UserPlus,
   GraduationCap,
   Megaphone,
+  Plug,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
 import { TourProvider } from "@/components/tour/TourProvider";
-
 export const Route = createFileRoute("/_authenticated")({
   component: AuthenticatedLayout,
 });
