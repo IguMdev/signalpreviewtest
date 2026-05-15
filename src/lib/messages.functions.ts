@@ -95,6 +95,7 @@ export const dispatchDue = createServerFn({ method: "POST" }).handler(async () =
               userId: msg.user_id,
               chatId: c.chat_id,
               text: msg.content,
+              botToken: acc.bot_token,
             })
           : { applied: false as const, reason: "skip" };
       if (premium.applied) {
