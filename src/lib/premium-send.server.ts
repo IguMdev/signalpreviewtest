@@ -4,6 +4,7 @@ import {
   renderEmojiTokens,
   renderEmojiTokensToHtml,
   type EmojiLookup,
+  type RenderedEntity,
 } from "./premium-emoji-render";
 
 export type PremiumSendResult =
@@ -25,16 +26,17 @@ async function getUserEmojiLookup(userId: string): Promise<EmojiLookup> {
   );
 }
 
-async function getActivePremiumAccount(userId: string) {
-  const { data: acc } = await supabaseAdmin
+async function getActivePremiumAccount(userId: string, accountId?: string) {
+  let query = supabaseAdmin
     .from("telegram_accounts")
-    .select("tg_api_id, tg_api_hash, tg_session")
+    .select("id, tg_api_id, tg_api_hash, tg_session")
     .eq("user_id", userId)
     .eq("account_type", "premium")
     .eq("is_active", true)
-    .not("tg_session", "is", null)
-    .limit(1)
-    .maybeSingle();
+    .not("tg_session", "is", null);
+
+  query = accountId ? query.eq("id", accountId) : query.limit(1);
+  const { data: acc } = await query.maybeSingle();
 
   if (!acc?.tg_session || !acc.tg_api_id || !acc.tg_api_hash) return null;
   return acc;
@@ -68,6 +70,7 @@ async function connectAndAssertPremium(acc: {
   await client.connect();
 
   let isPremium = false;
+  let userInfo: { firstName?: string | null; username?: string | null } = {};
   try {
     const me = await client.invoke(
       new Api.users.GetFullUser({ id: new Api.InputUserSelf() }),
@@ -76,17 +79,79 @@ async function connectAndAssertPremium(acc: {
       (u): u is InstanceType<typeof Api.User> => u.className === "User",
     );
     isPremium = Boolean(user?.premium);
+    userInfo = {
+      firstName: (user as { firstName?: string | null } | undefined)?.firstName ?? null,
+      username: (user as { username?: string | null } | undefined)?.username ?? null,
+    };
   } catch {
     isPremium = false;
   }
 
-  return { client, isPremium };
+  return { client, isPremium, userInfo };
 }
 
 export async function renderPremiumEmojiTokensForBotApi(userId: string, text: string | null | undefined) {
   if (!text || !hasEmojiTokens(text)) return { text: text ?? null, replaced: false };
   const lookup = await getUserEmojiLookup(userId);
   return renderEmojiTokensToHtml(text, lookup);
+}
+
+async function normalizeCustomEmojiAlts(
+  client: { invoke: (request: unknown) => Promise<unknown> },
+  rendered: { text: string; entities: RenderedEntity[] },
+) {
+  if (!rendered.entities.length) return rendered;
+  const { Api } = await import("telegram");
+  const { default: bigInt } = await import("big-integer");
+  const ids = Array.from(new Set(rendered.entities.map((entity) => entity.documentId)));
+  const docs = (await client.invoke(
+    new Api.messages.GetCustomEmojiDocuments({
+      documentId: ids.map((id) => bigInt(id) as never),
+    }),
+  ).catch(() => [])) as Array<{
+    id?: { toString(): string };
+    attributes?: Array<{ className?: string; alt?: string }>;
+  }>;
+  const altById = new Map<string, string>();
+  for (const doc of docs ?? []) {
+    const id = doc.id ? String(doc.id) : null;
+    const alt = doc.attributes?.find(
+      (attr) => attr.className === "DocumentAttributeCustomEmoji" && typeof attr.alt === "string" && attr.alt.length > 0,
+    )?.alt;
+    if (id && alt) altById.set(id, alt);
+  }
+  if (!altById.size) return rendered;
+
+  const entities = [...rendered.entities].sort((a, b) => a.offset - b.offset);
+  let text = "";
+  let last = 0;
+  const normalizedEntities: RenderedEntity[] = [];
+  for (const entity of entities) {
+    text += rendered.text.slice(last, entity.offset);
+    const fallback = rendered.text.slice(entity.offset, entity.offset + entity.length);
+    const replacement = altById.get(entity.documentId) ?? fallback;
+    normalizedEntities.push({
+      ...entity,
+      offset: text.length,
+      length: replacement.length,
+    });
+    text += replacement;
+    last = entity.offset + entity.length;
+  }
+  text += rendered.text.slice(last);
+  return { text, entities: normalizedEntities };
+}
+
+export async function getPremiumAccountConnectionStatus(userId: string, accountId: string) {
+  const acc = await getActivePremiumAccount(userId, accountId);
+  if (!acc) return { ok: false as const, error: "Conecte a conta Telegram Premium novamente." };
+  const { client, isPremium, userInfo } = await connectAndAssertPremium({
+    tg_api_id: acc.tg_api_id as number,
+    tg_api_hash: acc.tg_api_hash as string,
+    tg_session: acc.tg_session as string,
+  });
+  await client.disconnect().catch(() => {});
+  return { ok: true as const, isPremium, ...userInfo };
 }
 
 /**
@@ -99,12 +164,34 @@ export async function renderPremiumEmojiTokensForBotApi(userId: string, text: st
  */
 export async function sendTextWithPremiumEmojis(opts: {
   userId: string;
+  accountId?: string;
   chatId: number | string;
   text: string;
   replyToMessageId?: number;
   strict?: boolean;
+  allowPlain?: boolean;
 }): Promise<PremiumSendResult> {
   if (!hasEmojiTokens(opts.text)) {
+    if (opts.allowPlain) {
+      const acc = await getActivePremiumAccount(opts.userId, opts.accountId);
+      if (!acc) return { applied: true, ok: false, error: "Conecte a conta Telegram Premium novamente." };
+      const { client } = await connectAndAssertPremium({
+        tg_api_id: acc.tg_api_id as number,
+        tg_api_hash: acc.tg_api_hash as string,
+        tg_session: acc.tg_session as string,
+      });
+      try {
+        const msg = await client.sendMessage(resolveTelegramTarget(opts.chatId) as never, {
+          message: opts.text,
+          replyTo: opts.replyToMessageId,
+        });
+        return { applied: true, ok: true, messageId: Number(msg.id) };
+      } catch (e) {
+        return { applied: true, ok: false, error: e instanceof Error ? e.message : String(e) };
+      } finally {
+        await client.disconnect().catch(() => {});
+      }
+    }
     return { applied: false, reason: "no-tokens" };
   }
 
@@ -118,7 +205,7 @@ export async function sendTextWithPremiumEmojis(opts: {
     return { applied: false, reason: "no-known-emojis" };
   }
 
-  const acc = await getActivePremiumAccount(opts.userId);
+  const acc = await getActivePremiumAccount(opts.userId, opts.accountId);
   if (!acc) {
     if (opts.strict) {
       return { applied: true, ok: false, error: "Conecte uma conta Telegram Premium ativa para enviar emojis premium animados." };
@@ -145,10 +232,11 @@ export async function sendTextWithPremiumEmojis(opts: {
   }
 
   try {
+    const normalized = await normalizeCustomEmojiAlts(client, rendered);
     const target = resolveTelegramTarget(opts.chatId);
     const msg = await client.sendMessage(target as never, {
-      message: rendered.text,
-      formattingEntities: rendered.entities.map(
+      message: normalized.text,
+      formattingEntities: normalized.entities.map(
         (entity) =>
           new Api.MessageEntityCustomEmoji({
             offset: entity.offset,
