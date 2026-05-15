@@ -50,7 +50,11 @@ async function decodeTgsDataUrl(dataUrl: string) {
   return JSON.parse(await new Response(stream).text()) as object;
 }
 
-function TgsEmojiMedia({ src, className, animate }: { src: string; className: string; animate: boolean }) {
+function EmojiFallback({ fallback }: { fallback: string | null }) {
+  return <span className="text-xl leading-none">{fallback ?? "✨"}</span>;
+}
+
+function TgsEmojiMedia({ src, className, animate, fallback }: { src: string; className: string; animate: boolean; fallback: string | null }) {
   const ref = useRef<HTMLDivElement | null>(null);
   const [failed, setFailed] = useState(false);
 
@@ -79,7 +83,7 @@ function TgsEmojiMedia({ src, className, animate }: { src: string; className: st
     };
   }, [src, animate]);
 
-  if (failed) return null;
+  if (failed) return <EmojiFallback fallback={fallback} />;
   return <div ref={ref} className={`${className} [&_svg]:!block`} />;
 }
 
@@ -92,10 +96,10 @@ export function PremiumEmojiMedia({ cached, fallback, className = "size-7", anim
       return <img src={cached.thumb_data_url} alt="" className={`${className} object-contain`} />;
     }
     if (cached.thumb_mime === "application/x-tgsticker") {
-      return <TgsEmojiMedia src={cached.thumb_data_url} className={className} animate={animate} />;
+      return <TgsEmojiMedia src={cached.thumb_data_url} className={className} animate={animate} fallback={fallback} />;
     }
   }
-  return <span className="text-xl leading-none">{fallback ?? "✨"}</span>;
+  return <EmojiFallback fallback={fallback} />;
 }
 
 type Props = {
@@ -137,10 +141,13 @@ export function PremiumEmojiPicker({ value, onChange, targetRef, size = "sm", cl
         return !item?.thumb_data_url || item.thumb_mime === "application/x-tgsticker";
       });
       if (!missing.length) return;
-      const fresh = await fetchThumbs({ data: { ids: missing } }).catch(() => null);
-      if (!fresh?.ok || !fresh.items.length) return;
-      await putCachedEmojis(fresh.items.map((it) => ({ custom_emoji_id: it.custom_emoji_id, preview_char: list.data.find((e) => e.custom_emoji_id === it.custom_emoji_id)?.preview_char ?? null, thumb_data_url: it.thumb_data_url, thumb_mime: it.thumb_mime })));
-      setThumbs(new Map([...cached, ...fresh.items.map((it) => [it.custom_emoji_id, { ...it, preview_char: list.data.find((e) => e.custom_emoji_id === it.custom_emoji_id)?.preview_char ?? null, cached_at: Date.now() } as CachedEmoji] as const)]));
+      const previewById = new Map(list.data.map((e) => [e.custom_emoji_id, e.preview_char] as const));
+      for (let i = 0; i < missing.length; i += 24) {
+        const fresh = await fetchThumbs({ data: { ids: missing.slice(i, i + 24) } }).catch(() => null);
+        if (!fresh?.ok || !fresh.items.length) continue;
+        await putCachedEmojis(fresh.items.map((it) => ({ custom_emoji_id: it.custom_emoji_id, preview_char: previewById.get(it.custom_emoji_id) ?? null, thumb_data_url: it.thumb_data_url, thumb_mime: it.thumb_mime })));
+        setThumbs((prev) => new Map([...prev, ...fresh.items.map((it) => [it.custom_emoji_id, { ...it, preview_char: previewById.get(it.custom_emoji_id) ?? null, cached_at: Date.now() } as CachedEmoji] as const)]));
+      }
     });
   }, [list.data, fetchThumbs]);
 
