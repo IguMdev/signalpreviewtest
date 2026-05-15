@@ -164,8 +164,7 @@ export const testSchedule = createServerFn({ method: "POST" })
               userId: s.user_id,
               chatId: c.chat_id,
               text: s.content,
-              botToken: acc.bot_token,
-              strict: true,
+                  strict: true,
             })
           : { applied: false as const, reason: "skip" };
       if (premium.applied) {
@@ -183,7 +182,6 @@ export const testSchedule = createServerFn({ method: "POST" })
                 chatId: c.chat_id,
                 photoUrl: pub.publicUrl,
                 caption: s.content,
-                botToken: acc.bot_token,
                 strict: true,
               });
               if (premiumPhoto.applied) {

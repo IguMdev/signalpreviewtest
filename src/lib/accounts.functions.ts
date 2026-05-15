@@ -63,7 +63,6 @@ export const sendTestMessage = createServerFn({ method: "POST" })
       userId,
       chatId: data.chatId,
       text: data.text,
-      botToken: acc.bot_token,
     });
     if (premium.applied) {
       if (!premium.ok) return { ok: false, error: premium.error };
@@ -174,7 +173,7 @@ export const sendRoomTest = createServerFn({ method: "POST" })
           sticker: pub.publicUrl,
         });
         if (r.ok && text) {
-          const premium = await sendTextWithPremiumEmojis({ userId, chatId: chat.chat_id, text, botToken: acc.bot_token });
+          const premium = await sendTextWithPremiumEmojis({ userId, chatId: chat.chat_id, text });
           if (premium.applied) {
             if (!premium.ok) throw new Error(premium.error);
           } else await callTelegram<{ message_id: number }>(acc.bot_token, "sendMessage", {
@@ -189,7 +188,6 @@ export const sendRoomTest = createServerFn({ method: "POST" })
           chatId: chat.chat_id,
           photoUrl: pub.publicUrl,
           caption: text,
-          botToken: acc.bot_token,
         });
         r = premiumPhoto.applied
           ? premiumPhoto.ok
@@ -204,7 +202,7 @@ export const sendRoomTest = createServerFn({ method: "POST" })
       }
     } else {
       if (!text) throw new Error("Mensagem vazia");
-      const premium = await sendTextWithPremiumEmojis({ userId, chatId: chat.chat_id, text, botToken: acc.bot_token });
+      const premium = await sendTextWithPremiumEmojis({ userId, chatId: chat.chat_id, text });
       if (premium.applied) {
         if (!premium.ok) throw new Error(premium.error);
         r = { ok: true, result: { message_id: premium.messageId ?? undefined } };

@@ -72,7 +72,6 @@ async function sendOne(
       userId: msg.user_id,
       chatId,
       text: msg.content,
-      botToken,
       strict: true,
     });
     if (premium.applied) {
@@ -89,7 +88,6 @@ async function sendOne(
         chatId,
         photoUrl: pub.publicUrl,
         caption: msg.content,
-        botToken,
         strict: true,
       });
       if (premiumPhoto.applied) {
@@ -193,7 +191,6 @@ export const Route = createFileRoute("/api/public/cron/dispatch-recurring")({
                     userId: s.user_id,
                     chatId: c.chat_id,
                     text: s.content,
-                    botToken: acc.bot_token,
                     strict: true,
                   })
                 : { applied: false as const, reason: "skip" };
@@ -212,7 +209,6 @@ export const Route = createFileRoute("/api/public/cron/dispatch-recurring")({
                       chatId: c.chat_id,
                       photoUrl: pub.publicUrl,
                       caption: s.content,
-                      botToken: acc.bot_token,
                       strict: true,
                     });
                     if (premiumPhoto.applied) {

@@ -49,7 +49,6 @@ async function sendToRoom(opts: {
       userId: opts.userId,
       chatId: cid,
       text: opts.text,
-      botToken: opts.botToken,
       replyToMessageId: opts.replyTo?.[String(cid)],
     });
     if (premium.applied) {
