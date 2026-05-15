@@ -50,6 +50,7 @@ import {
   ImageIcon,
   Loader2,
   Send,
+  Copy,
 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/mensagens")({
@@ -254,6 +255,17 @@ function MensagensPage() {
     });
   };
 
+  const openDuplicate = (s: Schedule) => {
+    setPresetRoomId(s.room_id);
+    setEditing({
+      ...s,
+      id: "",
+      title: `${s.title} (cópia)`,
+      is_active: true,
+      last_sent_at: null,
+    });
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -408,6 +420,16 @@ function MensagensPage() {
                             <Send className="size-4" />
                           )}
                           Testar
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          title="Duplicar agendamento"
+                          onClick={() => openDuplicate(s)}
+                          className="h-8"
+                        >
+                          <Copy className="size-4" />
+                          Duplicar
                         </Button>
                         <Button size="icon" variant="ghost" onClick={() => setEditing(s)}>
                           <Pencil className="size-4" />
