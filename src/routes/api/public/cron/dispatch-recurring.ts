@@ -3,7 +3,10 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { callTelegram } from "@/lib/telegram.server";
 import { dispatchVideoNote, dispatchVideo } from "@/lib/videos.functions";
 import { triggerSignalReactions } from "@/lib/engagement.functions";
-import { sendPhotoWithPremiumEmojiCaption, sendTextWithPremiumEmojis } from "@/lib/premium-send.server";
+import {
+  sendPhotoWithPremiumEmojiCaption,
+  sendTextWithPremiumEmojis,
+} from "@/lib/premium-send.server";
 
 type TelegramResult = { ok: boolean; result?: { message_id?: number }; description?: string };
 
@@ -49,7 +52,13 @@ function nowParts(tz: string) {
   const parts = fmt.formatToParts(new Date());
   const get = (t: string) => parts.find((p) => p.type === t)?.value ?? "";
   const wdMap: Record<string, number> = {
-    Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6, Sun: 7,
+    Mon: 1,
+    Tue: 2,
+    Wed: 3,
+    Thu: 4,
+    Fri: 5,
+    Sat: 6,
+    Sun: 7,
   };
   const weekday = wdMap[get("weekday")] ?? 0;
   const hh = get("hour").padStart(2, "0");
@@ -105,7 +114,14 @@ type PendingFollowup = {
 async function sendOne(
   botToken: string | null | undefined,
   chatId: number | string,
-  msg: { content: string | null; image_path: string | null; parse_mode: string; user_id?: string; is_premium?: boolean; reply_markup?: unknown },
+  msg: {
+    content: string | null;
+    image_path: string | null;
+    parse_mode: string;
+    user_id?: string;
+    is_premium?: boolean;
+    reply_markup?: unknown;
+  },
 ): Promise<{ ok: boolean; result?: { message_id?: number }; description?: string }> {
   if (!msg.image_path && msg.content && msg.user_id && msg.is_premium) {
     const premium = await sendTextWithPremiumEmojis({
@@ -224,7 +240,13 @@ export const Route = createFileRoute("/api/public/cron/dispatch-recurring")({
             .eq("room_id", s.room_id);
           if (!acc || !chats?.length) continue;
 
-          let video: { storage_path: string; mime_type: string | null; duration_seconds: number | null; title: string; kind: string | null } | null = null;
+          let video: {
+            storage_path: string;
+            mime_type: string | null;
+            duration_seconds: number | null;
+            title: string;
+            kind: string | null;
+          } | null = null;
           if (s.video_id) {
             const { data: v } = await supabaseAdmin
               .from("videos")
@@ -260,76 +282,76 @@ export const Route = createFileRoute("/api/public/cron/dispatch-recurring")({
                 c.chat_id,
                 replyMarkup,
               );
-            } else r = s.image_path
-              ? await (async () => {
-                  const { data: pub } = supabaseAdmin.storage
-                    .from("room-images")
-                    .getPublicUrl(s.image_path!);
-                  if (s.is_premium) {
-                    const premiumPhoto = await sendPhotoWithPremiumEmojiCaption({
-                      userId: s.user_id,
-                      chatId: c.chat_id,
-                      photoUrl: pub.publicUrl,
-                      caption: s.content,
-                      strict: true,
-                    });
-                    if (premiumPhoto.applied) {
-                      return await withCompanionButton(
-                        premiumPhoto.ok
-                          ? { ok: true, result: { message_id: premiumPhoto.messageId ?? undefined } }
-                          : { ok: false, description: premiumPhoto.error },
-                        acc.bot_token,
-                        c.chat_id,
-                        replyMarkup,
-                      );
+            } else
+              r = s.image_path
+                ? await (async () => {
+                    const { data: pub } = supabaseAdmin.storage
+                      .from("room-images")
+                      .getPublicUrl(s.image_path!);
+                    if (s.is_premium) {
+                      const premiumPhoto = await sendPhotoWithPremiumEmojiCaption({
+                        userId: s.user_id,
+                        chatId: c.chat_id,
+                        photoUrl: pub.publicUrl,
+                        caption: s.content,
+                        strict: true,
+                      });
+                      if (premiumPhoto.applied) {
+                        return await withCompanionButton(
+                          premiumPhoto.ok
+                            ? {
+                                ok: true,
+                                result: { message_id: premiumPhoto.messageId ?? undefined },
+                              }
+                            : { ok: false, description: premiumPhoto.error },
+                          acc.bot_token,
+                          c.chat_id,
+                          replyMarkup,
+                        );
+                      }
                     }
-                  }
-                  return await callTelegram<{ message_id: number }>(
-                    acc.bot_token,
-                    "sendPhoto",
-                    {
+                    return await callTelegram<{ message_id: number }>(acc.bot_token, "sendPhoto", {
                       chat_id: c.chat_id,
                       photo: pub.publicUrl,
                       caption: s.content ?? undefined,
                       parse_mode: s.content ? s.parse_mode : undefined,
                       reply_markup: replyMarkup,
-                    },
-                  );
-                })()
-              : video
-              ? isNormalVideo
-                ? await dispatchVideo({
-                    botToken: acc.bot_token,
-                    storagePath: video!.storage_path,
-                    chatId: c.chat_id,
-                    duration: video!.duration_seconds,
-                    mimeType: video!.mime_type,
-                    filename: (video!.title || "video").replace(/[^\w.-]+/g, "_") + ".mp4",
-                    caption: s.content,
-                    parseMode: s.parse_mode,
-                    replyMarkup,
-                  })
-                : await dispatchVideoNote({
-                  botToken: acc.bot_token,
-                  storagePath: video.storage_path,
-                  chatId: c.chat_id,
-                  duration: video.duration_seconds,
-                  mimeType: video.mime_type,
-                  filename: (video.title || "video").replace(/[^\w.-]+/g, "_") + ".mp4",
-                })
-              : await callTelegram<{ message_id: number }>(acc.bot_token, "sendMessage", {
-                  chat_id: c.chat_id,
-                  text: s.content ?? "",
-                  parse_mode: s.parse_mode,
-                  reply_markup: replyMarkup,
-                });
+                    });
+                  })()
+                : video
+                  ? isNormalVideo
+                    ? await dispatchVideo({
+                        botToken: acc.bot_token,
+                        storagePath: video!.storage_path,
+                        chatId: c.chat_id,
+                        duration: video!.duration_seconds,
+                        mimeType: video!.mime_type,
+                        filename: (video!.title || "video").replace(/[^\w.-]+/g, "_") + ".mp4",
+                        caption: s.content,
+                        parseMode: s.parse_mode,
+                        replyMarkup,
+                      })
+                    : await dispatchVideoNote({
+                        botToken: acc.bot_token,
+                        storagePath: video.storage_path,
+                        chatId: c.chat_id,
+                        duration: video.duration_seconds,
+                        mimeType: video.mime_type,
+                        filename: (video.title || "video").replace(/[^\w.-]+/g, "_") + ".mp4",
+                      })
+                  : await callTelegram<{ message_id: number }>(acc.bot_token, "sendMessage", {
+                      chat_id: c.chat_id,
+                      text: s.content ?? "",
+                      parse_mode: s.parse_mode,
+                      reply_markup: replyMarkup,
+                    });
             await supabaseAdmin.from("message_logs").insert({
               user_id: s.user_id,
               account_id: accountId,
               chat_id: c.chat_id,
               ok: r.ok,
               telegram_message_id: r.result?.message_id ?? null,
-              error: r.ok ? null : r.description ?? "erro",
+              error: r.ok ? null : (r.description ?? "erro"),
             } as never);
             if (r.ok) okAny = true;
             if (r.ok && r.result?.message_id) {
@@ -381,7 +403,9 @@ export const Route = createFileRoute("/api/public/cron/dispatch-recurring")({
         const nowIso = new Date().toISOString();
         const { data: pendings } = await supabaseAdmin
           .from("recurring_pending_followups")
-          .select("id, schedule_id, user_id, room_id, account_id, content, image_path, image_mime, video_id, parse_mode, button_text, button_url")
+          .select(
+            "id, schedule_id, user_id, room_id, account_id, content, image_path, image_mime, video_id, parse_mode, button_text, button_url",
+          )
           .eq("status", "pending")
           .lte("scheduled_at", nowIso)
           .limit(100);
@@ -433,7 +457,13 @@ export const Route = createFileRoute("/api/public/cron/dispatch-recurring")({
 
           let okAny = false;
           let lastErr: string | null = null;
-          let video: { storage_path: string; mime_type: string | null; duration_seconds: number | null; title: string; kind: string | null } | null = null;
+          let video: {
+            storage_path: string;
+            mime_type: string | null;
+            duration_seconds: number | null;
+            title: string;
+            kind: string | null;
+          } | null = null;
           if (p.video_id) {
             const { data: v } = await supabaseAdmin
               .from("videos")
@@ -470,13 +500,13 @@ export const Route = createFileRoute("/api/public/cron/dispatch-recurring")({
                     replyMarkup: pReplyMarkup,
                   })
                 : await dispatchVideoNote({
-                  botToken: acc.bot_token,
-                  storagePath: video.storage_path,
-                  chatId: c.chat_id,
-                  duration: video.duration_seconds,
-                  mimeType: video.mime_type,
-                  filename: (video.title || "video").replace(/[^\w.-]+/g, "_") + ".mp4",
-                })
+                    botToken: acc.bot_token,
+                    storagePath: video.storage_path,
+                    chatId: c.chat_id,
+                    duration: video.duration_seconds,
+                    mimeType: video.mime_type,
+                    filename: (video.title || "video").replace(/[^\w.-]+/g, "_") + ".mp4",
+                  })
               : await sendOne(acc.bot_token, c.chat_id, {
                   content: p.content,
                   image_path: p.image_path,
@@ -491,7 +521,7 @@ export const Route = createFileRoute("/api/public/cron/dispatch-recurring")({
               chat_id: c.chat_id,
               ok: r.ok,
               telegram_message_id: r.result?.message_id ?? null,
-              error: r.ok ? null : r.description ?? "erro",
+              error: r.ok ? null : (r.description ?? "erro"),
             } as never);
             if (r.ok) okAny = true;
             else lastErr = r.description ?? "erro";
