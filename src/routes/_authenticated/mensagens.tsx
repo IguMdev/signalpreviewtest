@@ -546,6 +546,13 @@ function ScheduleDialog({
   const [buttonUrl, setButtonUrl] = useState("");
 
   const open = !!editing;
+  const videoKindById = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const v of videos) m.set(v.id, (v.kind ?? "round") as string);
+    return m;
+  }, [videos]);
+  const isRoundVideo = (vid: string) =>
+    !!vid && (videoKindById.get(vid) ?? "round") === "round";
 
   useMemo(() => {
     if (editing) {
