@@ -72,6 +72,17 @@ export const testWindow = createServerFn({ method: "POST" })
 
     const { data: tpls } = await supabaseAdmin
       .from("room_templates").select("kind, content, parse_mode").eq("room_id", w.room_id);
+    const { data: btnsRaw } = await supabaseAdmin
+      .from("room_template_buttons")
+      .select("template_kind, label, url, sort_order")
+      .eq("room_id", w.room_id)
+      .order("sort_order", { ascending: true });
+    const signalButtons = (btnsRaw ?? [])
+      .filter((b) => b.template_kind === "signal" && b.label && b.url)
+      .map((b) => [{ text: b.label, url: b.url }]);
+    const replyMarkup = signalButtons.length
+      ? { inline_keyboard: signalButtons }
+      : undefined;
     const tpl = (tpls ?? []).find((t) => t.kind === "signal") ?? {
       kind: "signal", parse_mode: "HTML",
       content: "🧪 TESTE 🧪\n✅ ENTRADA CONFIRMADA ✅\n🌎 Ativo: {ATIVO}\n⏳ Expiração: {TIMEFRAME}\n📊 Direção: {DIRECAO}\n⏰ Entrada: {ENTRADA}\nGale 1: {ENTRADAGALE1}\nGale 2: {ENTRADAGALE2}",
@@ -89,20 +100,24 @@ export const testWindow = createServerFn({ method: "POST" })
     const ids: Record<string, number> = {};
     const errors: string[] = [];
     for (const cid of chatIds) {
-      const premium = await sendTextWithPremiumEmojis({
-        userId: w.user_id,
-        chatId: cid,
-        text,
-      });
-      if (premium.applied) {
-        if (premium.ok && premium.messageId) ids[String(cid)] = premium.messageId;
-        else errors.push(`chat ${cid}: ${premium.ok ? "erro" : premium.error}`);
-        continue;
+      // Botões inline exigem Bot API — pula a rota premium quando há botões.
+      if (!replyMarkup) {
+        const premium = await sendTextWithPremiumEmojis({
+          userId: w.user_id,
+          chatId: cid,
+          text,
+        });
+        if (premium.applied) {
+          if (premium.ok && premium.messageId) ids[String(cid)] = premium.messageId;
+          else errors.push(`chat ${cid}: ${premium.ok ? "erro" : premium.error}`);
+          continue;
+        }
       }
       const r = await callTelegram<{ message_id: number }>(botToken, "sendMessage", {
         chat_id: cid,
         text,
         parse_mode: tpl.parse_mode || "HTML",
+        reply_markup: replyMarkup,
       });
       if (r.ok && r.result?.message_id) ids[String(cid)] = r.result.message_id;
       else errors.push(`chat ${cid}: ${r.description ?? "erro"}`);
