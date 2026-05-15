@@ -10,6 +10,7 @@ import {
   requestPremiumCode,
   confirmPremiumCode,
   syncPremiumEmojis,
+  getPremiumAccountAvatar,
 } from "@/lib/premium-account.functions";
 import { premiumStrings as S, translatePremiumError } from "@/lib/premium-strings";
 import { useResendCooldown } from "@/lib/use-resend-cooldown";
