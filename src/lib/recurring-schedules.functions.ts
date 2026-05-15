@@ -349,7 +349,10 @@ export const testMessage = createServerFn({ method: "POST" })
     let failed = 0;
     let lastError: string | null = null;
     for (const c of chats) {
-      let r: { ok: boolean; result?: { message_id?: number }; description?: string };
+      let r: { ok: boolean; result?: { message_id?: number }; description?: string } = {
+        ok: false,
+        description: "no-op",
+      };
       const premium =
         wantsPremium && !data.imagePath && !video && data.content
           ? await sendTextWithPremiumEmojis({
