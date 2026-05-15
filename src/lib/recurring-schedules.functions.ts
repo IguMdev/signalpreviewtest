@@ -10,6 +10,7 @@ const TimeRe = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 const FollowUpInput = z.object({
   delayMinutes: z.number().int().min(1).max(1440),
+  delaySeconds: z.number().int().min(1).max(86400).nullable().optional(),
   content: z.string().max(4000).nullable().optional(),
   imagePath: z.string().max(500).nullable().optional(),
   imageMime: z.string().max(100).nullable().optional(),
@@ -61,6 +62,7 @@ export const upsertSchedule = createServerFn({ method: "POST" })
       ),
       follow_ups: (data.followUps ?? []).map((f) => ({
         delay_minutes: f.delayMinutes,
+        delay_seconds: f.delaySeconds ?? null,
         content: f.content ?? null,
         image_path: f.imagePath ?? null,
         image_mime: f.imageMime ?? null,
