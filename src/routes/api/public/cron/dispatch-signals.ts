@@ -226,6 +226,7 @@ async function sendScheduled(): Promise<number> {
       chatIds: ctx.chatIds,
       text,
       parseMode: tpl.parse_mode,
+      replyMarkup: buildReplyMarkup(ctx.buttons, "signal"),
     });
 
     await supabaseAdmin.from("signal_events").update({
@@ -308,6 +309,7 @@ async function postResult(
     text,
     parseMode: tpl.parse_mode,
     replyTo,
+    replyMarkup: buildReplyMarkup(ctx.buttons, tplKind),
   });
 
   // se LOSS e ainda há gales disponíveis, encadeia próxima entrada
