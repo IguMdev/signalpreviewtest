@@ -67,7 +67,7 @@ async function logBot(entry: {
       tg_first_name: entry.tgFirstName ?? null,
       message: entry.message ?? null,
       error: entry.error ?? null,
-      details: entry.details ?? null,
+      details: (entry.details ?? null) as never,
     });
   } catch (e) {
     console.error("[bot-log] insert failed:", e);
