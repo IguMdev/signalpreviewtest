@@ -398,17 +398,45 @@ export const testMessage = createServerFn({ method: "POST" })
         }
       } else if (video) {
         if (isNormalVideo) {
-          r = await dispatchVideo({
-            botToken: acc.bot_token,
-            storagePath: video.storage_path,
-            chatId: c.chat_id,
-            duration: video.duration_seconds,
-            mimeType: video.mime_type,
-            filename: (video.title || "video").replace(/[^\w.-]+/g, "_") + ".mp4",
-            caption: captionForMedia,
-            parseMode: captionParseMode,
-            replyMarkup,
-          });
+          let premiumVideoOk = false;
+          if (wantsPremium && data.content && hasEmojiTokens(data.content)) {
+            const { data: file } = await supabaseAdmin.storage
+              .from("videos")
+              .download(video.storage_path);
+            if (file) {
+              const bytes = await file.arrayBuffer();
+              const pv = await sendVideoWithPremiumEmojiCaption({
+                userId,
+                chatId: c.chat_id,
+                videoBytes: bytes,
+                filename: (video.title || "video").replace(/[^\w.-]+/g, "_") + ".mp4",
+                mimeType: video.mime_type ?? "video/mp4",
+                duration: video.duration_seconds,
+                caption: data.content,
+                strict: true,
+                buttonRows,
+              });
+              if (pv.applied) {
+                r = pv.ok
+                  ? { ok: true, result: { message_id: pv.messageId ?? undefined } }
+                  : { ok: false, description: pv.error };
+                premiumVideoOk = true;
+              }
+            }
+          }
+          if (!premiumVideoOk) {
+            r = await dispatchVideo({
+              botToken: acc.bot_token,
+              storagePath: video.storage_path,
+              chatId: c.chat_id,
+              duration: video.duration_seconds,
+              mimeType: video.mime_type,
+              filename: (video.title || "video").replace(/[^\w.-]+/g, "_") + ".mp4",
+              caption: captionForMedia,
+              parseMode: captionParseMode,
+              replyMarkup,
+            });
+          }
         } else {
           r = await dispatchVideoNote({
             botToken: acc.bot_token,
