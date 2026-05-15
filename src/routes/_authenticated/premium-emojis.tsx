@@ -1,8 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
+import { syncPremiumEmojis } from "@/lib/premium-account.functions";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,6 +33,7 @@ function PremiumEmojisPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
   const [editEmojiId, setEditEmojiId] = useState("");
+  const syncEmojis = useServerFn(syncPremiumEmojis);
 
   const accounts = useQuery({
     queryKey: ["telegram-accounts", "premium"],
@@ -83,6 +86,28 @@ function PremiumEmojisPage() {
     },
   });
 
+  const syncMut = useMutation({
+    mutationFn: async () => {
+      if (!accountId) throw new Error("Selecione uma conta premium");
+      return syncEmojis({ data: { accountId } });
+    },
+    onSuccess: (r) => {
+      qc.invalidateQueries({ queryKey: ["emojis"] });
+      if (r.count > 0) {
+        toast.success(`${r.count} emojis premium capturados`);
+      }
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  useEffect(() => {
+    if (!capturing || !accountId) return;
+    const timer = window.setInterval(() => {
+      if (!syncMut.isPending) syncMut.mutate();
+    }, 8000);
+    return () => window.clearInterval(timer);
+  }, [capturing, accountId, syncMut.isPending]);
+
   const filtered = useMemo(() => {
     if (!list.data) return [];
     const q = search.toLowerCase().trim();
@@ -102,6 +127,7 @@ function PremiumEmojisPage() {
       return;
     }
     setCapturing(true);
+    syncMut.mutate();
     toast.info("Captura iniciada. Envie emojis premium na conta selecionada.");
   };
 
@@ -166,9 +192,9 @@ function PremiumEmojisPage() {
                 ))}
               </SelectContent>
             </Select>
-            <Button onClick={startCapture} disabled={capturing} className="gap-2">
+            <Button onClick={startCapture} disabled={capturing || syncMut.isPending} className="gap-2">
               <Play className="size-4" />
-              Iniciar Captura
+              {syncMut.isPending ? "Sincronizando" : "Iniciar Captura"}
             </Button>
             <Button onClick={stopCapture} disabled={!capturing} variant="secondary" className="gap-2">
               <Square className="size-4" />
