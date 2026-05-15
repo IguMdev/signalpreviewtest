@@ -91,7 +91,7 @@ export const sendTestMessage = createServerFn({ method: "POST" })
       strict: acc.account_type === "premium",
     });
     if (premium.applied) {
-      if (!premium.ok) return { ok: false, error: premium.error, reason: "premium-send-failed" };
+      if (!premium.ok) return { ok: false, error: premium.error, reason: premium.reason };
       return { ok: true, messageId: premium.messageId ?? undefined };
     }
     // Premium não se aplicou. Para contas premium isso só ocorre quando strict
