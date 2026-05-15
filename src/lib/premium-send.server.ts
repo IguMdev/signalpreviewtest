@@ -2,6 +2,7 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import {
   hasEmojiTokens,
   renderEmojiTokens,
+  renderEmojiTokensToHtml,
   type EmojiLookup,
 } from "./premium-emoji-render";
 
@@ -9,6 +10,26 @@ export type PremiumSendResult =
   | { applied: true; ok: true; messageId: number | null }
   | { applied: true; ok: false; error: string }
   | { applied: false; reason: string };
+
+async function getUserEmojiLookup(userId: string): Promise<EmojiLookup> {
+  const { data: emojiRows } = await supabaseAdmin
+    .from("premium_emojis")
+    .select("name, custom_emoji_id, preview_char")
+    .eq("user_id", userId);
+
+  return new Map(
+    (emojiRows ?? []).map((r) => [
+      r.name,
+      { custom_emoji_id: r.custom_emoji_id, preview_char: r.preview_char },
+    ]),
+  );
+}
+
+export async function renderPremiumEmojiTokensForBotApi(userId: string, text: string | null | undefined) {
+  if (!text || !hasEmojiTokens(text)) return { text: text ?? null, replaced: false };
+  const lookup = await getUserEmojiLookup(userId);
+  return renderEmojiTokensToHtml(text, lookup);
+}
 
 /**
  * Tenta enviar uma mensagem de texto via conta premium MTProto, substituindo
@@ -28,17 +49,7 @@ export async function sendTextWithPremiumEmojis(opts: {
     return { applied: false, reason: "no-tokens" };
   }
 
-  const { data: emojiRows } = await supabaseAdmin
-    .from("premium_emojis")
-    .select("name, custom_emoji_id, preview_char")
-    .eq("user_id", opts.userId);
-
-  const lookup: EmojiLookup = new Map(
-    (emojiRows ?? []).map((r) => [
-      r.name,
-      { custom_emoji_id: r.custom_emoji_id, preview_char: r.preview_char },
-    ]),
-  );
+  const lookup = await getUserEmojiLookup(opts.userId);
 
   const { text, entities } = renderEmojiTokens(opts.text, lookup);
   if (entities.length === 0) {
