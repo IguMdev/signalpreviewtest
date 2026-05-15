@@ -468,7 +468,6 @@ export const testMessage = createServerFn({ method: "POST" })
             photoUrl: pub.publicUrl,
             caption: data.content ?? null,
             strict: true,
-            buttonRows,
           });
           if (premiumPhoto.applied) {
             r = await withCompanionButton(
@@ -515,7 +514,6 @@ export const testMessage = createServerFn({ method: "POST" })
                 duration: video.duration_seconds,
                 caption: data.content,
                 strict: true,
-                buttonRows,
               });
               if (pv.applied) {
                 r = await withCompanionButton(
