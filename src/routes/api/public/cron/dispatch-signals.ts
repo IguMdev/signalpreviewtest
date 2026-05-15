@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { callTelegram } from "@/lib/telegram.server";
-import { getUserEmojiLookup, sendTextWithPremiumEmojis } from "@/lib/premium-send.server";
+import { getUserEmojiLookup, sendPhotoWithPremiumEmojiCaption, sendTextWithPremiumEmojis } from "@/lib/premium-send.server";
 import { renderEmojiTokens, renderEmojiTokensToHtml } from "@/lib/premium-emoji-render";
 import {
   buildSlots,
@@ -40,6 +40,9 @@ type Template = {
   kind: string;
   content: string;
   parse_mode: string;
+  image_path?: string | null;
+  image_mime?: string | null;
+  image_ext?: string | null;
 };
 
 type TemplateButton = {
@@ -104,11 +107,39 @@ async function sendToRoom(opts: {
   chatIds: number[];
   text: string;
   parseMode: string;
+  imagePath?: string | null;
   replyTo?: Record<string, number>; // chatId -> message_id
   replyMarkup?: { inline_keyboard: { text: string; url: string }[][] };
 }): Promise<Record<string, number>> {
   const out: Record<string, number> = {};
   for (const cid of opts.chatIds) {
+    if (opts.imagePath) {
+      const { data: pub } = supabaseAdmin.storage.from("room-images").getPublicUrl(opts.imagePath);
+      const premiumPhoto = await sendPhotoWithPremiumEmojiCaption({
+        userId: opts.userId,
+        chatId: cid,
+        photoUrl: pub.publicUrl,
+        caption: opts.text,
+        replyToMessageId: opts.replyTo?.[String(cid)],
+        buttonRows: opts.replyMarkup?.inline_keyboard,
+      });
+      if (premiumPhoto.applied) {
+        if (premiumPhoto.ok && premiumPhoto.messageId) out[String(cid)] = premiumPhoto.messageId;
+        continue;
+      }
+      const botText = await renderBotApiText(opts.userId, opts.text);
+      const r = await callTelegram<{ message_id: number }>(opts.botToken, "sendPhoto", {
+        chat_id: cid,
+        photo: pub.publicUrl,
+        caption: botText || undefined,
+        parse_mode: opts.parseMode || "HTML",
+        reply_to_message_id: opts.replyTo?.[String(cid)],
+        allow_sending_without_reply: true,
+        reply_markup: opts.replyMarkup,
+      });
+      if (r.ok && r.result?.message_id) out[String(cid)] = r.result.message_id;
+      continue;
+    }
     const premium = await sendTextWithPremiumEmojis({
       userId: opts.userId,
       chatId: cid,
@@ -122,7 +153,7 @@ async function sendToRoom(opts: {
       }
       continue;
     }
-    const botText = opts.replyMarkup ? await renderBotApiText(opts.userId, opts.text) : opts.text;
+    const botText = await renderBotApiText(opts.userId, opts.text);
     const r = await callTelegram<{ message_id: number }>(opts.botToken, "sendMessage", {
       chat_id: cid,
       text: botText,
@@ -149,7 +180,7 @@ async function getRoomContext(roomId: string) {
     .eq("room_id", roomId);
   const { data: tpls } = await supabaseAdmin
     .from("room_templates")
-    .select("kind, content, parse_mode")
+    .select("kind, content, parse_mode, image_path, image_mime, image_ext")
     .eq("room_id", roomId);
   const { data: btns } = await supabaseAdmin
     .from("room_template_buttons")
