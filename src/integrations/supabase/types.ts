@@ -676,12 +676,12 @@ export type Database = {
           updated_at: string
           user_id: string
           welcome_bot_enabled: boolean
-          welcome_button_text: string | null
-          welcome_button_url: string | null
           welcome_image_mime: string | null
           welcome_image_path: string | null
           welcome_message: string | null
           welcome_parse_mode: string
+          welcome_premium_account_id: string | null
+          welcome_premium_enabled: boolean
           welcome_video_id: string | null
         }
         Insert: {
@@ -701,12 +701,12 @@ export type Database = {
           updated_at?: string
           user_id: string
           welcome_bot_enabled?: boolean
-          welcome_button_text?: string | null
-          welcome_button_url?: string | null
           welcome_image_mime?: string | null
           welcome_image_path?: string | null
           welcome_message?: string | null
           welcome_parse_mode?: string
+          welcome_premium_account_id?: string | null
+          welcome_premium_enabled?: boolean
           welcome_video_id?: string | null
         }
         Update: {
@@ -726,12 +726,12 @@ export type Database = {
           updated_at?: string
           user_id?: string
           welcome_bot_enabled?: boolean
-          welcome_button_text?: string | null
-          welcome_button_url?: string | null
           welcome_image_mime?: string | null
           welcome_image_path?: string | null
           welcome_message?: string | null
           welcome_parse_mode?: string
+          welcome_premium_account_id?: string | null
+          welcome_premium_enabled?: boolean
           welcome_video_id?: string | null
         }
         Relationships: []
@@ -1561,8 +1561,6 @@ export type Database = {
       }
       welcome_extra_messages: {
         Row: {
-          button_text: string | null
-          button_url: string | null
           content: string | null
           created_at: string
           delay_seconds: number
@@ -1570,6 +1568,8 @@ export type Database = {
           image_mime: string | null
           image_path: string | null
           parse_mode: string
+          premium_account_id: string | null
+          premium_enabled: boolean
           room_id: string
           sort_order: number
           updated_at: string
@@ -1577,8 +1577,6 @@ export type Database = {
           video_id: string | null
         }
         Insert: {
-          button_text?: string | null
-          button_url?: string | null
           content?: string | null
           created_at?: string
           delay_seconds?: number
@@ -1586,6 +1584,8 @@ export type Database = {
           image_mime?: string | null
           image_path?: string | null
           parse_mode?: string
+          premium_account_id?: string | null
+          premium_enabled?: boolean
           room_id: string
           sort_order?: number
           updated_at?: string
@@ -1593,8 +1593,6 @@ export type Database = {
           video_id?: string | null
         }
         Update: {
-          button_text?: string | null
-          button_url?: string | null
           content?: string | null
           created_at?: string
           delay_seconds?: number
@@ -1602,6 +1600,8 @@ export type Database = {
           image_mime?: string | null
           image_path?: string | null
           parse_mode?: string
+          premium_account_id?: string | null
+          premium_enabled?: boolean
           room_id?: string
           sort_order?: number
           updated_at?: string
