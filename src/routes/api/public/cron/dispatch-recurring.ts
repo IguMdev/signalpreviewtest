@@ -328,6 +328,14 @@ export const Route = createFileRoute("/api/public/cron/dispatch-recurring")({
               .maybeSingle();
             video = v ?? null;
           }
+          const { data: parentSchedule } = p.schedule_id
+            ? await supabaseAdmin
+                .from("recurring_schedules")
+                .select("is_premium")
+                .eq("id", p.schedule_id)
+                .maybeSingle()
+            : { data: null };
+          const isPremium = Boolean(parentSchedule?.is_premium);
           for (const c of chats) {
             const r = video
               ? await dispatchVideoNote({
@@ -343,7 +351,7 @@ export const Route = createFileRoute("/api/public/cron/dispatch-recurring")({
                   image_path: p.image_path,
                   parse_mode: p.parse_mode,
                   user_id: p.user_id,
-                  is_premium: p.is_premium,
+                  is_premium: isPremium,
                 });
             await supabaseAdmin.from("message_logs").insert({
               user_id: p.user_id,
