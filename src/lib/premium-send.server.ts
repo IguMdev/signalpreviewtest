@@ -51,8 +51,9 @@ export async function sendTextWithPremiumEmojis(opts: {
 
   const lookup = await getUserEmojiLookup(opts.userId);
 
-  const { text, entities } = renderEmojiTokens(opts.text, lookup);
-  if (entities.length === 0) {
+  const rendered = renderEmojiTokensToHtml(opts.text, lookup);
+  const { entities } = renderEmojiTokens(opts.text, lookup);
+  if (!rendered.replaced) {
     return { applied: false, reason: "no-known-emojis" };
   }
 
@@ -70,9 +71,8 @@ export async function sendTextWithPremiumEmojis(opts: {
     return { applied: false, reason: "no-premium-account" };
   }
 
-  const { TelegramClient, Api } = await import("telegram");
+  const { TelegramClient } = await import("telegram");
   const { StringSession } = await import("telegram/sessions");
-  const { default: bigInt } = await import("big-integer");
 
   const client = new TelegramClient(
     new StringSession(acc.tg_session as string),
@@ -83,19 +83,11 @@ export async function sendTextWithPremiumEmojis(opts: {
   await client.connect();
 
   try {
-    const apiEntities = entities.map(
-      (e) =>
-        new Api.MessageEntityCustomEmoji({
-          offset: e.offset,
-          length: e.length,
-          documentId: bigInt(e.documentId) as never,
-        }),
-    );
     const numeric = typeof opts.chatId === "string" ? Number(opts.chatId) : opts.chatId;
     const target = Number.isFinite(numeric) ? (numeric as number) : opts.chatId;
     const msg = await client.sendMessage(target as never, {
-      message: text,
-      formattingEntities: apiEntities,
+      message: rendered.text,
+      parseMode: "html",
       replyTo: opts.replyToMessageId,
     });
     return { applied: true, ok: true, messageId: Number(msg.id) };
