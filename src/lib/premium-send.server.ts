@@ -201,7 +201,13 @@ export async function sendTextWithPremiumEmojis(opts: {
   if (!hasEmojiTokens(opts.text)) {
     if (opts.allowPlain) {
       const acc = await getActivePremiumAccount(opts.userId, opts.accountId);
-      if (!acc) return { applied: true, ok: false, error: "Conecte a conta Telegram Premium novamente." };
+      if (!acc) {
+        logPremiumFallback(
+          { where: "sendText.allowPlain", userId: opts.userId, accountId: opts.accountId, chatId: opts.chatId, text: opts.text, entitiesCount: 0 },
+          "no-active-premium-account",
+        );
+        return { applied: true, ok: false, error: "Conecte a conta Telegram Premium novamente." };
+      }
       const { client } = await connectAndAssertPremium({
         tg_api_id: acc.tg_api_id as number,
         tg_api_hash: acc.tg_api_hash as string,
@@ -214,11 +220,21 @@ export async function sendTextWithPremiumEmojis(opts: {
         });
         return { applied: true, ok: true, messageId: Number(msg.id) };
       } catch (e) {
-        return { applied: true, ok: false, error: e instanceof Error ? e.message : String(e) };
+        const error = e instanceof Error ? e.message : String(e);
+        logPremiumFallback(
+          { where: "sendText.allowPlain", userId: opts.userId, accountId: acc.id, chatId: opts.chatId, text: opts.text, entitiesCount: 0 },
+          "client.sendMessage threw",
+          { error },
+        );
+        return { applied: true, ok: false, error };
       } finally {
         await client.disconnect().catch(() => {});
       }
     }
+    logPremiumFallback(
+      { where: "sendText", userId: opts.userId, accountId: opts.accountId, chatId: opts.chatId, text: opts.text, entitiesCount: 0 },
+      "no-tokens",
+    );
     return { applied: false, reason: "no-tokens" };
   }
 
@@ -226,6 +242,11 @@ export async function sendTextWithPremiumEmojis(opts: {
 
   const rendered = renderEmojiTokens(opts.text, lookup);
   if (!rendered.entities.length) {
+    logPremiumFallback(
+      { where: "sendText", userId: opts.userId, accountId: opts.accountId, chatId: opts.chatId, text: opts.text, entitiesCount: 0 },
+      "no-known-emojis",
+      { lookupSize: lookup.size },
+    );
     if (opts.strict) {
       return { applied: true, ok: false, error: "Nenhum emoji premium salvo corresponde aos tokens da mensagem." };
     }
@@ -234,6 +255,10 @@ export async function sendTextWithPremiumEmojis(opts: {
 
   const acc = await getActivePremiumAccount(opts.userId, opts.accountId);
   if (!acc) {
+    logPremiumFallback(
+      { where: "sendText", userId: opts.userId, accountId: opts.accountId, chatId: opts.chatId, text: opts.text, entitiesCount: rendered.entities.length },
+      "no-premium-account",
+    );
     if (opts.strict) {
       return { applied: true, ok: false, error: "Conecte uma conta Telegram Premium ativa para enviar emojis premium animados." };
     }
@@ -250,6 +275,10 @@ export async function sendTextWithPremiumEmojis(opts: {
   });
   if (!isPremium) {
     await client.disconnect().catch(() => {});
+    logPremiumFallback(
+      { where: "sendText", userId: opts.userId, accountId: acc.id, chatId: opts.chatId, text: opts.text, entitiesCount: rendered.entities.length },
+      "account-not-premium",
+    );
     return {
       applied: true,
       ok: false,
@@ -261,6 +290,13 @@ export async function sendTextWithPremiumEmojis(opts: {
   try {
     const normalized = await normalizeCustomEmojiAlts(client, rendered);
     const target = resolveTelegramTarget(opts.chatId);
+    console.log("[premium-send] sending text", {
+      userId: opts.userId,
+      accountId: acc.id,
+      chatId: String(opts.chatId),
+      entitiesCount: normalized.entities.length,
+      docIds: normalized.entities.map((e) => e.documentId),
+    });
     const msg = await client.sendMessage(target as never, {
       message: normalized.text,
       formattingEntities: normalized.entities.map(
@@ -275,10 +311,16 @@ export async function sendTextWithPremiumEmojis(opts: {
     });
     return { applied: true, ok: true, messageId: Number(msg.id) };
   } catch (e) {
+    const error = e instanceof Error ? e.message : String(e);
+    logPremiumFallback(
+      { where: "sendText", userId: opts.userId, accountId: acc.id, chatId: opts.chatId, text: opts.text, entitiesCount: rendered.entities.length },
+      "client.sendMessage threw",
+      { error },
+    );
     return {
       applied: true,
       ok: false,
-      error: e instanceof Error ? e.message : String(e),
+      error,
     };
   } finally {
     await client.disconnect().catch(() => {});
