@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
@@ -54,6 +54,24 @@ import {
   Activity,
   KeyRound,
 } from "lucide-react";
+
+const PREMIUM_REASON_LABELS: Record<string, string> = {
+  "no-tokens": "A mensagem não contém tokens {NOME} para envio premium.",
+  "no-known-emojis": "Nenhum emoji premium salvo corresponde aos tokens.",
+  "no-premium-account": "Nenhuma conta Premium ativa conectada.",
+  "no-active-premium-account": "Conecte a conta Premium novamente.",
+  "account-not-premium": "A conta Telegram conectada não tem assinatura Premium ativa.",
+  "client-send-threw": "O cliente MTProto rejeitou o envio.",
+  "premium-send-failed": "Envio premium falhou.",
+};
+
+function reasonLabel(reason?: string | null) {
+  if (!reason) return null;
+  return PREMIUM_REASON_LABELS[reason] ?? reason;
+}
+
+const HAS_TOKEN_RE = /\{[^{}\n]{1,80}\}/;
+const AUTO_CHECK_KEY = "premium-auto-check-minutes";
 
 export const Route = createFileRoute("/_authenticated/telegram-accounts")({
   component: TelegramAccountsPage,
@@ -238,6 +256,62 @@ function TelegramAccountsPage() {
   const [testChat, setTestChat] = useState("");
   const [testText, setTestText] = useState("Mensagem de teste do TelesinAIs - Automação Telegram 🚀");
 
+  // Verificação automática de Premium (configurável). Persistido em localStorage.
+  const [autoCheckMin, setAutoCheckMin] = useState<number>(() => {
+    if (typeof window === "undefined") return 5;
+    const stored = Number(window.localStorage.getItem(AUTO_CHECK_KEY));
+    return Number.isFinite(stored) && stored >= 1 ? stored : 5;
+  });
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(AUTO_CHECK_KEY, String(autoCheckMin));
+    }
+  }, [autoCheckMin]);
+
+  const premiumAccountIds = useMemo(
+    () =>
+      (accounts.data ?? [])
+        .filter((a) => a.account_type === "premium")
+        .map((a) => a.id as string),
+    [accounts.data],
+  );
+
+  useEffect(() => {
+    if (!premiumAccountIds.length || autoCheckMin <= 0) return;
+    let cancelled = false;
+    const run = async () => {
+      for (const id of premiumAccountIds) {
+        if (cancelled) return;
+        try {
+          await verify({ data: { accountId: id } });
+        } catch {
+          /* ignora — verify já grava last_error no DB */
+        }
+      }
+      if (!cancelled) qc.invalidateQueries({ queryKey: ["telegram-accounts"] });
+    };
+    const handle = window.setInterval(run, autoCheckMin * 60_000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(handle);
+    };
+  }, [premiumAccountIds, autoCheckMin, verify, qc]);
+
+  const testAccount = useMemo(
+    () => (testFor ? accounts.data?.find((a) => a.id === testFor) : undefined),
+    [testFor, accounts.data],
+  );
+  const testHasTokens = HAS_TOKEN_RE.test(testText);
+  const testIsPremium = testAccount?.account_type === "premium";
+  const testPremiumBlocked =
+    Boolean(testIsPremium) &&
+    testHasTokens &&
+    (testAccount?.status !== "ok" || Boolean(testAccount?.last_error));
+  const testBlockMessage = testPremiumBlocked
+    ? testAccount?.last_error ??
+      "Status Premium não está OK. Clique em Verificar antes de enviar."
+    : null;
+
   return (
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4 flex-wrap">
@@ -247,6 +321,29 @@ function TelegramAccountsPage() {
             Gerencie seus bots e contas pessoais premium do Telegram.
           </p>
         </div>
+        {premiumAccountIds.length > 0 && (
+          <div className="flex items-center gap-2 text-xs">
+            <Label htmlFor="auto-check" className="text-muted-foreground">
+              Auto-checar Premium:
+            </Label>
+            <Select
+              value={String(autoCheckMin)}
+              onValueChange={(v) => setAutoCheckMin(Number(v))}
+            >
+              <SelectTrigger id="auto-check" className="h-8 w-[120px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="0">Desligado</SelectItem>
+                <SelectItem value="1">A cada 1 min</SelectItem>
+                <SelectItem value="5">A cada 5 min</SelectItem>
+                <SelectItem value="15">A cada 15 min</SelectItem>
+                <SelectItem value="30">A cada 30 min</SelectItem>
+                <SelectItem value="60">A cada 60 min</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        )}
         <Dialog open={openNew} onOpenChange={setOpenNew}>
           <DialogTrigger asChild>
             <Button className="gap-2" data-tour="add-account">
@@ -509,6 +606,15 @@ function TelegramAccountsPage() {
               </div>
               <Textarea value={testText} onChange={(e) => setTestText(e.target.value)} rows={4} />
             </div>
+            {testPremiumBlocked && (
+              <div className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
+                <p className="font-semibold">Envio premium bloqueado</p>
+                <p className="text-xs mt-0.5">{testBlockMessage}</p>
+                <p className="text-xs mt-1 opacity-80">
+                  Status atual: {testAccount?.status ?? "—"}. Verifique a conta antes de enviar emojis premium.
+                </p>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="ghost" onClick={() => setTestFor(null)}>Cancelar</Button>
@@ -522,10 +628,15 @@ function TelegramAccountsPage() {
                   toast.success("Mensagem enviada");
                   setTestFor(null);
                 } else {
-                  toast.error(r.error ?? "Falha");
+                  const reason = (r as { reason?: string }).reason;
+                  toast.error(r.error ?? "Falha", {
+                    description: reason
+                      ? `Motivo: ${reason} — ${reasonLabel(reason)}`
+                      : undefined,
+                  });
                 }
               }}
-              disabled={!testChat || !testText}
+              disabled={!testChat || !testText || testPremiumBlocked}
             >
               Enviar
             </Button>
