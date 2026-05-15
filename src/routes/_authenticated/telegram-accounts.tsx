@@ -709,6 +709,24 @@ function AccountCard({
   });
   const avatarUrl = avatarQ.data?.dataUrl ?? null;
 
+  const botRoomPhotoQ = useQuery({
+    queryKey: ["bot-room-photo", a.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("rooms")
+        .select("photo_url")
+        .eq("default_account_id", a.id)
+        .not("photo_url", "is", null)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      return data?.photo_url ?? null;
+    },
+    enabled: !isPremium,
+    staleTime: 1000 * 60 * 5,
+  });
+  const botRoomPhoto = botRoomPhotoQ.data ?? null;
+
   return (
     <div className="rounded-2xl border border-border bg-card p-5 space-y-4 hover:border-primary/40 transition">
       <div className="flex items-start justify-between">
@@ -718,6 +736,12 @@ function AccountCard({
               src={avatarUrl}
               alt={a.label}
               className="size-10 rounded-xl object-cover border border-amber-500/30"
+            />
+          ) : !isPremium && botRoomPhoto ? (
+            <img
+              src={botRoomPhoto}
+              alt={a.label}
+              className="size-10 rounded-xl object-cover border border-primary/30"
             />
           ) : (
             <div
