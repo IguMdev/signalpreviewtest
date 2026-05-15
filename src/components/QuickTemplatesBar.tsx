@@ -39,6 +39,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
+import { PremiumEmojiPicker } from "@/components/PremiumEmojiPicker";
 
 export type QuickTemplate = {
   id: string;
