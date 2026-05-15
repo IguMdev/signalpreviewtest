@@ -665,15 +665,19 @@ function AccountCard({
           <Button size="icon" variant="ghost" className="size-8" onClick={onVerify} title="Verificar">
             <RefreshCw className="size-3.5" />
           </Button>
-          <Button size="icon" variant="ghost" className="size-8" onClick={onRefresh} title="Sincronizar grupos">
-            <UsersIcon className="size-3.5" />
-          </Button>
+          {!isPremium && (
+            <Button size="icon" variant="ghost" className="size-8" onClick={onRefresh} title="Sincronizar grupos">
+              <UsersIcon className="size-3.5" />
+            </Button>
+          )}
           <Button size="icon" variant="ghost" className="size-8" onClick={onTest} title="Enviar teste">
             <MessageSquare className="size-3.5" />
           </Button>
-          <Button size="icon" variant="ghost" className="size-8" onClick={onEnableTracking} title="Ativar rastreamento de membros">
-            <Activity className="size-3.5" />
-          </Button>
+          {!isPremium && (
+            <Button size="icon" variant="ghost" className="size-8" onClick={onEnableTracking} title="Ativar rastreamento de membros">
+              <Activity className="size-3.5" />
+            </Button>
+          )}
           {isPremium && (
             <Button size="icon" variant="ghost" className="size-8" onClick={onSyncEmojis} title="Sincronizar emojis premium">
               <Sparkles className="size-3.5" />
