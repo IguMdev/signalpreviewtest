@@ -12,6 +12,7 @@ import {
   renderTemplate,
   resolveBinary,
 } from "@/lib/signals.server";
+import { aggregateTerminalStats, reportDateKey, withRetry } from "@/lib/signals-aggregation";
 
 type Window = {
   id: string;
@@ -67,17 +68,6 @@ type SignalEvent = {
   max_gales: number | null;
   signal_message_ids: unknown;
 };
-
-function reportDateKey(date: Date, tz: string) {
-  const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone: tz,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).formatToParts(date);
-  const get = (type: string) => parts.find((p) => p.type === type)?.value ?? "";
-  return `${get("year")}-${get("month")}-${get("day")}`;
-}
 
 function asMessageIds(value: unknown): Record<string, number> {
   return value && typeof value === "object" && !Array.isArray(value)
@@ -140,15 +130,19 @@ async function sendToRoom(opts: {
       }
       // Premium não aplicável ou falhou → garante envio via Bot API com a imagem.
       const botText = await renderBotApiText(opts.userId, opts.text);
-      const r = await callTelegram<{ message_id: number }>(opts.botToken, "sendPhoto", {
-        chat_id: cid,
-        photo: pub.publicUrl,
-        caption: botText || undefined,
-        parse_mode: opts.parseMode || "HTML",
-        reply_to_message_id: opts.replyTo?.[String(cid)],
-        allow_sending_without_reply: true,
-        reply_markup: opts.replyMarkup,
-      });
+      const r = await withRetry(
+        () =>
+          callTelegram<{ message_id: number }>(opts.botToken, "sendPhoto", {
+            chat_id: cid,
+            photo: pub.publicUrl,
+            caption: botText || undefined,
+            parse_mode: opts.parseMode || "HTML",
+            reply_to_message_id: opts.replyTo?.[String(cid)],
+            allow_sending_without_reply: true,
+            reply_markup: opts.replyMarkup,
+          }),
+        { isRetryable: (res, err) => Boolean(err) || !res?.ok },
+      ).catch(() => ({ ok: false } as { ok: false; result?: { message_id: number } }));
       if (r.ok && r.result?.message_id) out[String(cid)] = r.result.message_id;
       continue;
     }
@@ -166,14 +160,18 @@ async function sendToRoom(opts: {
       continue;
     }
     const botText = await renderBotApiText(opts.userId, opts.text);
-    const r = await callTelegram<{ message_id: number }>(opts.botToken, "sendMessage", {
-      chat_id: cid,
-      text: botText,
-      parse_mode: opts.parseMode || "HTML",
-      reply_to_message_id: opts.replyTo?.[String(cid)],
-      allow_sending_without_reply: true,
-      reply_markup: opts.replyMarkup,
-    });
+    const r = await withRetry(
+      () =>
+        callTelegram<{ message_id: number }>(opts.botToken, "sendMessage", {
+          chat_id: cid,
+          text: botText,
+          parse_mode: opts.parseMode || "HTML",
+          reply_to_message_id: opts.replyTo?.[String(cid)],
+          allow_sending_without_reply: true,
+          reply_markup: opts.replyMarkup,
+        }),
+      { isRetryable: (res, err) => Boolean(err) || !res?.ok },
+    ).catch(() => ({ ok: false } as { ok: false; result?: { message_id: number } }));
     if (r.ok && r.result?.message_id) out[String(cid)] = r.result.message_id;
   }
   return out;
@@ -508,14 +506,8 @@ async function sendDueReports(): Promise<number> {
         .maybeSingle();
       if (!claim) continue;
 
-      // Agrega apenas operações do CICLO DE HOJE da janela (no timezone da sala)
-      // e conta apenas eventos terminais para evitar duplicar pais cujo gale venceu.
+      // Agrega apenas operações TERMINAIS do ciclo de hoje (timezone da sala).
       const tz = ctx.room.timezone;
-      const todayKey = reportDateKey(now, tz);
-      const dayStartUtc = new Date(
-        new Date(`${todayKey}T00:00:00`).toLocaleString("en-US", { timeZone: "UTC" }),
-      );
-      // entry_at ~ início do dia no tz: usamos um filtro amplo (24h) baseado no "agora"
       const since = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
       const { data: stats } = await supabaseAdmin
         .from("signal_events")
@@ -523,22 +515,10 @@ async function sendDueReports(): Promise<number> {
         .eq("room_id", report.room_id)
         .eq("window_id", w.id)
         .gte("entry_at", since);
-      const inToday = (stats ?? []).filter(
-        (s) => reportDateKey(new Date(String(s.entry_at)), tz) === todayKey,
+      const { totalWins, totalLosses, total, winRate } = aggregateTerminalStats(
+        (stats ?? []) as { status: string; gale_level: number; max_gales: number; entry_at: string }[],
+        { tz, now },
       );
-      const terminal = inToday.filter((s) => {
-        const st = String(s.status);
-        if (st === "win" || st === "win_g1" || st === "win_g2") return true;
-        if (st === "loss" && Number(s.gale_level ?? 0) >= Number(s.max_gales ?? 0)) return true;
-        return false;
-      });
-      const totalWins = terminal.filter((s) =>
-        ["win", "win_g1", "win_g2"].includes(String(s.status)),
-      ).length;
-      const totalLosses = terminal.filter((s) => String(s.status) === "loss").length;
-      void dayStartUtc; // mantido para futura expansão
-      const total = totalWins + totalLosses;
-      const winRate = total ? Math.round((totalWins / total) * 100) : 0;
       const text = String(report.template || "📊 RELATÓRIO {SESSAO_NOME}\n✅ Wins: {TOTAL_WINS}\n🔴 Losses: {TOTAL_LOSSES}\n📈 Operações: {TOTAL_OPERACOES}\n🎯 Win rate: {WIN_RATE}%")
         .replaceAll("{SESSAO_NOME}", w.name ?? "Sessão")
         .replaceAll("{TOTAL_WINS}", String(totalWins))
