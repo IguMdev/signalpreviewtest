@@ -268,6 +268,7 @@ export type Database = {
           sent_at: string | null
           status: string
           user_id: string
+          video_id: string | null
         }
         Insert: {
           account_id?: string | null
@@ -284,6 +285,7 @@ export type Database = {
           sent_at?: string | null
           status?: string
           user_id: string
+          video_id?: string | null
         }
         Update: {
           account_id?: string | null
@@ -300,6 +302,7 @@ export type Database = {
           sent_at?: string | null
           status?: string
           user_id?: string
+          video_id?: string | null
         }
         Relationships: [
           {
