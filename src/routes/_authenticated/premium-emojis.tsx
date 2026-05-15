@@ -42,6 +42,27 @@ type Captured = {
   name: string;
 };
 
+function EmojiPreview({ item }: { item: Pick<Captured, "thumb_data_url" | "preview_char"> }) {
+  const [failed, setFailed] = useState(false);
+
+  if (item.thumb_data_url && !failed) {
+    return (
+      <img
+        src={item.thumb_data_url}
+        alt="emoji"
+        className="size-12 object-contain"
+        onError={() => setFailed(true)}
+      />
+    );
+  }
+
+  return item.preview_char ? (
+    <div className="text-4xl leading-none">{item.preview_char}</div>
+  ) : (
+    <Zap className="size-7 text-amber-400" />
+  );
+}
+
 function PremiumEmojisPage() {
   useAuth();
   const qc = useQueryClient();
@@ -317,17 +338,7 @@ function PremiumEmojisPage() {
                 key={item.custom_emoji_id}
                 className="rounded-lg border border-border bg-muted/20 p-5 flex flex-col items-center gap-3"
               >
-                {item.thumb_data_url ? (
-                  <img
-                    src={item.thumb_data_url}
-                    alt="emoji"
-                    className="size-12 object-contain"
-                  />
-                ) : item.preview_char ? (
-                  <div className="text-4xl leading-none">{item.preview_char}</div>
-                ) : (
-                  <Zap className="size-7 text-amber-400" />
-                )}
+                <EmojiPreview item={item} />
                 <div className="text-xs text-muted-foreground break-all text-center">
                   ID: {item.custom_emoji_id}
                 </div>
