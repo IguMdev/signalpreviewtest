@@ -50,6 +50,7 @@ import {
   ImageIcon,
   Loader2,
   Send,
+  Copy,
 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/mensagens")({
