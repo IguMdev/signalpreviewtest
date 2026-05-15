@@ -5,6 +5,7 @@ import { callTelegram } from "./telegram.server";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { dispatchVideoNote } from "./videos.functions";
 import { triggerSignalReactions } from "./engagement.functions";
+import { sendTextWithPremiumEmojis } from "./premium-send.server";
 
 export const scheduleMessage = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -87,7 +88,20 @@ export const dispatchDue = createServerFn({ method: "POST" }).handler(async () =
     let anyOk = false;
     let lastErr: string | null = null;
     for (const c of chats) {
-      const r = video
+      let r: { ok: boolean; result?: { message_id?: number }; description?: string };
+      const premium =
+        !video && msg.content
+          ? await sendTextWithPremiumEmojis({
+              userId: msg.user_id,
+              chatId: c.chat_id,
+              text: msg.content,
+            })
+          : { applied: false as const, reason: "skip" };
+      if (premium.applied) {
+        r = premium.ok
+          ? { ok: true, result: { message_id: premium.messageId ?? undefined } }
+          : { ok: false, description: premium.error };
+      } else r = video
         ? await dispatchVideoNote({
             botToken: acc.bot_token,
             storagePath: video.storage_path,

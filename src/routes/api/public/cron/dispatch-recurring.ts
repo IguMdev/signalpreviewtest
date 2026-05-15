@@ -3,6 +3,7 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { callTelegram } from "@/lib/telegram.server";
 import { dispatchVideoNote } from "@/lib/videos.functions";
 import { triggerSignalReactions } from "@/lib/engagement.functions";
+import { sendTextWithPremiumEmojis } from "@/lib/premium-send.server";
 
 function nowParts(tz: string) {
   const fmt = new Intl.DateTimeFormat("en-GB", {
@@ -62,8 +63,20 @@ type PendingFollowup = {
 async function sendOne(
   botToken: string | null | undefined,
   chatId: number | string,
-  msg: { content: string | null; image_path: string | null; parse_mode: string },
-) {
+  msg: { content: string | null; image_path: string | null; parse_mode: string; user_id?: string },
+): Promise<{ ok: boolean; result?: { message_id?: number }; description?: string }> {
+  if (!msg.image_path && msg.content && msg.user_id) {
+    const premium = await sendTextWithPremiumEmojis({
+      userId: msg.user_id,
+      chatId,
+      text: msg.content,
+    });
+    if (premium.applied) {
+      return premium.ok
+        ? { ok: true, result: { message_id: premium.messageId ?? undefined } }
+        : { ok: false, description: premium.error };
+    }
+  }
   if (msg.image_path) {
     const { data: pub } = supabaseAdmin.storage.from("room-images").getPublicUrl(msg.image_path);
     return await callTelegram<{ message_id: number }>(botToken, "sendPhoto", {
@@ -154,7 +167,20 @@ export const Route = createFileRoute("/api/public/cron/dispatch-recurring")({
 
           let okAny = false;
           for (const c of chats) {
-            const r = s.image_path
+            let r: { ok: boolean; result?: { message_id?: number }; description?: string };
+            const premium =
+              !s.image_path && !video && s.content
+                ? await sendTextWithPremiumEmojis({
+                    userId: s.user_id,
+                    chatId: c.chat_id,
+                    text: s.content,
+                  })
+                : { applied: false as const, reason: "skip" };
+            if (premium.applied) {
+              r = premium.ok
+                ? { ok: true, result: { message_id: premium.messageId ?? undefined } }
+                : { ok: false, description: premium.error };
+            } else r = s.image_path
               ? await (async () => {
                   const { data: pub } = supabaseAdmin.storage
                     .from("room-images")
@@ -311,6 +337,7 @@ export const Route = createFileRoute("/api/public/cron/dispatch-recurring")({
                   content: p.content,
                   image_path: p.image_path,
                   parse_mode: p.parse_mode,
+                  user_id: p.user_id,
                 });
             await supabaseAdmin.from("message_logs").insert({
               user_id: p.user_id,
