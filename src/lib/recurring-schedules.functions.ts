@@ -221,9 +221,14 @@ export const testSchedule = createServerFn({ method: "POST" })
             })
           : { applied: false as const, reason: "skip" };
       if (premium.applied) {
-        r = premium.ok
-          ? { ok: true, result: { message_id: premium.messageId ?? undefined } }
-          : { ok: false, description: premium.error };
+        r = await withCompanionButton(
+          premium.ok
+            ? { ok: true, result: { message_id: premium.messageId ?? undefined } }
+            : { ok: false, description: premium.error },
+          acc.bot_token,
+          c.chat_id,
+          replyMarkup,
+        );
       } else r = s.image_path
         ? await (async () => {
             const { data: pub } = supabaseAdmin.storage
@@ -238,9 +243,14 @@ export const testSchedule = createServerFn({ method: "POST" })
                 strict: true,
               });
               if (premiumPhoto.applied) {
-                return premiumPhoto.ok
-                  ? { ok: true, result: { message_id: premiumPhoto.messageId ?? undefined } }
-                  : { ok: false, description: premiumPhoto.error };
+                return await withCompanionButton(
+                  premiumPhoto.ok
+                    ? { ok: true, result: { message_id: premiumPhoto.messageId ?? undefined } }
+                    : { ok: false, description: premiumPhoto.error },
+                  acc.bot_token,
+                  c.chat_id,
+                  replyMarkup,
+                );
               }
             }
             return await callTelegram<{ message_id: number }>(
@@ -276,9 +286,14 @@ export const testSchedule = createServerFn({ method: "POST" })
                     buttonRows: sAny.button_text && sAny.button_url ? [[{ text: sAny.button_text, url: sAny.button_url }]] : undefined,
                   });
                   if (pv.applied) {
-                    return pv.ok
-                      ? { ok: true, result: { message_id: pv.messageId ?? undefined } }
-                      : { ok: false, description: pv.error };
+                    return await withCompanionButton(
+                      pv.ok
+                        ? { ok: true, result: { message_id: pv.messageId ?? undefined } }
+                        : { ok: false, description: pv.error },
+                      acc.bot_token,
+                      c.chat_id,
+                      replyMarkup,
+                    );
                   }
                 }
               }
