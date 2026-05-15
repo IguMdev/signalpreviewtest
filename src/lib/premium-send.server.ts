@@ -12,6 +12,33 @@ export type PremiumSendResult =
   | { applied: true; ok: false; error: string }
   | { applied: false; reason: string };
 
+function logPremiumFallback(
+  ctx: {
+    where: string;
+    userId: string;
+    accountId?: string | null;
+    chatId: number | string;
+    text: string;
+    entitiesCount: number;
+    parseMode?: string | null;
+  },
+  reason: string,
+  extra?: Record<string, unknown>,
+) {
+  const preview = (ctx.text ?? "").slice(0, 80).replace(/\s+/g, " ");
+  console.warn("[premium-send] fallback to plain", {
+    where: ctx.where,
+    reason,
+    userId: ctx.userId,
+    accountId: ctx.accountId ?? null,
+    chatId: String(ctx.chatId),
+    parseMode: ctx.parseMode ?? "MTProto/customEmoji",
+    entitiesCount: ctx.entitiesCount,
+    textPreview: preview,
+    ...extra,
+  });
+}
+
 async function getUserEmojiLookup(userId: string): Promise<EmojiLookup> {
   const { data: emojiRows } = await supabaseAdmin
     .from("premium_emojis")
