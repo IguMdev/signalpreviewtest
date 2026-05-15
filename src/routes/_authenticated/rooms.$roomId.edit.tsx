@@ -1641,7 +1641,7 @@ function ReportsCard({ roomId }: { roomId: string }) {
     if (!report.data) return;
     setEnabled(report.data.enabled);
     setDelay(String(report.data.delay_minutes ?? 1));
-    setTpl(report.data.template ?? REPORT_DEFAULT);
+    setTpl(report.data.template && report.data.template.trim().length > 0 ? report.data.template : REPORT_DEFAULT);
     setIncludeStats(report.data.include_stats ?? true);
     setImagePath(report.data.image_path ?? null);
     setImageMime((report.data as any).image_mime ?? null);
