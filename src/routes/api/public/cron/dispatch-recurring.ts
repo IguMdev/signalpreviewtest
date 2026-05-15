@@ -64,7 +64,7 @@ async function sendOne(
   botToken: string | null | undefined,
   chatId: number | string,
   msg: { content: string | null; image_path: string | null; parse_mode: string; user_id?: string },
-) {
+): Promise<{ ok: boolean; result?: { message_id?: number }; description?: string }> {
   if (!msg.image_path && msg.content && msg.user_id) {
     const premium = await sendTextWithPremiumEmojis({
       userId: msg.user_id,
