@@ -24,6 +24,7 @@ import { Route as AuthenticatedMembrosRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedRoomsIndexRouteImport } from './routes/_authenticated/rooms.index'
 import { Route as AuthenticatedIntegracoesMetaRouteImport } from './routes/_authenticated/integracoes.meta'
+import { Route as AuthenticatedBotsEncaminhadorRouteImport } from './routes/_authenticated/bots.encaminhador'
 import { Route as AuthenticatedBotsBoasvindasRouteImport } from './routes/_authenticated/bots.boasvindas'
 import { Route as ApiPublicKirvanoWebhookRouteImport } from './routes/api/public/kirvano/webhook'
 import { Route as ApiPublicCronDispatchSignalsRouteImport } from './routes/api/public/cron/dispatch-signals'
@@ -108,6 +109,12 @@ const AuthenticatedIntegracoesMetaRoute =
     path: '/integracoes/meta',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedBotsEncaminhadorRoute =
+  AuthenticatedBotsEncaminhadorRouteImport.update({
+    id: '/bots/encaminhador',
+    path: '/bots/encaminhador',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedBotsBoasvindasRoute =
   AuthenticatedBotsBoasvindasRouteImport.update({
     id: '/bots/boasvindas',
@@ -158,6 +165,7 @@ export interface FileRoutesByFullPath {
   '/tutorial': typeof AuthenticatedTutorialRoute
   '/videos': typeof AuthenticatedVideosRoute
   '/bots/boasvindas': typeof AuthenticatedBotsBoasvindasRoute
+  '/bots/encaminhador': typeof AuthenticatedBotsEncaminhadorRoute
   '/integracoes/meta': typeof AuthenticatedIntegracoesMetaRoute
   '/rooms/': typeof AuthenticatedRoomsIndexRoute
   '/rooms/$roomId/edit': typeof AuthenticatedRoomsRoomIdEditRoute
@@ -180,6 +188,7 @@ export interface FileRoutesByTo {
   '/videos': typeof AuthenticatedVideosRoute
   '/': typeof AuthenticatedIndexRoute
   '/bots/boasvindas': typeof AuthenticatedBotsBoasvindasRoute
+  '/bots/encaminhador': typeof AuthenticatedBotsEncaminhadorRoute
   '/integracoes/meta': typeof AuthenticatedIntegracoesMetaRoute
   '/rooms': typeof AuthenticatedRoomsIndexRoute
   '/rooms/$roomId/edit': typeof AuthenticatedRoomsRoomIdEditRoute
@@ -204,6 +213,7 @@ export interface FileRoutesById {
   '/_authenticated/videos': typeof AuthenticatedVideosRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/bots/boasvindas': typeof AuthenticatedBotsBoasvindasRoute
+  '/_authenticated/bots/encaminhador': typeof AuthenticatedBotsEncaminhadorRoute
   '/_authenticated/integracoes/meta': typeof AuthenticatedIntegracoesMetaRoute
   '/_authenticated/rooms/': typeof AuthenticatedRoomsIndexRoute
   '/_authenticated/rooms/$roomId/edit': typeof AuthenticatedRoomsRoomIdEditRoute
@@ -228,6 +238,7 @@ export interface FileRouteTypes {
     | '/tutorial'
     | '/videos'
     | '/bots/boasvindas'
+    | '/bots/encaminhador'
     | '/integracoes/meta'
     | '/rooms/'
     | '/rooms/$roomId/edit'
@@ -250,6 +261,7 @@ export interface FileRouteTypes {
     | '/videos'
     | '/'
     | '/bots/boasvindas'
+    | '/bots/encaminhador'
     | '/integracoes/meta'
     | '/rooms'
     | '/rooms/$roomId/edit'
@@ -273,6 +285,7 @@ export interface FileRouteTypes {
     | '/_authenticated/videos'
     | '/_authenticated/'
     | '/_authenticated/bots/boasvindas'
+    | '/_authenticated/bots/encaminhador'
     | '/_authenticated/integracoes/meta'
     | '/_authenticated/rooms/'
     | '/_authenticated/rooms/$roomId/edit'
@@ -399,6 +412,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedIntegracoesMetaRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/bots/encaminhador': {
+      id: '/_authenticated/bots/encaminhador'
+      path: '/bots/encaminhador'
+      fullPath: '/bots/encaminhador'
+      preLoaderRoute: typeof AuthenticatedBotsEncaminhadorRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/bots/boasvindas': {
       id: '/_authenticated/bots/boasvindas'
       path: '/bots/boasvindas'
@@ -456,6 +476,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedVideosRoute: typeof AuthenticatedVideosRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedBotsBoasvindasRoute: typeof AuthenticatedBotsBoasvindasRoute
+  AuthenticatedBotsEncaminhadorRoute: typeof AuthenticatedBotsEncaminhadorRoute
   AuthenticatedIntegracoesMetaRoute: typeof AuthenticatedIntegracoesMetaRoute
   AuthenticatedRoomsIndexRoute: typeof AuthenticatedRoomsIndexRoute
   AuthenticatedRoomsRoomIdEditRoute: typeof AuthenticatedRoomsRoomIdEditRoute
@@ -473,6 +494,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedVideosRoute: AuthenticatedVideosRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedBotsBoasvindasRoute: AuthenticatedBotsBoasvindasRoute,
+  AuthenticatedBotsEncaminhadorRoute: AuthenticatedBotsEncaminhadorRoute,
   AuthenticatedIntegracoesMetaRoute: AuthenticatedIntegracoesMetaRoute,
   AuthenticatedRoomsIndexRoute: AuthenticatedRoomsIndexRoute,
   AuthenticatedRoomsRoomIdEditRoute: AuthenticatedRoomsRoomIdEditRoute,
