@@ -54,9 +54,24 @@ export const disableMemberTracking = createServerFn({ method: "POST" })
 
 export const getMemberStats = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
+  .inputValidator((d) =>
+    z
+      .object({
+        from: z.string().optional(),
+        to: z.string().optional(),
+      })
+      .optional()
+      .parse(d ?? {}),
+  )
+  .handler(async ({ data, context }) => {
     const { supabase } = context;
-    const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+    const fromDate = data?.from ? new Date(data.from) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const toDate = data?.to ? new Date(data.to) : new Date();
+    // normalize to inclusive day bounds
+    fromDate.setHours(0, 0, 0, 0);
+    toDate.setHours(23, 59, 59, 999);
+    const since = fromDate.toISOString();
+    const until = toDate.toISOString();
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
 
@@ -65,11 +80,14 @@ export const getMemberStats = createServerFn({ method: "GET" })
         .from("telegram_member_events")
         .select("event_type, occurred_at, chat_id, chat_title")
         .gte("occurred_at", since)
+        .lte("occurred_at", until)
         .order("occurred_at", { ascending: false })
         .limit(5000),
       supabase
         .from("telegram_member_events")
         .select("id, chat_title, chat_id, tg_first_name, tg_username, event_type, occurred_at")
+        .gte("occurred_at", since)
+        .lte("occurred_at", until)
         .order("occurred_at", { ascending: false })
         .limit(200),
     ]);
