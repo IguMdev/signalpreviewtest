@@ -490,7 +490,7 @@ function ScheduleDialog({
   editing: Schedule | null;
   rooms: Room[];
   accounts: { id: string; label: string }[];
-  videos: { id: string; title: string }[];
+  videos: { id: string; title: string; kind?: "round" | "normal" | null }[];
   presetRoomId: string | null;
   onClose: () => void;
   onSave: (data: {
