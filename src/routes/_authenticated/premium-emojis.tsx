@@ -400,6 +400,14 @@ function PremiumEmojisPage() {
         />
       </div>
 
+      {/* Toggle animação vs estático */}
+      <div className="flex items-center justify-end gap-2">
+        <Switch id="animate-toggle" checked={animate} onCheckedChange={setAnimate} />
+        <Label htmlFor="animate-toggle" className="text-sm cursor-pointer">
+          {animate ? "Animado" : "Estático"}
+        </Label>
+      </div>
+
       {/* Emojis Capturados (pendentes) */}
       {captured.length > 0 && (
         <Card className="p-6">
@@ -480,7 +488,18 @@ function PremiumEmojisPage() {
               key={e.id}
               className="grid grid-cols-[100px_1fr_2fr_180px_100px] gap-4 px-6 py-3 border-b border-border last:border-0 items-center hover:bg-muted/20"
             >
-              <div className="text-3xl">{e.preview_char ?? "✨"}</div>
+              <div className="flex items-center justify-center size-12">
+                <EmojiPreview
+                  item={{
+                    preview_char: e.preview_char,
+                    thumb_data_url:
+                      savedThumbs.get(e.custom_emoji_id)?.thumb_data_url ?? null,
+                    thumb_mime:
+                      savedThumbs.get(e.custom_emoji_id)?.thumb_mime ?? null,
+                  }}
+                  animate={animate}
+                />
+              </div>
               <div>
                 {editingId === e.id ? (
                   <Input
