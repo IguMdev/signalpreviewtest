@@ -428,7 +428,7 @@ function PremiumEmojisPage() {
                 key={item.custom_emoji_id}
                 className="rounded-lg border border-border bg-muted/20 p-5 flex flex-col items-center gap-3"
               >
-                <EmojiPreview item={item} />
+                <EmojiPreview item={item} animate={animate} />
                 <div className="text-xs text-muted-foreground break-all text-center">
                   ID: {item.custom_emoji_id}
                 </div>
