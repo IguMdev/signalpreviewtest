@@ -9,7 +9,10 @@ import { categoryFor, pickRandom, renderTemplate } from "@/lib/signals.server";
 
 function fmtHHMM(d: Date, tz: string) {
   return new Intl.DateTimeFormat("en-GB", {
-    timeZone: tz, hour: "2-digit", minute: "2-digit", hour12: false,
+    timeZone: tz,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
   }).format(d);
 }
 
@@ -20,7 +23,8 @@ function dirLabel(d: "buy" | "sell") {
 export const testWindow = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: { windowId: string }) =>
-    z.object({ windowId: z.string().uuid() }).parse(input))
+    z.object({ windowId: z.string().uuid() }).parse(input),
+  )
   .handler(async ({ data, context }) => {
     const { userId } = context as { userId: string };
 
@@ -35,18 +39,24 @@ export const testWindow = createServerFn({ method: "POST" })
     const { data: room } = await supabaseAdmin
       .from("rooms")
       .select("id, user_id, timezone, default_account_id")
-      .eq("id", w.room_id).maybeSingle();
+      .eq("id", w.room_id)
+      .maybeSingle();
     if (!room) throw new Error("Sala não encontrada");
 
     const { data: chats } = await supabaseAdmin
-      .from("room_chats").select("chat_id").eq("room_id", w.room_id);
+      .from("room_chats")
+      .select("chat_id")
+      .eq("room_id", w.room_id);
     const chatIds = (chats ?? []).map((c) => Number(c.chat_id));
     if (!chatIds.length) throw new Error("Vincule um chat/canal à sala antes de testar");
 
     let botToken: string | null = null;
     if (room.default_account_id) {
       const { data: acc } = await supabaseAdmin
-        .from("telegram_accounts").select("bot_token").eq("id", room.default_account_id).maybeSingle();
+        .from("telegram_accounts")
+        .select("bot_token")
+        .eq("id", room.default_account_id)
+        .maybeSingle();
       botToken = acc?.bot_token ?? null;
     }
     if (!botToken) throw new Error("Defina uma conta bot padrão na sala");
@@ -55,7 +65,10 @@ export const testWindow = createServerFn({ method: "POST" })
     let pool: string[] = [];
     if (w.use_all_assets || !w.asset_filter?.length) {
       const { data: ras } = await supabaseAdmin
-        .from("room_assets").select("asset_code").eq("room_id", w.room_id).eq("is_open", true);
+        .from("room_assets")
+        .select("asset_code")
+        .eq("room_id", w.room_id)
+        .eq("is_open", true);
       pool = (ras ?? []).map((r) => r.asset_code);
     } else {
       pool = w.asset_filter as string[];
@@ -72,7 +85,9 @@ export const testWindow = createServerFn({ method: "POST" })
     const expires = new Date(entry.getTime() + 60_000);
 
     const { data: tpls } = await supabaseAdmin
-      .from("room_templates").select("kind, content, parse_mode").eq("room_id", w.room_id);
+      .from("room_templates")
+      .select("kind, content, parse_mode")
+      .eq("room_id", w.room_id);
     const { data: btnsRaw } = await supabaseAdmin
       .from("room_template_buttons")
       .select("template_kind, label, url, sort_order")
@@ -82,26 +97,26 @@ export const testWindow = createServerFn({ method: "POST" })
     const signalButtons = (btnsRaw ?? [])
       .filter((b) => b.template_kind === "signal" && b.label && b.url)
       .map((b) => [{ text: renderEmojiTokens(b.label, emojiLookup).text, url: b.url }]);
-    const replyMarkup = signalButtons.length
-      ? { inline_keyboard: signalButtons }
-      : undefined;
+    const replyMarkup = signalButtons.length ? { inline_keyboard: signalButtons } : undefined;
     const tpl = (tpls ?? []).find((t) => t.kind === "signal") ?? {
-      kind: "signal", parse_mode: "HTML",
-      content: "🧪 TESTE 🧪\n✅ ENTRADA CONFIRMADA ✅\n🌎 Ativo: {ATIVO}\n⏳ Expiração: {TIMEFRAME}\n📊 Direção: {DIRECAO}\n⏰ Entrada: {ENTRADA}\nGale 1: {ENTRADAGALE1}\nGale 2: {ENTRADAGALE2}",
+      kind: "signal",
+      parse_mode: "HTML",
+      content:
+        "🧪 TESTE 🧪\n✅ ENTRADA CONFIRMADA ✅\n🌎 Ativo: {ATIVO}\n⏳ Expiração: {TIMEFRAME}\n📊 Direção: {DIRECAO}\n⏰ Entrada: {ENTRADA}\nGale 1: {ENTRADAGALE1}\nGale 2: {ENTRADAGALE2}",
     };
-    const text = "🧪 TESTE 🧪\n" + renderTemplate(tpl.content, {
-      ATIVO: asset,
-      TIMEFRAME: timeframe,
-      DIRECAO: dirLabel(direction),
-      ENTRADA: fmtHHMM(entry, tz),
-      ENTRADAGALE1: fmtHHMM(new Date(entry.getTime() + 60_000), tz),
-      ENTRADAGALE2: fmtHHMM(new Date(entry.getTime() + 120_000), tz),
-      MARTINGALE: String(w.martingale ?? 2),
-    });
+    const text =
+      "🧪 TESTE 🧪\n" +
+      renderTemplate(tpl.content, {
+        ATIVO: asset,
+        TIMEFRAME: timeframe,
+        DIRECAO: dirLabel(direction),
+        ENTRADA: fmtHHMM(entry, tz),
+        ENTRADAGALE1: fmtHHMM(new Date(entry.getTime() + 60_000), tz),
+        ENTRADAGALE2: fmtHHMM(new Date(entry.getTime() + 120_000), tz),
+        MARTINGALE: String(w.martingale ?? 2),
+      });
 
-    const botText = replyMarkup
-      ? renderEmojiTokensToHtml(text, emojiLookup).text
-      : text;
+    const botText = replyMarkup ? renderEmojiTokensToHtml(text, emojiLookup).text : text;
     const ids: Record<string, number> = {};
     const errors: string[] = [];
     for (const cid of chatIds) {
@@ -148,7 +163,9 @@ export const testWindow = createServerFn({ method: "POST" })
 
     return {
       ok: Object.keys(ids).length > 0,
-      asset, direction, timeframe,
+      asset,
+      direction,
+      timeframe,
       entry_at: entry.toISOString(),
       sent: Object.keys(ids).length,
       errors,

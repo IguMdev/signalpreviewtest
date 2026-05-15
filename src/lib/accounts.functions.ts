@@ -2,7 +2,12 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { callTelegram, type TelegramUser, type TelegramUpdate } from "./telegram.server";
-import { getPremiumAccountConnectionStatus, getUserEmojiLookup, sendPhotoWithPremiumEmojiCaption, sendTextWithPremiumEmojis } from "./premium-send.server";
+import {
+  getPremiumAccountConnectionStatus,
+  getUserEmojiLookup,
+  sendPhotoWithPremiumEmojiCaption,
+  sendTextWithPremiumEmojis,
+} from "./premium-send.server";
 import { renderEmojiTokens, renderEmojiTokensToHtml } from "./premium-emoji-render";
 
 export const verifyAccount = createServerFn({ method: "POST" })
@@ -22,7 +27,9 @@ export const verifyAccount = createServerFn({ method: "POST" })
         ? {
             status: "ok" as const,
             last_check_at: new Date().toISOString(),
-            last_error: premium.isPremium ? null : "A conta conectada não tem Telegram Premium ativo.",
+            last_error: premium.isPremium
+              ? null
+              : "A conta conectada não tem Telegram Premium ativo.",
             bot_username: premium.username ?? null,
             bot_first_name: premium.firstName ?? null,
           }
@@ -31,13 +38,19 @@ export const verifyAccount = createServerFn({ method: "POST" })
             last_check_at: new Date().toISOString(),
             last_error: premium.error,
           };
-      await supabase
-        .from("telegram_accounts")
-        .update(premiumUpdate)
-        .eq("id", acc.id);
+      await supabase.from("telegram_accounts").update(premiumUpdate).eq("id", acc.id);
       if (!premium.ok) return { ok: false, error: premium.error };
-      if (!premium.isPremium) return { ok: false, error: "A conta conectada não tem Telegram Premium ativo." };
-      return { ok: true, bot: { id: 0, is_bot: false, first_name: premium.firstName ?? "Conta Premium", username: premium.username ?? undefined } };
+      if (!premium.isPremium)
+        return { ok: false, error: "A conta conectada não tem Telegram Premium ativo." };
+      return {
+        ok: true,
+        bot: {
+          id: 0,
+          is_bot: false,
+          first_name: premium.firstName ?? "Conta Premium",
+          username: premium.username ?? undefined,
+        },
+      };
     }
     const r = await callTelegram<TelegramUser>(acc.bot_token, "getMe");
     if (!r.ok || !r.result) {
@@ -153,7 +166,19 @@ export const sendRoomTest = createServerFn({ method: "POST" })
     z
       .object({
         roomId: z.string().uuid(),
-        templateKind: z.enum(["buy_direction", "entry", "event", "gain", "loss", "sell_direction", "signal", "win", "win_martingale"]).optional(),
+        templateKind: z
+          .enum([
+            "buy_direction",
+            "entry",
+            "event",
+            "gain",
+            "loss",
+            "sell_direction",
+            "signal",
+            "win",
+            "win_martingale",
+          ])
+          .optional(),
         text: z.string().max(4000).optional(),
         imagePath: z.string().optional(),
         imageBucket: z.string().optional(),
@@ -170,7 +195,8 @@ export const sendRoomTest = createServerFn({ method: "POST" })
       .eq("id", data.roomId)
       .maybeSingle();
     if (roomErr || !room) throw new Error("Sala não encontrada");
-    if (!room.default_account_id) throw new Error("Selecione um bot padrão para a sala antes de enviar testes.");
+    if (!room.default_account_id)
+      throw new Error("Selecione um bot padrão para a sala antes de enviar testes.");
 
     const { data: chat } = await supabase
       .from("room_chats")
@@ -178,7 +204,8 @@ export const sendRoomTest = createServerFn({ method: "POST" })
       .eq("room_id", room.id)
       .limit(1)
       .maybeSingle();
-    if (!chat) throw new Error("Vincule pelo menos um chat do Telegram à sala antes de enviar testes.");
+    if (!chat)
+      throw new Error("Vincule pelo menos um chat do Telegram à sala antes de enviar testes.");
 
     const { data: acc } = await supabase
       .from("telegram_accounts")
@@ -199,9 +226,7 @@ export const sendRoomTest = createServerFn({ method: "POST" })
       .filter((b) => b.label && b.url)
       .map((b) => [{ text: renderEmojiTokens(b.label, emojiLookup).text, url: b.url }]);
     const replyMarkup = buttonRows.length ? { inline_keyboard: buttonRows } : undefined;
-    const botText = replyMarkup
-      ? renderEmojiTokensToHtml(text, emojiLookup).text
-      : text;
+    const botText = replyMarkup ? renderEmojiTokensToHtml(text, emojiLookup).text : text;
     let r;
     if (data.imagePath) {
       const bucket = data.imageBucket || "room-images";
@@ -209,9 +234,7 @@ export const sendRoomTest = createServerFn({ method: "POST" })
       const mime = (data.imageMime || "").toLowerCase();
       const ext = (data.imageExt || data.imagePath.split(".").pop() || "").toLowerCase();
       const isStickerByMime =
-        mime === "image/webp" ||
-        mime === "application/x-tgsticker" ||
-        mime === "video/webm";
+        mime === "image/webp" || mime === "application/x-tgsticker" || mime === "video/webm";
       const isStickerByExt = ext === "webp" || ext === "tgs" || ext === "webm";
       const isSticker = isStickerByMime || (!mime && isStickerByExt);
       if (isSticker) {
@@ -221,29 +244,33 @@ export const sendRoomTest = createServerFn({ method: "POST" })
           reply_markup: replyMarkup,
         });
         if (r.ok && text) {
-          if (replyMarkup) await callTelegram<{ message_id: number }>(acc.bot_token, "sendMessage", {
-            chat_id: chat.chat_id,
-            text: botText,
-            parse_mode: "HTML",
-          });
+          if (replyMarkup)
+            await callTelegram<{ message_id: number }>(acc.bot_token, "sendMessage", {
+              chat_id: chat.chat_id,
+              text: botText,
+              parse_mode: "HTML",
+            });
           else {
-          const premium = await sendTextWithPremiumEmojis({ userId, chatId: chat.chat_id, text });
-          if (premium.applied) {
-            if (!premium.ok) throw new Error(premium.error);
-          } else await callTelegram<{ message_id: number }>(acc.bot_token, "sendMessage", {
-            chat_id: chat.chat_id,
-            text,
-            parse_mode: "HTML",
-          });
+            const premium = await sendTextWithPremiumEmojis({ userId, chatId: chat.chat_id, text });
+            if (premium.applied) {
+              if (!premium.ok) throw new Error(premium.error);
+            } else
+              await callTelegram<{ message_id: number }>(acc.bot_token, "sendMessage", {
+                chat_id: chat.chat_id,
+                text,
+                parse_mode: "HTML",
+              });
           }
         }
       } else {
-        const premiumPhoto = replyMarkup ? { applied: false as const, reason: "inline-buttons" } : await sendPhotoWithPremiumEmojiCaption({
-          userId,
-          chatId: chat.chat_id,
-          photoUrl: pub.publicUrl,
-          caption: text,
-        });
+        const premiumPhoto = replyMarkup
+          ? { applied: false as const, reason: "inline-buttons" }
+          : await sendPhotoWithPremiumEmojiCaption({
+              userId,
+              chatId: chat.chat_id,
+              photoUrl: pub.publicUrl,
+              caption: text,
+            });
         r = premiumPhoto.applied
           ? premiumPhoto.ok
             ? { ok: true, result: { message_id: premiumPhoto.messageId ?? undefined } }
@@ -258,16 +285,19 @@ export const sendRoomTest = createServerFn({ method: "POST" })
       }
     } else {
       if (!text) throw new Error("Mensagem vazia");
-      const premium = replyMarkup ? { applied: false as const, reason: "inline-buttons" } : await sendTextWithPremiumEmojis({ userId, chatId: chat.chat_id, text });
+      const premium = replyMarkup
+        ? { applied: false as const, reason: "inline-buttons" }
+        : await sendTextWithPremiumEmojis({ userId, chatId: chat.chat_id, text });
       if (premium.applied) {
         if (!premium.ok) throw new Error(premium.error);
         r = { ok: true, result: { message_id: premium.messageId ?? undefined } };
-      } else r = await callTelegram<{ message_id: number }>(acc.bot_token, "sendMessage", {
-        chat_id: chat.chat_id,
-        text: botText,
-        parse_mode: "HTML",
-        reply_markup: replyMarkup,
-      });
+      } else
+        r = await callTelegram<{ message_id: number }>(acc.bot_token, "sendMessage", {
+          chat_id: chat.chat_id,
+          text: botText,
+          parse_mode: "HTML",
+          reply_markup: replyMarkup,
+        });
     }
     if (!r.ok) throw new Error(r.description ?? "Falha ao enviar");
     return { ok: true, messageId: r.result?.message_id };
