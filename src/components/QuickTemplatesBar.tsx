@@ -251,7 +251,7 @@ function QuickTemplateDialog({
       const uid = u.user?.id;
       if (!uid) throw new Error("Sessão expirada");
       const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
-      const path = `quick/${uid}/${Date.now()}.${ext}`;
+      const path = `${uid}/quick/${Date.now()}.${ext}`;
       const { error } = await supabase.storage
         .from("room-images")
         .upload(path, file, { contentType: file.type, upsert: false });
@@ -447,7 +447,7 @@ function QuickSendDialog({
       const uid = u.user?.id;
       if (!uid) throw new Error("Sessão expirada");
       const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
-      const path = `quick/${uid}/${Date.now()}.${ext}`;
+      const path = `${uid}/quick/${Date.now()}.${ext}`;
       const { error } = await supabase.storage
         .from("room-images")
         .upload(path, file, { contentType: file.type, upsert: false });
