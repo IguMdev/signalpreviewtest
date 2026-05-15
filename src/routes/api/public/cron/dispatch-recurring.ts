@@ -41,6 +41,7 @@ type Schedule = {
     content: string | null;
     image_path: string | null;
     image_mime: string | null;
+    video_id: string | null;
   }> | null;
   timezone: string;
   last_fire_key: string | null;
@@ -54,6 +55,7 @@ type PendingFollowup = {
   content: string | null;
   image_path: string | null;
   image_mime: string | null;
+  video_id: string | null;
   parse_mode: string;
 };
 
@@ -221,6 +223,7 @@ export const Route = createFileRoute("/api/public/cron/dispatch-recurring")({
                 content: f.content ?? null,
                 image_path: f.image_path ?? null,
                 image_mime: f.image_mime ?? null,
+                video_id: f.video_id ?? null,
                 parse_mode: s.parse_mode,
               };
             });
@@ -232,7 +235,7 @@ export const Route = createFileRoute("/api/public/cron/dispatch-recurring")({
         const nowIso = new Date().toISOString();
         const { data: pendings } = await supabaseAdmin
           .from("recurring_pending_followups")
-          .select("id, user_id, room_id, account_id, content, image_path, image_mime, parse_mode")
+          .select("id, user_id, room_id, account_id, content, image_path, image_mime, video_id, parse_mode")
           .eq("status", "pending")
           .lte("scheduled_at", nowIso)
           .limit(100);
@@ -284,12 +287,30 @@ export const Route = createFileRoute("/api/public/cron/dispatch-recurring")({
 
           let okAny = false;
           let lastErr: string | null = null;
+          let video: { storage_path: string; mime_type: string | null; duration_seconds: number | null; title: string } | null = null;
+          if (p.video_id) {
+            const { data: v } = await supabaseAdmin
+              .from("videos")
+              .select("storage_path, mime_type, duration_seconds, title")
+              .eq("id", p.video_id)
+              .maybeSingle();
+            video = v ?? null;
+          }
           for (const c of chats) {
-            const r = await sendOne(acc.bot_token, c.chat_id, {
-              content: p.content,
-              image_path: p.image_path,
-              parse_mode: p.parse_mode,
-            });
+            const r = video
+              ? await dispatchVideoNote({
+                  botToken: acc.bot_token,
+                  storagePath: video.storage_path,
+                  chatId: c.chat_id,
+                  duration: video.duration_seconds,
+                  mimeType: video.mime_type,
+                  filename: (video.title || "video").replace(/[^\w.-]+/g, "_") + ".mp4",
+                })
+              : await sendOne(acc.bot_token, c.chat_id, {
+                  content: p.content,
+                  image_path: p.image_path,
+                  parse_mode: p.parse_mode,
+                });
             await supabaseAdmin.from("message_logs").insert({
               user_id: p.user_id,
               chat_id: c.chat_id,
