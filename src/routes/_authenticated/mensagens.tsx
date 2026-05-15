@@ -504,6 +504,7 @@ function ScheduleDialog({
     weekdayOverrides: Record<string, string[]>;
     followUps: Array<{
       delayMinutes: number;
+      delaySeconds?: number | null;
       content: string | null;
       imagePath: string | null;
       imageMime: string | null;
@@ -527,7 +528,7 @@ function ScheduleDialog({
   const [weekdayOverrides, setWeekdayOverrides] = useState<Record<string, string[]>>({});
   const [overrideInputs, setOverrideInputs] = useState<Record<string, string>>({});
   const [followUps, setFollowUps] = useState<
-    Array<{ delayMinutes: number; content: string; imagePath: string; imageMime: string; videoId: string }>
+    Array<{ delayValue: number; delayUnit: "seconds" | "minutes"; content: string; imagePath: string; imageMime: string; videoId: string }>
   >([]);
   const [followUpUploading, setFollowUpUploading] = useState<number | null>(null);
   const [isPremium, setIsPremium] = useState(false);
