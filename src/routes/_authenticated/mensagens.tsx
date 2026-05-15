@@ -805,7 +805,7 @@ function ScheduleDialog({
                   onClick={() =>
                     setFollowUps([
                       ...followUps,
-                      { delayMinutes: 1, content: "", imagePath: "", imageMime: "", videoId: "" },
+                      { delayValue: 1, delayUnit: "minutes", content: "", imagePath: "", imageMime: "", videoId: "" },
                     ])
                   }
                 >
@@ -822,7 +822,8 @@ function ScheduleDialog({
                   {followUps.map((f, idx) => {
                     const update = (
                       patch: Partial<{
-                        delayMinutes: number;
+                        delayValue: number;
+                        delayUnit: "seconds" | "minutes";
                         content: string;
                         imagePath: string;
                         imageMime: string;
@@ -854,25 +855,39 @@ function ScheduleDialog({
                             <Trash2 className="size-4" />
                           </Button>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Label className="text-xs whitespace-nowrap">
-                            Após (min):
-                          </Label>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <Label className="text-xs whitespace-nowrap">Após:</Label>
                           <Input
                             type="number"
                             min={1}
-                            max={1440}
-                            value={f.delayMinutes}
-                            onChange={(e) =>
+                            max={f.delayUnit === "seconds" ? 86400 : 1440}
+                            value={f.delayValue}
+                            onChange={(e) => {
+                              const max = f.delayUnit === "seconds" ? 86400 : 1440;
                               update({
-                                delayMinutes: Math.max(
-                                  1,
-                                  Math.min(1440, Number(e.target.value) || 1),
-                                ),
-                              })
-                            }
+                                delayValue: Math.max(1, Math.min(max, Number(e.target.value) || 1)),
+                              });
+                            }}
                             className="max-w-[100px]"
                           />
+                          <Select
+                            value={f.delayUnit}
+                            onValueChange={(v: "seconds" | "minutes") => {
+                              const max = v === "seconds" ? 86400 : 1440;
+                              update({
+                                delayUnit: v,
+                                delayValue: Math.max(1, Math.min(max, f.delayValue)),
+                              });
+                            }}
+                          >
+                            <SelectTrigger className="max-w-[130px]">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="seconds">segundos</SelectItem>
+                              <SelectItem value="minutes">minutos</SelectItem>
+                            </SelectContent>
+                          </Select>
                           <span className="text-xs text-muted-foreground">
                             depois da mensagem anterior
                           </span>
