@@ -16,7 +16,18 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Sparkles, Search, Play, Square, Pencil, Trash2, Home, ChevronRight } from "lucide-react";
+import {
+  Sparkles,
+  Search,
+  Play,
+  Square,
+  Pencil,
+  Trash2,
+  Home,
+  ChevronRight,
+  Zap,
+  Save,
+} from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -24,8 +35,10 @@ export const Route = createFileRoute("/_authenticated/premium-emojis")({
   component: PremiumEmojisPage,
 });
 
+type Captured = { custom_emoji_id: string; preview_char: string | null; name: string };
+
 function PremiumEmojisPage() {
-  const { user } = useAuth();
+  useAuth();
   const qc = useQueryClient();
   const [accountId, setAccountId] = useState<string>("");
   const [capturing, setCapturing] = useState(false);
@@ -34,6 +47,7 @@ function PremiumEmojisPage() {
   const [editName, setEditName] = useState("");
   const [editEmojiId, setEditEmojiId] = useState("");
   const [captureStartedAt, setCaptureStartedAt] = useState<string | null>(null);
+  const [captured, setCaptured] = useState<Captured[]>([]);
   const syncEmojis = useServerFn(syncPremiumEmojis);
 
   const accounts = useQuery({
@@ -87,15 +101,28 @@ function PremiumEmojisPage() {
     },
   });
 
+  const mergeFresh = (items: Array<{ custom_emoji_id: string; preview_char: string | null }>) => {
+    setCaptured((prev) => {
+      const seen = new Set(prev.map((p) => p.custom_emoji_id));
+      const merged = [...prev];
+      for (const it of items) {
+        if (!seen.has(it.custom_emoji_id)) {
+          merged.push({ ...it, name: "" });
+        }
+      }
+      return merged;
+    });
+  };
+
   const syncMut = useMutation({
     mutationFn: async () => {
       if (!accountId) throw new Error("Selecione uma conta premium");
       return syncEmojis({ data: { accountId, since: captureStartedAt ?? undefined } });
     },
     onSuccess: (r) => {
-      qc.invalidateQueries({ queryKey: ["emojis"] });
-      if (r.count > 0) {
-        toast.success(`${r.count} emojis premium capturados`);
+      if (r.items?.length) {
+        mergeFresh(r.items);
+        toast.success(`${r.items.length} novos emojis capturados`);
       }
     },
     onError: (e: Error) => toast.error(e.message),
@@ -108,6 +135,26 @@ function PremiumEmojisPage() {
     }, 8000);
     return () => window.clearInterval(timer);
   }, [capturing, accountId, syncMut.isPending]);
+
+  const saveCaptured = async (item: Captured) => {
+    if (!item.name.trim()) {
+      toast.error("Defina uma nomenclatura");
+      return;
+    }
+    const { data: userRes } = await supabase.auth.getUser();
+    const uid = userRes.user?.id;
+    if (!uid) return toast.error("Sessão inválida");
+    const { error } = await supabase.from("premium_emojis").insert({
+      user_id: uid,
+      name: item.name.trim().toUpperCase(),
+      custom_emoji_id: item.custom_emoji_id,
+      preview_char: item.preview_char,
+    });
+    if (error) return toast.error(error.message);
+    toast.success("Emoji salvo");
+    setCaptured((prev) => prev.filter((c) => c.custom_emoji_id !== item.custom_emoji_id));
+    qc.invalidateQueries({ queryKey: ["emojis"] });
+  };
 
   const filtered = useMemo(() => {
     if (!list.data) return [];
@@ -132,8 +179,10 @@ function PremiumEmojisPage() {
     setCapturing(true);
     syncEmojis({ data: { accountId, since: startedAt } })
       .then((r) => {
-        qc.invalidateQueries({ queryKey: ["emojis"] });
-        if (r.count > 0) toast.success(`${r.count} emojis premium capturados`);
+        if (r.items?.length) {
+          mergeFresh(r.items);
+          toast.success(`${r.items.length} novos emojis capturados`);
+        }
       })
       .catch((e: Error) => toast.error(e.message));
     toast.info("Captura iniciada. Envie emojis premium na conta selecionada.");
@@ -163,7 +212,7 @@ function PremiumEmojisPage() {
           Emojis Premium
         </h1>
         <p className="text-sm text-muted-foreground mt-1">
-          Gerencie seus emojis premium do Telegram com nomenclaturas personalizadas
+          Capture, nomeie e gerencie seus emojis premium do Telegram
         </p>
       </div>
 
@@ -176,7 +225,7 @@ function PremiumEmojisPage() {
           <div>
             <h2 className="text-lg font-semibold">Captura Automática de Emojis</h2>
             <p className="text-sm text-muted-foreground">
-              Capture emojis premium diretamente das suas contas do Telegram
+              Selecione uma conta premium e envie emojis nela — eles aparecerão abaixo para você nomear.
             </p>
           </div>
         </div>
@@ -224,7 +273,66 @@ function PremiumEmojisPage() {
         />
       </div>
 
-      {/* Table */}
+      {/* Emojis Capturados (pendentes) */}
+      {captured.length > 0 && (
+        <Card className="p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold flex items-center gap-2">
+              <Zap className="size-5 text-amber-400" />
+              Emojis Capturados
+              <span className="text-sm font-normal text-muted-foreground">
+                ({captured.length})
+              </span>
+            </h2>
+            <Button
+              variant="destructive"
+              size="sm"
+              className="gap-2"
+              onClick={() => setCaptured([])}
+            >
+              <Trash2 className="size-4" />
+              Limpar Capturas
+            </Button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {captured.map((item) => (
+              <div
+                key={item.custom_emoji_id}
+                className="rounded-lg border border-border bg-muted/20 p-5 flex flex-col items-center gap-3"
+              >
+                <Zap className="size-7 text-amber-400" />
+                <div className="text-xs text-muted-foreground">
+                  ID: {item.custom_emoji_id}
+                </div>
+                <Input
+                  placeholder="NOMENCLATURA (ex: APERTOMAO)"
+                  value={item.name}
+                  onChange={(e) =>
+                    setCaptured((prev) =>
+                      prev.map((c) =>
+                        c.custom_emoji_id === item.custom_emoji_id
+                          ? { ...c, name: e.target.value }
+                          : c,
+                      ),
+                    )
+                  }
+                  className="text-center font-mono uppercase"
+                />
+                <Button
+                  className="w-full gap-2 bg-emerald-600 hover:bg-emerald-700 text-white"
+                  onClick={() => saveCaptured(item)}
+                >
+                  <Save className="size-4" />
+                  Salvar
+                </Button>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      {/* Saved Table */}
       <Card className="overflow-hidden">
         <div className="grid grid-cols-[100px_1fr_2fr_180px_100px] gap-4 px-6 py-3 border-b border-border bg-muted/30 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           <div>Emoji</div>
@@ -237,7 +345,7 @@ function PremiumEmojisPage() {
         {filtered.length === 0 ? (
           <div className="p-12 text-center text-sm text-muted-foreground">
             <Sparkles className="size-8 mx-auto mb-2 opacity-40" />
-            Nenhum emoji encontrado.
+            Nenhum emoji salvo.
           </div>
         ) : (
           filtered.map((e) => (
