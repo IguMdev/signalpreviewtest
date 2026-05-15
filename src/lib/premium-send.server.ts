@@ -383,27 +383,20 @@ export async function sendTextWithPremiumEmojis(opts: {
   }
 
   try {
-    const normalized = await normalizeCustomEmojiAlts(client, rendered);
+    const formatted = await renderTelegramHtmlWithPremiumEmojis(opts.text, lookup);
     const target = resolveTelegramTarget(opts.chatId);
     const buttons = await buildInlineMarkup(opts.buttonRows);
     console.log("[premium-send] sending text", {
       userId: opts.userId,
       accountId: acc.id,
       chatId: String(opts.chatId),
-      entitiesCount: normalized.entities.length,
-      docIds: normalized.entities.map((e) => e.documentId),
+      entitiesCount: formatted.entities.length,
+      docIds: rendered.entities.map((e) => e.documentId),
       buttonRows: opts.buttonRows?.length ?? 0,
     });
     const msg = await client.sendMessage(target as never, {
-      message: normalized.text,
-      formattingEntities: normalized.entities.map(
-        (entity) =>
-          new Api.MessageEntityCustomEmoji({
-            offset: entity.offset,
-            length: entity.length,
-            documentId: bigInt(entity.documentId) as never,
-          }),
-      ),
+      message: formatted.text,
+      formattingEntities: formatted.entities as never,
       replyTo: opts.replyToMessageId,
       ...(buttons ? { buttons: buttons as never } : {}),
     });
