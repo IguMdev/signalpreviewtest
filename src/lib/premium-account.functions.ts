@@ -10,6 +10,11 @@ function userbot() {
       "Serviço de userbot não configurado. Configure os secrets USERBOT_API_URL e USERBOT_TOKEN.",
     );
   }
+  if (!/^https?:\/\//i.test(url)) {
+    throw new Error(
+      `USERBOT_API_URL inválido ("${url}"). Deve começar com https:// (ex: https://userbot.seudominio.com).`,
+    );
+  }
   return { url: url.replace(/\/$/, ""), token };
 }
 
