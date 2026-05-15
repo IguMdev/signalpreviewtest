@@ -33,6 +33,7 @@ function PremiumEmojisPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
   const [editEmojiId, setEditEmojiId] = useState("");
+  const [captureStartedAt, setCaptureStartedAt] = useState<string | null>(null);
   const syncEmojis = useServerFn(syncPremiumEmojis);
 
   const accounts = useQuery({
@@ -89,7 +90,7 @@ function PremiumEmojisPage() {
   const syncMut = useMutation({
     mutationFn: async () => {
       if (!accountId) throw new Error("Selecione uma conta premium");
-      return syncEmojis({ data: { accountId } });
+      return syncEmojis({ data: { accountId, since: captureStartedAt ?? undefined } });
     },
     onSuccess: (r) => {
       qc.invalidateQueries({ queryKey: ["emojis"] });
@@ -126,13 +127,21 @@ function PremiumEmojisPage() {
       toast.error("Selecione uma conta premium");
       return;
     }
+    const startedAt = new Date().toISOString();
+    setCaptureStartedAt(startedAt);
     setCapturing(true);
-    syncMut.mutate();
+    syncEmojis({ data: { accountId, since: startedAt } })
+      .then((r) => {
+        qc.invalidateQueries({ queryKey: ["emojis"] });
+        if (r.count > 0) toast.success(`${r.count} emojis premium capturados`);
+      })
+      .catch((e: Error) => toast.error(e.message));
     toast.info("Captura iniciada. Envie emojis premium na conta selecionada.");
   };
 
   const stopCapture = () => {
     setCapturing(false);
+    setCaptureStartedAt(null);
     toast.success("Captura parada");
   };
 
