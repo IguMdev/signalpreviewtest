@@ -120,18 +120,16 @@ export const testWindow = createServerFn({ method: "POST" })
     const ids: Record<string, number> = {};
     const errors: string[] = [];
     for (const cid of chatIds) {
-      // Botões inline exigem Bot API — pula a rota premium quando há botões.
-      if (!replyMarkup) {
-        const premium = await sendTextWithPremiumEmojis({
-          userId: w.user_id,
-          chatId: cid,
-          text,
-        });
-        if (premium.applied) {
-          if (premium.ok && premium.messageId) ids[String(cid)] = premium.messageId;
-          else errors.push(`chat ${cid}: ${premium.ok ? "erro" : premium.error}`);
-          continue;
-        }
+      const premium = await sendTextWithPremiumEmojis({
+        userId: w.user_id,
+        chatId: cid,
+        text,
+        buttonRows: signalButtons.length ? signalButtons : undefined,
+      });
+      if (premium.applied) {
+        if (premium.ok && premium.messageId) ids[String(cid)] = premium.messageId;
+        else errors.push(`chat ${cid}: ${premium.ok ? "erro" : premium.error}`);
+        continue;
       }
       const r = await callTelegram<{ message_id: number }>(botToken, "sendMessage", {
         chat_id: cid,
