@@ -563,9 +563,9 @@ function AccountCard({
     queryFn: async () => {
       const start = new Date();
       start.setHours(0, 0, 0, 0);
-      const { count } = await supabase
+      const { count } = await (supabase
         .from("message_logs")
-        .select("id", { count: "exact", head: true })
+        .select("id", { count: "exact", head: true }) as any)
         .eq("account_id", a.id)
         .eq("ok", true)
         .gte("created_at", start.toISOString());
