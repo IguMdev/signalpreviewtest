@@ -22,6 +22,17 @@ function publicUrl(bucket: string, path: string) {
 function renderTemplate(tpl: string, vars: Record<string, string>) {
   return tpl.replace(/\{(\w+)\}/g, (_, k) => vars[k] ?? "");
 }
+function getInitials(name?: string) {
+  if (!name) return "?";
+  return name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase();
+}
+function stringToColor(str?: string) {
+  if (!str) return "#64748b";
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  const c = (hash & 0x00ffffff).toString(16).padStart(6, "0");
+  return `#${c}`;
+}
 
 export const Route = createFileRoute("/_authenticated/bots/boasvindas")({
   component: BoasVindasPage,
