@@ -6,7 +6,19 @@ import { triggerSignalReactions } from "@/lib/engagement.functions";
 import {
   sendPhotoWithPremiumEmojiCaption,
   sendTextWithPremiumEmojis,
+  getUserEmojiLookup,
 } from "@/lib/premium-send.server";
+import { renderEmojiTokensPlain, hasEmojiTokens } from "@/lib/premium-emoji-render";
+
+async function renderButtonTextForUser(
+  userId: string,
+  buttonText: string | null | undefined,
+): Promise<string | null> {
+  if (!buttonText) return null;
+  if (!hasEmojiTokens(buttonText)) return buttonText;
+  const lookup = await getUserEmojiLookup(userId);
+  return renderEmojiTokensPlain(buttonText, lookup);
+}
 
 type TelegramResult = { ok: boolean; result?: { message_id?: number }; description?: string };
 
