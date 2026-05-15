@@ -137,7 +137,6 @@ export const syncPremiumEmojis = createServerFn({ method: "POST" })
     if (error || !acc) throw new Error("Conta não encontrada");
     if (!acc.tg_session) throw new Error("Conecte a conta premium primeiro.");
     const { Api } = await import("telegram");
-    const { default: bigInt } = await import("big-integer");
     const client = await makeClient(
       acc.tg_api_id as number,
       acc.tg_api_hash as string,
@@ -150,16 +149,45 @@ export const syncPremiumEmojis = createServerFn({ method: "POST" })
       preview_char: string | null;
     }> = [];
     try {
-      const stickers = (await client.invoke(
-        new Api.messages.GetEmojiStickers({ hash: bigInt(0) }),
-      )) as unknown as { sets?: Array<{ set: { id: { toString(): string }; shortName: string } }> };
-      for (const s of stickers.sets ?? []) {
-        rows.push({
-          user_id: userId,
-          custom_emoji_id: String(s.set.id),
-          name: s.set.shortName,
-          preview_char: null,
-        });
+      // Lê as últimas mensagens de "Mensagens Salvas" (Saved Messages = peer "me")
+      // e extrai todos os custom emojis enviados pelo usuário.
+      const history = (await client.invoke(
+        new Api.messages.GetHistory({
+          peer: new Api.InputPeerSelf(),
+          offsetId: 0,
+          offsetDate: 0,
+          addOffset: 0,
+          limit: 200,
+          maxId: 0,
+          minId: 0,
+          hash: 0 as unknown as bigint,
+        }),
+      )) as unknown as {
+        messages?: Array<{
+          message?: string;
+          entities?: Array<{ className?: string; documentId?: { toString(): string }; offset?: number; length?: number }>;
+        }>;
+      };
+      const seen = new Set<string>();
+      for (const msg of history.messages ?? []) {
+        const text = msg.message ?? "";
+        for (const ent of msg.entities ?? []) {
+          if (ent.className === "MessageEntityCustomEmoji" && ent.documentId) {
+            const id = String(ent.documentId);
+            if (seen.has(id)) continue;
+            seen.add(id);
+            const preview =
+              typeof ent.offset === "number" && typeof ent.length === "number"
+                ? text.substr(ent.offset, ent.length)
+                : null;
+            rows.push({
+              user_id: userId,
+              custom_emoji_id: id,
+              name: preview || id,
+              preview_char: preview,
+            });
+          }
+        }
       }
     } finally {
       await client.disconnect().catch(() => {});
