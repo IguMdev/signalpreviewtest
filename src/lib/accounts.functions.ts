@@ -2,7 +2,8 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { callTelegram, type TelegramUser, type TelegramUpdate } from "./telegram.server";
-import { getPremiumAccountConnectionStatus, sendPhotoWithPremiumEmojiCaption, sendTextWithPremiumEmojis } from "./premium-send.server";
+import { getPremiumAccountConnectionStatus, getUserEmojiLookup, sendPhotoWithPremiumEmojiCaption, sendTextWithPremiumEmojis } from "./premium-send.server";
+import { renderEmojiTokensToHtml } from "./premium-emoji-render";
 
 export const verifyAccount = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -186,6 +187,19 @@ export const sendRoomTest = createServerFn({ method: "POST" })
     if (!acc) throw new Error("Bot da sala não encontrado");
 
     const text = data.text?.trim() || "";
+    const { data: buttons } = await supabase
+      .from("room_template_buttons")
+      .select("label, url, sort_order")
+      .eq("room_id", room.id)
+      .eq("template_kind", "signal")
+      .order("sort_order", { ascending: true });
+    const buttonRows = (buttons ?? [])
+      .filter((b) => b.label && b.url)
+      .map((b) => [{ text: b.label, url: b.url }]);
+    const replyMarkup = buttonRows.length ? { inline_keyboard: buttonRows } : undefined;
+    const botText = replyMarkup
+      ? renderEmojiTokensToHtml(text, await getUserEmojiLookup(userId)).text
+      : text;
     let r;
     if (data.imagePath) {
       const bucket = data.imageBucket || "room-images";
@@ -202,8 +216,15 @@ export const sendRoomTest = createServerFn({ method: "POST" })
         r = await callTelegram<{ message_id: number }>(acc.bot_token, "sendSticker", {
           chat_id: chat.chat_id,
           sticker: pub.publicUrl,
+          reply_markup: replyMarkup,
         });
         if (r.ok && text) {
+          if (replyMarkup) await callTelegram<{ message_id: number }>(acc.bot_token, "sendMessage", {
+            chat_id: chat.chat_id,
+            text: botText,
+            parse_mode: "HTML",
+          });
+          else {
           const premium = await sendTextWithPremiumEmojis({ userId, chatId: chat.chat_id, text });
           if (premium.applied) {
             if (!premium.ok) throw new Error(premium.error);
@@ -212,9 +233,10 @@ export const sendRoomTest = createServerFn({ method: "POST" })
             text,
             parse_mode: "HTML",
           });
+          }
         }
       } else {
-        const premiumPhoto = await sendPhotoWithPremiumEmojiCaption({
+        const premiumPhoto = replyMarkup ? { applied: false as const, reason: "inline-buttons" } : await sendPhotoWithPremiumEmojiCaption({
           userId,
           chatId: chat.chat_id,
           photoUrl: pub.publicUrl,
@@ -227,20 +249,22 @@ export const sendRoomTest = createServerFn({ method: "POST" })
           : await callTelegram<{ message_id: number }>(acc.bot_token, "sendPhoto", {
               chat_id: chat.chat_id,
               photo: pub.publicUrl,
-              caption: text || undefined,
+              caption: botText || undefined,
               parse_mode: "HTML",
+              reply_markup: replyMarkup,
             });
       }
     } else {
       if (!text) throw new Error("Mensagem vazia");
-      const premium = await sendTextWithPremiumEmojis({ userId, chatId: chat.chat_id, text });
+      const premium = replyMarkup ? { applied: false as const, reason: "inline-buttons" } : await sendTextWithPremiumEmojis({ userId, chatId: chat.chat_id, text });
       if (premium.applied) {
         if (!premium.ok) throw new Error(premium.error);
         r = { ok: true, result: { message_id: premium.messageId ?? undefined } };
       } else r = await callTelegram<{ message_id: number }>(acc.bot_token, "sendMessage", {
         chat_id: chat.chat_id,
-        text,
+        text: botText,
         parse_mode: "HTML",
+        reply_markup: replyMarkup,
       });
     }
     if (!r.ok) throw new Error(r.description ?? "Falha ao enviar");
