@@ -58,9 +58,22 @@ async function hydrateEmojiDocuments(
     if (!id) continue;
     const target = items.find((i) => i.custom_emoji_id === id);
     if (!target) continue;
-    const fullBytes = (await client.downloadMedia(doc as never).catch(() => null)) as Buffer | null;
-    if (fullBytes?.length) {
-      const detected = mediaDataUrl(fullBytes);
+    const webpThumb = (doc.thumbs ?? [])
+      .filter((t) => t.className !== "PhotoPathSize")
+      .sort((a, b) => ((b as { size?: number }).size ?? 0) - ((a as { size?: number }).size ?? 0))[0];
+    if (webpThumb) {
+      const thumbBytes = (await client.downloadMedia(doc as never, { thumb: webpThumb as never }).catch(() => null)) as Buffer | null;
+      if (thumbBytes?.length) {
+        const detected = mediaDataUrl(thumbBytes);
+        if (detected) {
+          target.thumb_data_url = detected.url;
+          target.thumb_mime = detected.mime;
+        }
+      }
+    }
+    if (!target.thumb_data_url) {
+      const fullBytes = (await client.downloadMedia(doc as never).catch(() => null)) as Buffer | null;
+      const detected = fullBytes?.length ? mediaDataUrl(fullBytes) : null;
       if (detected) {
         target.thumb_data_url = detected.url;
         target.thumb_mime = detected.mime;
