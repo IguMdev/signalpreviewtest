@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { createHash, timingSafeEqual } from "crypto";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { sendMetaEvent } from "@/lib/meta-capi.server";
+import { callTelegram } from "@/lib/telegram.server";
 
 function safeEqual(a: string, b: string): boolean {
   const left = Buffer.from(a);
@@ -18,6 +19,136 @@ function classify(oldStatus: string | undefined, newStatus: string | undefined) 
     return "leave" as const;
   }
   return null;
+}
+
+function publicUrl(bucket: string, path: string): string {
+  const base = (process.env.SUPABASE_URL ?? "").replace(/\/$/, "");
+  return `${base}/storage/v1/object/public/${bucket}/${path}`;
+}
+
+async function hasActiveSub(userId: string, botType: "boasvindas" | "encaminhador"): Promise<boolean> {
+  const { data } = await supabaseAdmin
+    .from("user_engagement_subscriptions")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("bot_type", botType)
+    .eq("status", "active")
+    .limit(1)
+    .maybeSingle();
+  return !!data;
+}
+
+function buildInlineButton(text: string | null | undefined, url: string | null | undefined) {
+  if (!text || !url) return undefined;
+  return { inline_keyboard: [[{ text, url }]] };
+}
+
+function renderTemplate(tpl: string, vars: Record<string, string>) {
+  return tpl.replace(/\{(\w+)\}/g, (_, k) => vars[k] ?? "");
+}
+
+async function runWelcomeBot(opts: {
+  userId: string;
+  botToken: string | null | undefined;
+  chatId: number;
+  user: { id?: number; first_name?: string; last_name?: string; username?: string };
+}) {
+  if (!opts.botToken || !opts.user.id) return;
+  if (!(await hasActiveSub(opts.userId, "boasvindas"))) return;
+
+  // Find any room owned by this user that maps this chat_id
+  const { data: rc } = await supabaseAdmin
+    .from("room_chats")
+    .select("room_id")
+    .eq("user_id", opts.userId)
+    .eq("chat_id", opts.chatId)
+    .limit(1)
+    .maybeSingle();
+  if (!rc?.room_id) return;
+
+  const { data: cfg } = await supabaseAdmin
+    .from("room_engagement_settings")
+    .select("welcome_bot_enabled, welcome_message, welcome_image_path, welcome_image_mime, welcome_video_id, welcome_parse_mode, welcome_button_text, welcome_button_url")
+    .eq("room_id", rc.room_id)
+    .maybeSingle();
+  if (!cfg?.welcome_bot_enabled) return;
+
+  const firstName = (opts.user.first_name ?? "amigo(a)").replace(/[<>&]/g, "");
+  const mention = `<a href="tg://user?id=${opts.user.id}">${firstName}</a>`;
+  const text = renderTemplate(cfg.welcome_message ?? "Seja bem-vindo(a), {name}! 🎉", {
+    name: mention,
+    first_name: firstName,
+    username: opts.user.username ?? "",
+  });
+
+  const reply_markup = buildInlineButton(cfg.welcome_button_text, cfg.welcome_button_url);
+  const parse_mode = cfg.welcome_parse_mode ?? "HTML";
+
+  // Video round (video_note) takes precedence > image > text
+  if (cfg.welcome_video_id) {
+    const { data: vid } = await supabaseAdmin
+      .from("videos")
+      .select("storage_path, kind")
+      .eq("id", cfg.welcome_video_id)
+      .maybeSingle();
+    if (vid?.storage_path) {
+      const url = publicUrl("videos", vid.storage_path);
+      const method = vid.kind === "round" ? "sendVideoNote" : "sendVideo";
+      const body: Record<string, unknown> = { chat_id: opts.chatId };
+      if (method === "sendVideoNote") body.video_note = url;
+      else { body.video = url; body.caption = text; body.parse_mode = parse_mode; }
+      await callTelegram(opts.botToken, method, body);
+      // companion text/button when video_note (no caption support)
+      if (method === "sendVideoNote") {
+        await callTelegram(opts.botToken, "sendMessage", { chat_id: opts.chatId, text, parse_mode, reply_markup });
+      } else if (reply_markup) {
+        await callTelegram(opts.botToken, "sendMessage", { chat_id: opts.chatId, text: "\u2063", reply_markup });
+      }
+      return;
+    }
+  }
+
+  if (cfg.welcome_image_path) {
+    const url = publicUrl("room-images", cfg.welcome_image_path);
+    await callTelegram(opts.botToken, "sendPhoto", {
+      chat_id: opts.chatId, photo: url, caption: text, parse_mode, reply_markup,
+    });
+    return;
+  }
+
+  await callTelegram(opts.botToken, "sendMessage", {
+    chat_id: opts.chatId, text, parse_mode, reply_markup,
+    disable_web_page_preview: true,
+  });
+}
+
+async function runForwarder(opts: {
+  userId: string;
+  botToken: string | null | undefined;
+  fromChatId: number;
+  messageId: number;
+}) {
+  if (!opts.botToken) return;
+  if (!(await hasActiveSub(opts.userId, "encaminhador"))) return;
+
+  const { data: cfgs } = await supabaseAdmin
+    .from("room_engagement_settings")
+    .select("forwarder_enabled, forwarder_target_chat_ids")
+    .eq("user_id", opts.userId)
+    .eq("forwarder_enabled", true)
+    .eq("forwarder_source_chat_id", opts.fromChatId);
+  if (!cfgs?.length) return;
+
+  const targets = new Set<number>();
+  for (const c of cfgs) for (const t of (c.forwarder_target_chat_ids ?? [])) targets.add(t);
+  for (const target of targets) {
+    if (target === opts.fromChatId) continue;
+    await callTelegram(opts.botToken, "copyMessage", {
+      chat_id: target,
+      from_chat_id: opts.fromChatId,
+      message_id: opts.messageId,
+    });
+  }
 }
 
 export const Route = createFileRoute("/api/public/telegram/webhook/$accountId")({
@@ -92,7 +223,28 @@ export const Route = createFileRoute("/api/public/telegram/webhook/$accountId")(
                 });
               }
             }
+
+            // BotBoasVindas — dispara mensagem ao novo membro
+            if (eventType === "join") {
+              await runWelcomeBot({
+                userId: acc.user_id,
+                botToken: acc.bot_token,
+                chatId: cm.chat.id,
+                user: u,
+              }).catch((e) => console.error("[welcome-bot] failed:", e));
+            }
           }
+        }
+
+        // BotEncaminhador — copia mensagens do canal/grupo de origem para destinos
+        const post = update.channel_post ?? update.message;
+        if (post?.chat?.id && post?.message_id) {
+          await runForwarder({
+            userId: acc.user_id,
+            botToken: acc.bot_token,
+            fromChatId: post.chat.id,
+            messageId: post.message_id,
+          }).catch((e) => console.error("[forwarder] failed:", e));
         }
 
         return Response.json({ ok: true });
