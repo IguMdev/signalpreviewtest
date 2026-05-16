@@ -6,6 +6,7 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { dispatchVideoNote } from "./videos.functions";
 import { triggerSignalReactions } from "./engagement.functions";
 import { sendTextWithPremiumEmojis } from "./premium-send.server";
+import { mirrorIfMarked } from "./forwarder.server";
 
 export const scheduleMessage = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -132,6 +133,12 @@ export const dispatchDue = createServerFn({ method: "POST" }).handler(async () =
           chatId: c.chat_id,
           telegramMessageId: r.result.message_id,
           roomId: msg.room_id,
+        });
+        await mirrorIfMarked({
+          roomId: msg.room_id,
+          fromChatId: c.chat_id,
+          messageId: r.result.message_id,
+          origin: { kind: "scheduled", id: msg.id },
         });
       }
     }
