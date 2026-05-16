@@ -6,6 +6,7 @@ import { triggerSignalReactions } from "@/lib/engagement.functions";
 import {
   sendPhotoWithPremiumEmojiCaption,
   sendTextWithPremiumEmojis,
+  sendVideoWithPremiumEmojiCaption,
   sendPhotoWithPremiumEmojiCaptionRetry,
   sendTextWithPremiumEmojisRetry,
   getUserEmojiLookup,
@@ -346,17 +347,47 @@ export const Route = createFileRoute("/api/public/cron/dispatch-recurring")({
                   })()
                 : video
                   ? isNormalVideo
-                    ? await dispatchVideo({
-                        botToken: acc.bot_token,
-                        storagePath: video!.storage_path,
-                        chatId: c.chat_id,
-                        duration: video!.duration_seconds,
-                        mimeType: video!.mime_type,
-                        filename: (video!.title || "video").replace(/[^\w.-]+/g, "_") + ".mp4",
-                        caption: s.content,
-                        parseMode: s.parse_mode,
-                        replyMarkup,
-                      })
+                    ? await (async () => {
+                        if (wantsPremium && s.content && hasEmojiTokens(s.content)) {
+                          const { data: file } = await supabaseAdmin.storage
+                            .from("videos")
+                            .download(video!.storage_path);
+                          if (file) {
+                            const bytes = await file.arrayBuffer();
+                            const pv = await sendVideoWithPremiumEmojiCaption({
+                              userId: s.user_id,
+                              chatId: c.chat_id,
+                              videoBytes: bytes,
+                              filename: (video!.title || "video").replace(/[^\w.-]+/g, "_") + ".mp4",
+                              mimeType: video!.mime_type ?? "video/mp4",
+                              duration: video!.duration_seconds,
+                              caption: s.content,
+                              strict: true,
+                            });
+                            if (pv.applied) {
+                              return await withCompanionButton(
+                                pv.ok
+                                  ? { ok: true, result: { message_id: pv.messageId ?? undefined } }
+                                  : { ok: false, description: pv.error },
+                                acc.bot_token,
+                                c.chat_id,
+                                replyMarkup,
+                              );
+                            }
+                          }
+                        }
+                        return await dispatchVideo({
+                          botToken: acc.bot_token,
+                          storagePath: video!.storage_path,
+                          chatId: c.chat_id,
+                          duration: video!.duration_seconds,
+                          mimeType: video!.mime_type,
+                          filename: (video!.title || "video").replace(/[^\w.-]+/g, "_") + ".mp4",
+                          caption: s.content,
+                          parseMode: s.parse_mode,
+                          replyMarkup,
+                        });
+                      })()
                     : await dispatchVideoNote({
                         botToken: acc.bot_token,
                         storagePath: video.storage_path,
