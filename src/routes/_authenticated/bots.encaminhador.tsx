@@ -9,7 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Forward, ImageIcon, RefreshCw } from "lucide-react";
+import { Forward, ImageIcon, RefreshCw, Sparkles, CheckCircle2, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { getForwarderConfig, upsertForwarderConfig, listAccountChats, listForwarderSourceItems } from "@/lib/engagement.functions";
 
@@ -95,6 +95,21 @@ function EncaminhadorPage() {
   const [markedTemplates, setMarkedTemplates] = useState<string[]>([]);
   const [markedScheduled, setMarkedScheduled] = useState<string[]>([]);
   const [markedRecurring, setMarkedRecurring] = useState<string[]>([]);
+  const [premiumEnabled, setPremiumEnabled] = useState(false);
+  const [premiumAccountId, setPremiumAccountId] = useState<string>("");
+
+  const premiumAccountsQ = useQuery({
+    queryKey: ["premium-accounts-list"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("telegram_accounts")
+        .select("id, label, phone, is_active, tg_session")
+        .eq("account_type", "premium")
+        .order("created_at", { ascending: false });
+      return (data ?? []) as Array<{ id: string; label: string; phone: string | null; is_active: boolean; tg_session: string | null }>;
+    },
+  });
+  const activePremiumAccounts = (premiumAccountsQ.data ?? []).filter((a) => a.is_active && a.tg_session);
 
   useEffect(() => {
     const c = cfgQ.data;
@@ -105,6 +120,8 @@ function EncaminhadorPage() {
     setMarkedTemplates(((c as any).forwarder_marked_templates ?? []) as string[]);
     setMarkedScheduled(((c as any).forwarder_marked_scheduled ?? []) as string[]);
     setMarkedRecurring(((c as any).forwarder_marked_recurring ?? []) as string[]);
+    setPremiumEnabled(((c as any).forwarder_premium_enabled ?? false) as boolean);
+    setPremiumAccountId(((c as any).forwarder_premium_account_id ?? "") as string);
   }, [cfgQ.data]);
 
   const save = useMutation({
@@ -117,6 +134,8 @@ function EncaminhadorPage() {
         markedTemplates,
         markedScheduled,
         markedRecurring,
+        premiumEnabled,
+        premiumAccountId: premiumAccountId || null,
       },
     }),
     onSuccess: () => { toast.success("Salvo"); qc.invalidateQueries({ queryKey: ["fwd-cfg", roomId] }); },
@@ -194,6 +213,54 @@ function EncaminhadorPage() {
                   <Button type="button" variant="outline" size="sm" className="gap-2" onClick={() => chatsQ.refetch()}>
                     <RefreshCw className="size-3.5" /> Atualizar chats
                   </Button>
+                </div>
+              )}
+            </div>
+
+            <div className="rounded-md border border-border bg-muted/30 p-3 space-y-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-start gap-2">
+                  <Sparkles className="size-4 text-primary mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-sm font-medium">Emojis Premium animados</p>
+                    <p className="text-xs text-muted-foreground">
+                      Quando a mensagem original tiver emojis premium, reenviamos pela sua conta Telegram Premium para preservar a animação. Sem isso o Telegram remove os emojis no encaminhamento.
+                    </p>
+                  </div>
+                </div>
+                <Switch checked={premiumEnabled} onCheckedChange={setPremiumEnabled} />
+              </div>
+
+              {premiumEnabled && (
+                <div className="space-y-1.5 pl-6">
+                  <Label className="text-xs">Conta Premium</Label>
+                  {activePremiumAccounts.length === 0 ? (
+                    <div className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/5 p-2 text-xs">
+                      <AlertCircle className="size-4 text-destructive shrink-0 mt-0.5" />
+                      <span>Nenhuma conta Telegram Premium conectada. Vá em Contas Telegram e conecte uma conta Premium para usar esse recurso.</span>
+                    </div>
+                  ) : (
+                    <>
+                      <Select value={premiumAccountId} onValueChange={setPremiumAccountId}>
+                        <SelectTrigger><SelectValue placeholder="Selecione a conta Premium" /></SelectTrigger>
+                        <SelectContent>
+                          {activePremiumAccounts.map((a) => (
+                            <SelectItem key={a.id} value={a.id}>
+                              {a.label}{a.phone ? ` — ${a.phone}` : ""}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {premiumAccountId && (
+                        <div className="flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400">
+                          <CheckCircle2 className="size-3.5" /> Conta conectada e pronta para uso.
+                        </div>
+                      )}
+                      <p className="text-[11px] text-muted-foreground">
+                        A conta Premium precisa estar nos canais/grupos de destino com permissão de postar (admin em canais).
+                      </p>
+                    </>
+                  )}
                 </div>
               )}
             </div>
