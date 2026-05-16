@@ -42,16 +42,17 @@ export function hasPremiumEmojiEntities(post: BotApiPost | null | undefined): bo
   return ents.some((e) => e.type === "custom_emoji" && !!e.custom_emoji_id);
 }
 
-async function getActivePremiumAccount(userId: string) {
-  const { data } = await supabaseAdmin
+async function getActivePremiumAccount(userId: string, accountId?: string | null) {
+  let q = supabaseAdmin
     .from("telegram_accounts")
     .select("id, tg_api_id, tg_api_hash, tg_session")
     .eq("user_id", userId)
     .eq("account_type", "premium")
     .eq("is_active", true)
-    .not("tg_session", "is", null)
-    .limit(1)
-    .maybeSingle();
+    .not("tg_session", "is", null);
+  if (accountId) q = q.eq("id", accountId);
+  else q = q.limit(1);
+  const { data } = await q.maybeSingle();
   if (!data?.tg_session || !data.tg_api_id || !data.tg_api_hash) return null;
   return data as { id: string; tg_api_id: number; tg_api_hash: string; tg_session: string };
 }
@@ -126,8 +127,9 @@ export async function forwardWithPremiumEmojis(opts: {
   botToken: string;
   post: BotApiPost;
   targetChatId: number | string;
+  premiumAccountId?: string | null;
 }): Promise<ForwardPremiumResult> {
-  const acc = await getActivePremiumAccount(opts.userId);
+  const acc = await getActivePremiumAccount(opts.userId, opts.premiumAccountId ?? null);
   if (!acc) {
     return { applied: false, reason: "no-premium-account" };
   }

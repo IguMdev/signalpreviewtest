@@ -670,6 +670,8 @@ export type Database = {
           forwarder_marked_recurring: string[]
           forwarder_marked_scheduled: string[]
           forwarder_marked_templates: string[]
+          forwarder_premium_account_id: string | null
+          forwarder_premium_enabled: boolean
           forwarder_source_chat_id: number | null
           forwarder_target_chat_ids: number[]
           id: string
@@ -699,6 +701,8 @@ export type Database = {
           forwarder_marked_recurring?: string[]
           forwarder_marked_scheduled?: string[]
           forwarder_marked_templates?: string[]
+          forwarder_premium_account_id?: string | null
+          forwarder_premium_enabled?: boolean
           forwarder_source_chat_id?: number | null
           forwarder_target_chat_ids?: number[]
           id?: string
@@ -728,6 +732,8 @@ export type Database = {
           forwarder_marked_recurring?: string[]
           forwarder_marked_scheduled?: string[]
           forwarder_marked_templates?: string[]
+          forwarder_premium_account_id?: string | null
+          forwarder_premium_enabled?: boolean
           forwarder_source_chat_id?: number | null
           forwarder_target_chat_ids?: number[]
           id?: string
