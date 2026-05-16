@@ -11,6 +11,9 @@ import {
 import { renderEmojiTokensPlain, hasEmojiTokens } from "@/lib/premium-emoji-render";
 import { mirrorIfMarked } from "@/lib/forwarder.server";
 
+const PREMIUM_LOCK_ERROR =
+  "Envio bloqueado: a mensagem contém tokens {EMOJI} que não foram processados. Conecte uma conta Telegram Premium ativa e cadastre os emojis em Premium Emojis para liberar o envio.";
+
 async function renderButtonTextForUser(
   userId: string,
   buttonText: string | null | undefined,
