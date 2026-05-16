@@ -98,17 +98,30 @@ export const deleteMetaIntegration = createServerFn({ method: "POST" })
 export const sendMetaTestEvent = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { userId } = context;
+    const { supabase, userId } = context;
+    // Usa o evento mapeado em "novo membro" para o teste — assim o usuário valida
+    // exatamente o evento que configurou (Purchase, Subscribe, etc).
+    const { data: integ } = await supabase
+      .from("meta_integrations")
+      .select("event_mappings")
+      .eq("user_id", userId)
+      .maybeSingle();
+    const mappings = (integ?.event_mappings ?? {}) as Record<string, string>;
+    const mapped = mappings.join && mappings.join !== "off" ? mappings.join : "Lead";
     const result = await sendMetaEvent({
       userId,
-      eventName: "Lead",
+      eventName: mapped,
       eventId: `test-${Date.now()}`,
       actionSource: "system_generated",
       userData: { externalId: userId },
-      customData: { content_name: "Teste de conexão Lovable", value: 0, currency: "BRL" },
+      customData: {
+        content_name: `Teste de conexão Lovable (${mapped})`,
+        value: 0,
+        currency: "BRL",
+      },
     });
     if (!result.ok) throw new Error(result.error || "Falha ao enviar evento");
-    return { ok: true };
+    return { ok: true, eventName: mapped };
   });
 
 export const listMetaEventLogs = createServerFn({ method: "GET" })
