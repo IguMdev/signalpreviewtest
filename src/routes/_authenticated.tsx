@@ -50,6 +50,7 @@ const navItems = [
 
 const connectionItems = [
   { to: "/integracoes/meta", label: "Meta Pixel", icon: Megaphone, tour: "nav-meta" },
+  { to: "/trackeamento", label: "Trackeamento", icon: Crosshair, tour: "nav-trackeamento" },
 ] as const;
 
 const botItems = [
