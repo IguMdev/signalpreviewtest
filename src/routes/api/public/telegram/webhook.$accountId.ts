@@ -3,6 +3,7 @@ import { createHash, timingSafeEqual } from "crypto";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { sendMetaEvent } from "@/lib/meta-capi.server";
 import { callTelegram } from "@/lib/telegram.server";
+import { fireTrackingEvent } from "@/lib/tracking.server";
 import { sendTextWithPremiumEmojis, sendPhotoWithPremiumEmojiCaption } from "@/lib/premium-send.server";
 import { forwardWithPremiumEmojis, hasPremiumEmojiEntities, type BotApiPost } from "@/lib/forwarder-premium.server";
 
@@ -430,6 +431,44 @@ export const Route = createFileRoute("/api/public/telegram/webhook/$accountId")(
 
         const update = await request.json().catch(() => null);
         if (!update) return Response.json({ ok: true });
+
+        // ============ TRACK4YOU: /start tk_<click_id> ============
+        const msg = update.message;
+        const text: string | undefined = msg?.text;
+        if (msg?.from?.id && typeof text === "string" && text.startsWith("/start ")) {
+          const payload = text.slice(7).trim();
+          const m = payload.match(/^tk_([A-Za-z0-9]{6,32})$/);
+          if (m) {
+            const clickId = m[1];
+            const { data: click } = await supabaseAdmin
+              .from("tracking_clicks" as never)
+              .select("click_id, user_id, joined_at")
+              .eq("click_id", clickId)
+              .maybeSingle();
+            if (click && (click as any).user_id === acc.user_id) {
+              const c = click as any;
+              if (!c.joined_at) {
+                await supabaseAdmin
+                  .from("tracking_clicks" as never)
+                  .update({
+                    joined_at: new Date().toISOString(),
+                    tg_user_id: msg.from.id,
+                    tg_username: msg.from.username ?? null,
+                  } as never)
+                  .eq("click_id", clickId);
+              }
+              await fireTrackingEvent({
+                clickId,
+                stage: "join",
+                extraUserData: {
+                  firstName: msg.from.first_name ?? null,
+                  lastName: msg.from.last_name ?? null,
+                  externalId: msg.from.id,
+                },
+              }).catch((e) => console.error("[track4you] capi failed:", e));
+            }
+          }
+        }
 
         await cacheDetectedChat({
           userId: acc.user_id,
