@@ -7,10 +7,8 @@ import { dispatchVideoNote } from "./videos.functions";
 import { triggerSignalReactions } from "./engagement.functions";
 import { sendTextWithPremiumEmojisRetry } from "./premium-send.server";
 import { mirrorIfMarked } from "./forwarder.server";
-import { hasEmojiTokens } from "./premium-emoji-render";
-
-const PREMIUM_LOCK_ERROR =
-  "Envio bloqueado: a mensagem contém tokens {EMOJI} que não foram processados. Conecte uma conta Telegram Premium ativa e cadastre os emojis em Premium Emojis para liberar o envio.";
+import { hasEmojiTokens, renderEmojiTokensPlain } from "./premium-emoji-render";
+import { getUserEmojiLookup } from "./premium-send.server";
 
 export const scheduleMessage = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -92,22 +90,57 @@ export const dispatchDue = createServerFn({ method: "POST" }).handler(async () =
 
     let anyOk = false;
     let lastErr: string | null = null;
+    // Respeita o toggle global (forwarder_premium_enabled) e o per-item (scheduled_messages.is_premium)
+    const { data: roomCfg } = await supabaseAdmin
+      .from("room_engagement_settings")
+      .select("forwarder_premium_enabled")
+      .eq("room_id", msg.room_id)
+      .maybeSingle();
+    const globalPremiumOn = roomCfg?.forwarder_premium_enabled !== false;
+    const { data: schedRow } = await supabaseAdmin
+      .from("scheduled_messages")
+      .select("is_premium")
+      .eq("id", msg.id)
+      .maybeSingle();
+    const itemPremiumOn = (schedRow as { is_premium?: boolean } | null)?.is_premium === true;
+    const wantsPremium = globalPremiumOn && itemPremiumOn;
+    const hasTokens = hasEmojiTokens(msg.content);
     for (const c of chats) {
       let r: { ok: boolean; result?: { message_id?: number }; description?: string };
+      let premiumStatus:
+        | "premium_sent"
+        | "premium_blocked"
+        | "no_premium_account"
+        | "plain"
+        | "plain_forced" = "plain";
       const premium =
-        !video && msg.content
+        !video && msg.content && wantsPremium && hasTokens
           ? await sendTextWithPremiumEmojisRetry({
               userId: msg.user_id,
               chatId: c.chat_id,
               text: msg.content,
+              strict: true,
             })
           : { applied: false as const, reason: "skip" };
       if (premium.applied) {
+        premiumStatus = premium.ok ? "premium_sent" : "premium_blocked";
         r = premium.ok
           ? { ok: true, result: { message_id: premium.messageId ?? undefined } }
           : { ok: false, description: premium.error };
-      } else if (hasEmojiTokens(msg.content)) {
-        r = { ok: false, description: PREMIUM_LOCK_ERROR };
+      } else if (!video && msg.content && hasTokens) {
+        // Toggle Premium OFF (global ou item) ou sem conta: renderiza tokens em texto puro.
+        if (premium.reason === "no-premium-account" || premium.reason === "no-active-premium-account") {
+          premiumStatus = "no_premium_account";
+        } else {
+          premiumStatus = "plain_forced";
+        }
+        const lookup = await getUserEmojiLookup(msg.user_id);
+        const plain = renderEmojiTokensPlain(msg.content, lookup);
+        r = await callTelegram<{ message_id: number }>(acc.bot_token, "sendMessage", {
+          chat_id: c.chat_id,
+          text: plain,
+          parse_mode: msg.parse_mode,
+        });
       } else r = video
         ? await dispatchVideoNote({
             botToken: acc.bot_token,
@@ -122,14 +155,20 @@ export const dispatchDue = createServerFn({ method: "POST" }).handler(async () =
             text: msg.content ?? "",
             parse_mode: msg.parse_mode,
           });
+      console.log(
+        `[scheduled] msg=${msg.id} chat=${c.chat_id} premium_status=${premiumStatus} ok=${r.ok}`,
+      );
       await supabaseAdmin.from("message_logs").insert({
         scheduled_message_id: msg.id,
         user_id: msg.user_id,
         account_id: msg.account_id ?? null,
+        room_id: msg.room_id,
+        source: "scheduled",
         chat_id: c.chat_id,
         ok: r.ok,
         telegram_message_id: r.result?.message_id ?? null,
         error: r.ok ? null : r.description ?? "erro",
+        premium_status: premiumStatus,
       } as never);
       if (r.ok) anyOk = true;
       else lastErr = r.description ?? "erro";
