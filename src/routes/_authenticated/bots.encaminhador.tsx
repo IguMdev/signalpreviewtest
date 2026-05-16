@@ -12,6 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Forward, ImageIcon, RefreshCw, Sparkles, CheckCircle2, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { getForwarderConfig, upsertForwarderConfig, listAccountChats, listForwarderSourceItems } from "@/lib/engagement.functions";
+import { getPremiumAccountAvatar } from "@/lib/premium-account.functions";
 
 export const Route = createFileRoute("/_authenticated/bots/encaminhador")({
   component: EncaminhadorPage,
