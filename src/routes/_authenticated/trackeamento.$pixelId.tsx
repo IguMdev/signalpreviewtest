@@ -259,7 +259,7 @@ function AttributionTab({ pixelId, attrFn }: { pixelId: string; attrFn: any }) {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {(attr.data ?? []).map(row => (
+              {(attr.data ?? []).map((row: any) => (
                 <TableRow key={row.dimension}>
                   <TableCell className="font-medium text-xs max-w-xs truncate">{row.dimension}</TableCell>
                   <TableCell className="text-right tabular-nums">{row.clicks}</TableCell>
