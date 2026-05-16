@@ -41,13 +41,13 @@ const salasPlanos: SalaPlano[] = [
     id: "salas-1",
     nome: "Plano Básico",
     preco: 150,
-    descricao: "Inclui 1 crédito de sala — você pode operar 1 automação Telegram.",
+    descricao: "🟡Plano Básico\n✅ Acesso a todas a ferramentas básicas\n✅ Inclui 1 crédito de sala.\n✅ Opera apenas 1 Bot Telegram. \n✅ Suporte 24/7.",
   },
   {
     id: "salas-3",
     nome: "Plano Premium",
     preco: 300,
-    descricao: "Inclui 3 créditos de sala — opere até 3 salas simultaneamente.",
+    descricao: "🟣Plano Premium\n✅ Acesso a todas a ferramentas básicas\n✅ Inclui 3 crédito de sala.\n✅ Opera 3 Bots Telegram.\n✅ Suporte 24/7 Prioritário.",
     destaque: true,
   },
 ];
@@ -153,7 +153,7 @@ function RecargaPage() {
                   R$ {p.preco.toFixed(2).replace(".", ",")}
                   <span className="text-xs font-normal text-muted-foreground">/mês</span>
                 </div>
-                <p className="text-xs text-muted-foreground min-h-[32px]">{p.descricao}</p>
+                <p className="text-xs text-muted-foreground min-h-[32px] whitespace-pre-line">{p.descricao}</p>
                 {p.checkoutUrl ? (
                   <Button asChild size="sm" className="w-full">
                     <a href={p.checkoutUrl} target="_blank" rel="noreferrer">
