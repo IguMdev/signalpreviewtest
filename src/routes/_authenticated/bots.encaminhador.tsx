@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Forward, ImageIcon, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
-import { getForwarderConfig, upsertForwarderConfig, listAccountChats } from "@/lib/engagement.functions";
+import { getForwarderConfig, upsertForwarderConfig, listAccountChats, listForwarderSourceItems } from "@/lib/engagement.functions";
 
 export const Route = createFileRoute("/_authenticated/bots/encaminhador")({
   component: EncaminhadorPage,
@@ -22,6 +22,7 @@ function EncaminhadorPage() {
   const get = useServerFn(getForwarderConfig);
   const upsert = useServerFn(upsertForwarderConfig);
   const listChats = useServerFn(listAccountChats);
+  const listItems = useServerFn(listForwarderSourceItems);
 
   const roomsQ = useQuery({
     queryKey: ["rooms-pick"],
@@ -50,11 +51,14 @@ function EncaminhadorPage() {
   });
 
   const cfgQ = useQuery({ queryKey: ["fwd-cfg", roomId], enabled: !!roomId, queryFn: () => get({ data: { roomId } }) });
+  const itemsQ = useQuery({ queryKey: ["fwd-items", roomId], enabled: !!roomId, queryFn: () => listItems({ data: { roomId } }) });
 
   const [enabled, setEnabled] = useState(false);
   const [source, setSource] = useState<string>("");
   const [targets, setTargets] = useState<number[]>([]);
-  const [allowedTypes, setAllowedTypes] = useState<string[]>([]);
+  const [markedTemplates, setMarkedTemplates] = useState<string[]>([]);
+  const [markedScheduled, setMarkedScheduled] = useState<string[]>([]);
+  const [markedRecurring, setMarkedRecurring] = useState<string[]>([]);
 
   useEffect(() => {
     const c = cfgQ.data;
@@ -62,7 +66,9 @@ function EncaminhadorPage() {
     setEnabled(c.forwarder_enabled ?? false);
     setSource(c.forwarder_source_chat_id ? String(c.forwarder_source_chat_id) : "");
     setTargets((c.forwarder_target_chat_ids ?? []) as number[]);
-    setAllowedTypes(((c as any).forwarder_allowed_types ?? []) as string[]);
+    setMarkedTemplates(((c as any).forwarder_marked_templates ?? []) as string[]);
+    setMarkedScheduled(((c as any).forwarder_marked_scheduled ?? []) as string[]);
+    setMarkedRecurring(((c as any).forwarder_marked_recurring ?? []) as string[]);
   }, [cfgQ.data]);
 
   const save = useMutation({
@@ -72,7 +78,9 @@ function EncaminhadorPage() {
         enabled,
         sourceChatId: source ? Number(source) : null,
         targetChatIds: targets,
-        allowedTypes,
+        markedTemplates,
+        markedScheduled,
+        markedRecurring,
       },
     }),
     onSuccess: () => { toast.success("Salvo"); qc.invalidateQueries({ queryKey: ["fwd-cfg", roomId] }); },
