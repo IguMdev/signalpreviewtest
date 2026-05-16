@@ -26,6 +26,7 @@ import {
   MessageCircle,
   Forward,
   ScrollText,
+  Crosshair,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -49,6 +50,7 @@ const navItems = [
 
 const connectionItems = [
   { to: "/integracoes/meta", label: "Meta Pixel", icon: Megaphone, tour: "nav-meta" },
+  { to: "/trackeamento", label: "Trackeamento", icon: Crosshair, tour: "nav-trackeamento" },
 ] as const;
 
 const botItems = [
