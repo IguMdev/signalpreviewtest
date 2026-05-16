@@ -229,6 +229,36 @@ export type Database = {
         }
         Relationships: []
       }
+      market_tips_sent: {
+        Row: {
+          created_at: string
+          id: string
+          link: string | null
+          link_hash: string
+          room_id: string
+          title: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          link?: string | null
+          link_hash: string
+          room_id: string
+          title?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          link?: string | null
+          link_hash?: string
+          room_id?: string
+          title?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       message_logs: {
         Row: {
           account_id: string | null
@@ -1136,7 +1166,10 @@ export type Database = {
           expires_at: string | null
           id: string
           is_active: boolean
+          market_tips_categories: string[]
           market_tips_enabled: boolean
+          market_tips_interval_hours: number
+          market_tips_last_fire_at: string | null
           name: string
           photo_updated_at: string | null
           photo_url: string | null
@@ -1157,7 +1190,10 @@ export type Database = {
           expires_at?: string | null
           id?: string
           is_active?: boolean
+          market_tips_categories?: string[]
           market_tips_enabled?: boolean
+          market_tips_interval_hours?: number
+          market_tips_last_fire_at?: string | null
           name: string
           photo_updated_at?: string | null
           photo_url?: string | null
@@ -1178,7 +1214,10 @@ export type Database = {
           expires_at?: string | null
           id?: string
           is_active?: boolean
+          market_tips_categories?: string[]
           market_tips_enabled?: boolean
+          market_tips_interval_hours?: number
+          market_tips_last_fire_at?: string | null
           name?: string
           photo_updated_at?: string | null
           photo_url?: string | null

@@ -1031,11 +1031,24 @@ function StopLossCard({ room }: { room: RoomData }) {
 function MarketTipsCard({ room }: { room: RoomData }) {
   const qc = useQueryClient();
   const [enabled, setEnabled] = useState(room.market_tips_enabled ?? false);
+  const [intervalH, setIntervalH] = useState<number>(room.market_tips_interval_hours ?? 6);
+  const [cats, setCats] = useState<string[]>(
+    Array.isArray(room.market_tips_categories) && room.market_tips_categories.length > 0
+      ? room.market_tips_categories
+      : ["forex", "crypto"],
+  );
   const sendTest = useServerFn(sendRoomTest);
   const [testing, setTesting] = useState(false);
   const save = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.from("rooms").update({ market_tips_enabled: enabled }).eq("id", room.id);
+      const { error } = await supabase
+        .from("rooms")
+        .update({
+          market_tips_enabled: enabled,
+          market_tips_interval_hours: intervalH,
+          market_tips_categories: cats.length ? cats : ["forex", "crypto"],
+        })
+        .eq("id", room.id);
       if (error) throw error;
     },
     onSuccess: () => { toast.success("Dicas de Mercado salvas"); qc.invalidateQueries({ queryKey: ["room", room.id] }); },
@@ -1045,11 +1058,25 @@ function MarketTipsCard({ room }: { room: RoomData }) {
   const onTest = async () => {
     try {
       setTesting(true);
-      await sendTest({ data: { roomId: room.id, text: "📊 <b>Dica de Mercado (teste)</b>\nEsta é uma prévia das notícias e tendências que serão enviadas automaticamente ao grupo." } });
+      await sendTest({
+        data: {
+          roomId: room.id,
+          text:
+            "📊 <b>Dica de Mercado (teste)</b>\nEsta é uma prévia. As próximas mensagens trarão manchetes reais de " +
+            (cats.includes("forex") && cats.includes("crypto")
+              ? "Forex e Crypto"
+              : cats.includes("crypto")
+              ? "Crypto"
+              : "Forex") +
+            ` a cada ${intervalH}h.`,
+        },
+      });
       toast.success("Teste enviado");
     } catch (e: any) { toast.error(e.message); }
     finally { setTesting(false); }
   };
+  const toggleCat = (c: string) =>
+    setCats((prev) => (prev.includes(c) ? prev.filter((x) => x !== c) : [...prev, c]));
   return (
     <Card className="p-6 space-y-3">
       <div className="flex items-center gap-2">
@@ -1058,13 +1085,54 @@ function MarketTipsCard({ room }: { room: RoomData }) {
       </div>
       <p className="text-sm text-muted-foreground">
         Envia automaticamente as <span className="font-semibold text-foreground">últimas notícias e tendências</span> do mercado financeiro
-        para o grupo nos horários definidos. Escolha o <span className="font-semibold text-foreground">idioma</span> abaixo;
-        as fontes RSS seguem o idioma (com fallback para inglês se necessário).
+        para o grupo. Fontes em <span className="font-semibold text-foreground">português</span> (Investing.com, InfoMoney, Cointelegraph, Livecoins).
+        Cada disparo envia uma manchete inédita.
       </p>
       <label className="flex items-center gap-2 cursor-pointer w-fit">
         <Checkbox checked={enabled} onCheckedChange={(v) => setEnabled(!!v)} />
         <span className="text-sm">Habilitar envio de dicas de mercado</span>
       </label>
+      <div className="grid sm:grid-cols-2 gap-4 pt-2">
+        <div className="space-y-1">
+          <label className="text-sm font-medium">Intervalo entre envios</label>
+          <select
+            className="w-full h-9 rounded-md border border-input bg-background px-2 text-sm"
+            value={intervalH}
+            onChange={(e) => setIntervalH(Number(e.target.value))}
+            disabled={!enabled}
+          >
+            <option value={1}>A cada 1 hora</option>
+            <option value={2}>A cada 2 horas</option>
+            <option value={3}>A cada 3 horas</option>
+            <option value={4}>A cada 4 horas</option>
+            <option value={6}>A cada 6 horas</option>
+            <option value={8}>A cada 8 horas</option>
+            <option value={12}>A cada 12 horas</option>
+            <option value={24}>1 vez por dia</option>
+          </select>
+        </div>
+        <div className="space-y-1">
+          <label className="text-sm font-medium">Categorias</label>
+          <div className="flex flex-wrap gap-3 pt-1">
+            <label className="flex items-center gap-2 text-sm cursor-pointer">
+              <Checkbox
+                checked={cats.includes("forex")}
+                onCheckedChange={() => toggleCat("forex")}
+                disabled={!enabled}
+              />
+              💱 Forex
+            </label>
+            <label className="flex items-center gap-2 text-sm cursor-pointer">
+              <Checkbox
+                checked={cats.includes("crypto")}
+                onCheckedChange={() => toggleCat("crypto")}
+                disabled={!enabled}
+              />
+              🪙 Crypto
+            </label>
+          </div>
+        </div>
+      </div>
       <div className="flex items-center justify-between pt-2 border-t border-border">
         <Button variant="secondary" size="sm" onClick={onTest} disabled={testing}>
           📩 {testing ? "Enviando..." : "Enviar teste"}
