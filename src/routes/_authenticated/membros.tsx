@@ -18,9 +18,13 @@ function MembrosPage() {
   const fetchStats = useServerFn(getMemberStats);
   const fetchCurrentCounts = useServerFn(getCurrentMemberCounts);
   const today = new Date();
-  const defaultFrom = new Date(today.getTime() - 29 * 24 * 60 * 60 * 1000);
-  const fmt = (d: Date) => d.toISOString().slice(0, 10);
-  const [from, setFrom] = useState<string>(fmt(defaultFrom));
+  const fmt = (d: Date) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  };
+  const [from, setFrom] = useState<string>(fmt(today));
   const [to, setTo] = useState<string>(fmt(today));
   const q = useQuery({
     queryKey: ["member-stats", from, to],
@@ -85,8 +89,8 @@ function MembrosPage() {
   const totalLeaves = visiblePerChat.reduce((s, c) => s + c.leaves, 0);
 
   const cards = [
-    { label: "Entradas no período", value: totalJoins, icon: UserPlus, color: "text-emerald-500" },
-    { label: "Saídas no período", value: totalLeaves, icon: UserMinus, color: "text-rose-500" },
+    { label: "Entradas hoje", value: totalJoins, icon: UserPlus, color: "text-emerald-500" },
+    { label: "Saídas hoje", value: totalLeaves, icon: UserMinus, color: "text-rose-500" },
     { label: "Saldo no período", value: totalJoins - totalLeaves, icon: TrendingUp, color: "text-primary" },
     { label: "Membros atuais", value: totalMembers, icon: Users, color: "text-foreground" },
   ];
