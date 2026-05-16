@@ -24,6 +24,7 @@ import { Route as AuthenticatedMembrosRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedTrackeamentoIndexRouteImport } from './routes/_authenticated/trackeamento.index'
 import { Route as AuthenticatedRoomsIndexRouteImport } from './routes/_authenticated/rooms.index'
+import { Route as AuthenticatedTrackeamentoPixelIdRouteImport } from './routes/_authenticated/trackeamento.$pixelId'
 import { Route as AuthenticatedIntegracoesMetaRouteImport } from './routes/_authenticated/integracoes.meta'
 import { Route as AuthenticatedBotsLogsRouteImport } from './routes/_authenticated/bots.logs'
 import { Route as AuthenticatedBotsEncaminhadorRouteImport } from './routes/_authenticated/bots.encaminhador'
@@ -116,6 +117,12 @@ const AuthenticatedRoomsIndexRoute = AuthenticatedRoomsIndexRouteImport.update({
   path: '/rooms/',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedTrackeamentoPixelIdRoute =
+  AuthenticatedTrackeamentoPixelIdRouteImport.update({
+    id: '/trackeamento/$pixelId',
+    path: '/trackeamento/$pixelId',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedIntegracoesMetaRoute =
   AuthenticatedIntegracoesMetaRouteImport.update({
     id: '/integracoes/meta',
@@ -215,6 +222,7 @@ export interface FileRoutesByFullPath {
   '/bots/encaminhador': typeof AuthenticatedBotsEncaminhadorRoute
   '/bots/logs': typeof AuthenticatedBotsLogsRoute
   '/integracoes/meta': typeof AuthenticatedIntegracoesMetaRoute
+  '/trackeamento/$pixelId': typeof AuthenticatedTrackeamentoPixelIdRoute
   '/rooms/': typeof AuthenticatedRoomsIndexRoute
   '/trackeamento/': typeof AuthenticatedTrackeamentoIndexRoute
   '/rooms/$roomId/edit': typeof AuthenticatedRoomsRoomIdEditRoute
@@ -245,6 +253,7 @@ export interface FileRoutesByTo {
   '/bots/encaminhador': typeof AuthenticatedBotsEncaminhadorRoute
   '/bots/logs': typeof AuthenticatedBotsLogsRoute
   '/integracoes/meta': typeof AuthenticatedIntegracoesMetaRoute
+  '/trackeamento/$pixelId': typeof AuthenticatedTrackeamentoPixelIdRoute
   '/rooms': typeof AuthenticatedRoomsIndexRoute
   '/trackeamento': typeof AuthenticatedTrackeamentoIndexRoute
   '/rooms/$roomId/edit': typeof AuthenticatedRoomsRoomIdEditRoute
@@ -277,6 +286,7 @@ export interface FileRoutesById {
   '/_authenticated/bots/encaminhador': typeof AuthenticatedBotsEncaminhadorRoute
   '/_authenticated/bots/logs': typeof AuthenticatedBotsLogsRoute
   '/_authenticated/integracoes/meta': typeof AuthenticatedIntegracoesMetaRoute
+  '/_authenticated/trackeamento/$pixelId': typeof AuthenticatedTrackeamentoPixelIdRoute
   '/_authenticated/rooms/': typeof AuthenticatedRoomsIndexRoute
   '/_authenticated/trackeamento/': typeof AuthenticatedTrackeamentoIndexRoute
   '/_authenticated/rooms/$roomId/edit': typeof AuthenticatedRoomsRoomIdEditRoute
@@ -309,6 +319,7 @@ export interface FileRouteTypes {
     | '/bots/encaminhador'
     | '/bots/logs'
     | '/integracoes/meta'
+    | '/trackeamento/$pixelId'
     | '/rooms/'
     | '/trackeamento/'
     | '/rooms/$roomId/edit'
@@ -339,6 +350,7 @@ export interface FileRouteTypes {
     | '/bots/encaminhador'
     | '/bots/logs'
     | '/integracoes/meta'
+    | '/trackeamento/$pixelId'
     | '/rooms'
     | '/trackeamento'
     | '/rooms/$roomId/edit'
@@ -370,6 +382,7 @@ export interface FileRouteTypes {
     | '/_authenticated/bots/encaminhador'
     | '/_authenticated/bots/logs'
     | '/_authenticated/integracoes/meta'
+    | '/_authenticated/trackeamento/$pixelId'
     | '/_authenticated/rooms/'
     | '/_authenticated/trackeamento/'
     | '/_authenticated/rooms/$roomId/edit'
@@ -506,6 +519,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedRoomsIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/trackeamento/$pixelId': {
+      id: '/_authenticated/trackeamento/$pixelId'
+      path: '/trackeamento/$pixelId'
+      fullPath: '/trackeamento/$pixelId'
+      preLoaderRoute: typeof AuthenticatedTrackeamentoPixelIdRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/integracoes/meta': {
       id: '/_authenticated/integracoes/meta'
       path: '/integracoes/meta'
@@ -622,6 +642,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedBotsEncaminhadorRoute: typeof AuthenticatedBotsEncaminhadorRoute
   AuthenticatedBotsLogsRoute: typeof AuthenticatedBotsLogsRoute
   AuthenticatedIntegracoesMetaRoute: typeof AuthenticatedIntegracoesMetaRoute
+  AuthenticatedTrackeamentoPixelIdRoute: typeof AuthenticatedTrackeamentoPixelIdRoute
   AuthenticatedRoomsIndexRoute: typeof AuthenticatedRoomsIndexRoute
   AuthenticatedTrackeamentoIndexRoute: typeof AuthenticatedTrackeamentoIndexRoute
   AuthenticatedRoomsRoomIdEditRoute: typeof AuthenticatedRoomsRoomIdEditRoute
@@ -642,6 +663,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedBotsEncaminhadorRoute: AuthenticatedBotsEncaminhadorRoute,
   AuthenticatedBotsLogsRoute: AuthenticatedBotsLogsRoute,
   AuthenticatedIntegracoesMetaRoute: AuthenticatedIntegracoesMetaRoute,
+  AuthenticatedTrackeamentoPixelIdRoute: AuthenticatedTrackeamentoPixelIdRoute,
   AuthenticatedRoomsIndexRoute: AuthenticatedRoomsIndexRoute,
   AuthenticatedTrackeamentoIndexRoute: AuthenticatedTrackeamentoIndexRoute,
   AuthenticatedRoomsRoomIdEditRoute: AuthenticatedRoomsRoomIdEditRoute,
@@ -669,3 +691,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
