@@ -222,7 +222,7 @@ function FunnelDots({ r }: { r: any }) {
   );
 }
 
-function AttributionTab({ pixelId, attrFn }: { pixelId: string; attrFn: ReturnType<typeof useServerFn<typeof getAttribution>> }) {
+function AttributionTab({ pixelId, attrFn }: { pixelId: string; attrFn: any }) {
   const [groupCol, setGroupCol] = useState<"utm_source" | "utm_medium" | "utm_campaign" | "utm_content" | "utm_term">("utm_content");
   const attr = useQuery({
     queryKey: ["attr", pixelId, groupCol],
@@ -285,8 +285,8 @@ function AttributionTab({ pixelId, attrFn }: { pixelId: string; attrFn: ReturnTy
 function OffersTab({ pixelId, offers, createOfferFn, delOfferFn, baseUrl }: {
   pixelId: string;
   offers: any[];
-  createOfferFn: ReturnType<typeof useServerFn<typeof createOffer>>;
-  delOfferFn: ReturnType<typeof useServerFn<typeof deleteOffer>>;
+  createOfferFn: any;
+  delOfferFn: any;
   baseUrl: string;
 }) {
   const qc = useQueryClient();
@@ -498,7 +498,7 @@ function CopyRow({ value }: { value: string }) {
   );
 }
 
-function ConfigTab({ pixel, updFn }: { pixel: any; updFn: ReturnType<typeof useServerFn<typeof updatePixel>> }) {
+function ConfigTab({ pixel, updFn }: { pixel: any; updFn: any }) {
   const qc = useQueryClient();
   const [name, setName] = useState<string>(pixel.name);
   const [vertical, setVertical] = useState<string>(pixel.vertical);
