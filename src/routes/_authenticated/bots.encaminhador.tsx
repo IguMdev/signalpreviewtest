@@ -138,7 +138,20 @@ function EncaminhadorPage() {
                   {chats.map((c) => <SelectItem key={c.chat_id} value={String(c.chat_id)}>{c.title ?? c.username ?? c.chat_id}</SelectItem>)}
                 </SelectContent>
               </Select>
-              {chats.length === 0 && <p className="text-xs text-muted-foreground">Nenhum chat detectado. Adicione o bot como admin em um canal e envie qualquer mensagem para ele aparecer aqui.</p>}
+              {chats.length === 0 && (
+                <div className="rounded-md border border-border bg-muted/40 p-3 text-xs text-muted-foreground space-y-2">
+                  <p>Nenhum chat detectado para o bot desta sala.</p>
+                  <ol className="list-decimal pl-4 space-y-1">
+                    <li>Use o bot da sala: <span className="font-medium text-foreground">{roomBotName}</span>.</li>
+                    <li>Na página Contas Telegram, clique em <span className="font-medium text-foreground">Ativar rastreamento</span> nesse bot.</li>
+                    <li>Adicione esse bot como administrador no canal/grupo e envie uma mensagem nova no canal.</li>
+                    <li>Volte aqui e clique em atualizar.</li>
+                  </ol>
+                  <Button type="button" variant="outline" size="sm" className="gap-2" onClick={() => chatsQ.refetch()}>
+                    <RefreshCw className="size-3.5" /> Atualizar chats
+                  </Button>
+                </div>
+              )}
             </div>
 
             <div className="space-y-1.5">
