@@ -498,7 +498,7 @@ export const Route = createFileRoute("/api/public/cron/dispatch-recurring")({
                 .eq("id", p.schedule_id)
                 .maybeSingle()
             : { data: null };
-          const isPremium = Boolean(parentSchedule?.is_premium);
+          const isPremium = Boolean(parentSchedule?.is_premium) || hasEmojiTokens(p.content);
           const pReplyMarkup = undefined;
           const pIsNormalVideo = video && video.kind === "normal";
           for (const c of chats) {
