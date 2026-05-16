@@ -1,10 +1,95 @@
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { callTelegram } from "./telegram.server";
+import {
+  sendPhotoWithPremiumEmojiCaptionRetry,
+  sendTextWithPremiumEmojisRetry,
+  sendVideoWithPremiumEmojiCaption,
+  type PremiumButtonRow,
+} from "./premium-send.server";
+import { hasEmojiTokens } from "./premium-emoji-render";
 
 type Origin =
   | { kind: "recurring"; id: string }
   | { kind: "scheduled"; id: string }
   | { kind: "template"; id: string };
+
+type MirrorPayload = {
+  userId?: string | null;
+  content?: string | null;
+  parseMode?: string | null;
+  imagePath?: string | null;
+  video?: {
+    storagePath: string;
+    mimeType?: string | null;
+    duration?: number | null;
+    filename?: string | null;
+  } | null;
+  replyMarkup?: { inline_keyboard?: Array<Array<{ text?: string; url?: string }>> } | null;
+};
+
+function buttonRowsFromMarkup(markup: MirrorPayload["replyMarkup"]): PremiumButtonRow[] | undefined {
+  const rows = markup?.inline_keyboard
+    ?.map((row) => row
+      .filter((button): button is { text: string; url: string } => Boolean(button.text && button.url))
+      .map((button) => ({ text: button.text, url: button.url })))
+    .filter((row) => row.length > 0);
+  return rows?.length ? rows : undefined;
+}
+
+type PremiumMirrorStatus = "sent" | "blocked" | "skip";
+
+async function sendPremiumMirror(opts: {
+  payload: MirrorPayload;
+  targetChatId: number | string;
+  userId: string;
+  premiumAccountId?: string | null;
+}): Promise<PremiumMirrorStatus> {
+  const text = opts.payload.content ?? "";
+  if (!text || !hasEmojiTokens(text)) return "skip";
+  const buttonRows = buttonRowsFromMarkup(opts.payload.replyMarkup);
+
+  if (opts.payload.video?.storagePath) {
+    const { data: file } = await supabaseAdmin.storage.from("videos").download(opts.payload.video.storagePath);
+    if (!file) return "blocked";
+    const result = await sendVideoWithPremiumEmojiCaption({
+      userId: opts.userId,
+      accountId: opts.premiumAccountId ?? undefined,
+      chatId: opts.targetChatId,
+      videoBytes: await file.arrayBuffer(),
+      filename: opts.payload.video.filename ?? "video.mp4",
+      mimeType: opts.payload.video.mimeType ?? "video/mp4",
+      duration: opts.payload.video.duration,
+      caption: text,
+      strict: true,
+      buttonRows,
+    });
+    return result.applied && result.ok ? "sent" : "blocked";
+  }
+
+  if (opts.payload.imagePath) {
+    const { data: pub } = supabaseAdmin.storage.from("room-images").getPublicUrl(opts.payload.imagePath);
+    const result = await sendPhotoWithPremiumEmojiCaptionRetry({
+      userId: opts.userId,
+      accountId: opts.premiumAccountId ?? undefined,
+      chatId: opts.targetChatId,
+      photoUrl: pub.publicUrl,
+      caption: text,
+      strict: true,
+      buttonRows,
+    });
+    return result.applied && result.ok ? "sent" : "blocked";
+  }
+
+  const result = await sendTextWithPremiumEmojisRetry({
+    userId: opts.userId,
+    accountId: opts.premiumAccountId ?? undefined,
+    chatId: opts.targetChatId,
+    text,
+    strict: true,
+    buttonRows,
+  });
+  return result.applied && result.ok ? "sent" : "blocked";
+}
 
 /**
  * Mirrors a just-sent message to the forwarder's target chats using
@@ -20,12 +105,13 @@ export async function mirrorIfMarked(opts: {
   fromChatId: number | string;
   messageId: number | undefined | null;
   origin: Origin;
+  payload?: MirrorPayload;
 }): Promise<void> {
   if (!opts.messageId) return;
   const { data: cfg } = await supabaseAdmin
     .from("room_engagement_settings")
     .select(
-      "forwarder_enabled, forwarder_source_chat_id, forwarder_target_chat_ids, forwarder_marked_recurring, forwarder_marked_scheduled, forwarder_marked_templates",
+      "user_id, forwarder_enabled, forwarder_source_chat_id, forwarder_target_chat_ids, forwarder_marked_recurring, forwarder_marked_scheduled, forwarder_marked_templates, forwarder_premium_enabled, forwarder_premium_account_id",
     )
     .eq("room_id", opts.roomId)
     .maybeSingle();
@@ -59,6 +145,15 @@ export async function mirrorIfMarked(opts: {
 
   for (const t of targets) {
     if (String(t) === String(opts.fromChatId)) continue;
+    if (cfg.forwarder_premium_enabled && opts.payload?.content && hasEmojiTokens(opts.payload.content)) {
+      const status = await sendPremiumMirror({
+        payload: opts.payload,
+        targetChatId: t,
+        userId: opts.payload.userId ?? cfg.user_id,
+        premiumAccountId: cfg.forwarder_premium_account_id,
+      }).catch(() => "blocked" as const);
+      if (status !== "skip") continue;
+    }
     await callTelegram(acc.bot_token, "copyMessage", {
       chat_id: t,
       from_chat_id: opts.fromChatId,
