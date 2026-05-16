@@ -31,6 +31,7 @@ import { Route as ApiPublicKirvanoWebhookRouteImport } from './routes/api/public
 import { Route as ApiPublicCronDispatchSignalsRouteImport } from './routes/api/public/cron/dispatch-signals'
 import { Route as ApiPublicCronDispatchSessionsRouteImport } from './routes/api/public/cron/dispatch-sessions'
 import { Route as ApiPublicCronDispatchRecurringRouteImport } from './routes/api/public/cron/dispatch-recurring'
+import { Route as ApiPublicCronDispatchMarketTipsRouteImport } from './routes/api/public/cron/dispatch-market-tips'
 import { Route as AuthenticatedRoomsRoomIdEditRouteImport } from './routes/_authenticated/rooms.$roomId.edit'
 import { Route as ApiPublicTelegramWebhookAccountIdRouteImport } from './routes/api/public/telegram/webhook.$accountId'
 
@@ -151,6 +152,12 @@ const ApiPublicCronDispatchRecurringRoute =
     path: '/api/public/cron/dispatch-recurring',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicCronDispatchMarketTipsRoute =
+  ApiPublicCronDispatchMarketTipsRouteImport.update({
+    id: '/api/public/cron/dispatch-market-tips',
+    path: '/api/public/cron/dispatch-market-tips',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const AuthenticatedRoomsRoomIdEditRoute =
   AuthenticatedRoomsRoomIdEditRouteImport.update({
     id: '/rooms/$roomId/edit',
@@ -183,6 +190,7 @@ export interface FileRoutesByFullPath {
   '/integracoes/meta': typeof AuthenticatedIntegracoesMetaRoute
   '/rooms/': typeof AuthenticatedRoomsIndexRoute
   '/rooms/$roomId/edit': typeof AuthenticatedRoomsRoomIdEditRoute
+  '/api/public/cron/dispatch-market-tips': typeof ApiPublicCronDispatchMarketTipsRoute
   '/api/public/cron/dispatch-recurring': typeof ApiPublicCronDispatchRecurringRoute
   '/api/public/cron/dispatch-sessions': typeof ApiPublicCronDispatchSessionsRoute
   '/api/public/cron/dispatch-signals': typeof ApiPublicCronDispatchSignalsRoute
@@ -208,6 +216,7 @@ export interface FileRoutesByTo {
   '/integracoes/meta': typeof AuthenticatedIntegracoesMetaRoute
   '/rooms': typeof AuthenticatedRoomsIndexRoute
   '/rooms/$roomId/edit': typeof AuthenticatedRoomsRoomIdEditRoute
+  '/api/public/cron/dispatch-market-tips': typeof ApiPublicCronDispatchMarketTipsRoute
   '/api/public/cron/dispatch-recurring': typeof ApiPublicCronDispatchRecurringRoute
   '/api/public/cron/dispatch-sessions': typeof ApiPublicCronDispatchSessionsRoute
   '/api/public/cron/dispatch-signals': typeof ApiPublicCronDispatchSignalsRoute
@@ -235,6 +244,7 @@ export interface FileRoutesById {
   '/_authenticated/integracoes/meta': typeof AuthenticatedIntegracoesMetaRoute
   '/_authenticated/rooms/': typeof AuthenticatedRoomsIndexRoute
   '/_authenticated/rooms/$roomId/edit': typeof AuthenticatedRoomsRoomIdEditRoute
+  '/api/public/cron/dispatch-market-tips': typeof ApiPublicCronDispatchMarketTipsRoute
   '/api/public/cron/dispatch-recurring': typeof ApiPublicCronDispatchRecurringRoute
   '/api/public/cron/dispatch-sessions': typeof ApiPublicCronDispatchSessionsRoute
   '/api/public/cron/dispatch-signals': typeof ApiPublicCronDispatchSignalsRoute
@@ -262,6 +272,7 @@ export interface FileRouteTypes {
     | '/integracoes/meta'
     | '/rooms/'
     | '/rooms/$roomId/edit'
+    | '/api/public/cron/dispatch-market-tips'
     | '/api/public/cron/dispatch-recurring'
     | '/api/public/cron/dispatch-sessions'
     | '/api/public/cron/dispatch-signals'
@@ -287,6 +298,7 @@ export interface FileRouteTypes {
     | '/integracoes/meta'
     | '/rooms'
     | '/rooms/$roomId/edit'
+    | '/api/public/cron/dispatch-market-tips'
     | '/api/public/cron/dispatch-recurring'
     | '/api/public/cron/dispatch-sessions'
     | '/api/public/cron/dispatch-signals'
@@ -313,6 +325,7 @@ export interface FileRouteTypes {
     | '/_authenticated/integracoes/meta'
     | '/_authenticated/rooms/'
     | '/_authenticated/rooms/$roomId/edit'
+    | '/api/public/cron/dispatch-market-tips'
     | '/api/public/cron/dispatch-recurring'
     | '/api/public/cron/dispatch-sessions'
     | '/api/public/cron/dispatch-signals'
@@ -324,6 +337,7 @@ export interface RootRouteChildren {
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   LoginRoute: typeof LoginRoute
   SignupRoute: typeof SignupRoute
+  ApiPublicCronDispatchMarketTipsRoute: typeof ApiPublicCronDispatchMarketTipsRoute
   ApiPublicCronDispatchRecurringRoute: typeof ApiPublicCronDispatchRecurringRoute
   ApiPublicCronDispatchSessionsRoute: typeof ApiPublicCronDispatchSessionsRoute
   ApiPublicCronDispatchSignalsRoute: typeof ApiPublicCronDispatchSignalsRoute
@@ -487,6 +501,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicCronDispatchRecurringRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/cron/dispatch-market-tips': {
+      id: '/api/public/cron/dispatch-market-tips'
+      path: '/api/public/cron/dispatch-market-tips'
+      fullPath: '/api/public/cron/dispatch-market-tips'
+      preLoaderRoute: typeof ApiPublicCronDispatchMarketTipsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/rooms/$roomId/edit': {
       id: '/_authenticated/rooms/$roomId/edit'
       path: '/rooms/$roomId/edit'
@@ -550,6 +571,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
   LoginRoute: LoginRoute,
   SignupRoute: SignupRoute,
+  ApiPublicCronDispatchMarketTipsRoute: ApiPublicCronDispatchMarketTipsRoute,
   ApiPublicCronDispatchRecurringRoute: ApiPublicCronDispatchRecurringRoute,
   ApiPublicCronDispatchSessionsRoute: ApiPublicCronDispatchSessionsRoute,
   ApiPublicCronDispatchSignalsRoute: ApiPublicCronDispatchSignalsRoute,
