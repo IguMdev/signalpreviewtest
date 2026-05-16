@@ -331,6 +331,9 @@ export const Route = createFileRoute("/api/public/cron/dispatch-recurring")({
                         );
                       }
                     }
+                    if (hasEmojiTokens(s.content)) {
+                      return { ok: false, description: PREMIUM_LOCK_ERROR };
+                    }
                     return await callTelegram<{ message_id: number }>(acc.bot_token, "sendPhoto", {
                       chat_id: c.chat_id,
                       photo: pub.publicUrl,
@@ -360,7 +363,9 @@ export const Route = createFileRoute("/api/public/cron/dispatch-recurring")({
                         mimeType: video.mime_type,
                         filename: (video.title || "video").replace(/[^\w.-]+/g, "_") + ".mp4",
                       })
-                  : await callTelegram<{ message_id: number }>(acc.bot_token, "sendMessage", {
+                  : hasEmojiTokens(s.content)
+                    ? { ok: false, description: PREMIUM_LOCK_ERROR }
+                    : await callTelegram<{ message_id: number }>(acc.bot_token, "sendMessage", {
                       chat_id: c.chat_id,
                       text: s.content ?? "",
                       parse_mode: s.parse_mode,
