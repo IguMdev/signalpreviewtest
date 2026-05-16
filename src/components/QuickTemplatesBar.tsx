@@ -38,8 +38,8 @@ import {
   X,
   Sparkles,
 } from "lucide-react";
-import { Switch } from "@/components/ui/switch";
 import { PremiumEmojiPicker } from "@/components/PremiumEmojiPicker";
+import { Switch } from "@/components/ui/switch";
 
 export type QuickTemplate = {
   id: string;
@@ -434,8 +434,12 @@ function QuickSendDialog({
   const [submitting, setSubmitting] = useState(false);
   const premiumKey = `qst:premium:${tpl.id}`;
   const [premium, setPremiumState] = useState<boolean>(() => {
+    // Default: usa o is_premium do modelo; localStorage como override
     if (typeof window === "undefined") return false;
-    return window.localStorage.getItem(premiumKey) === "1";
+    const ls = window.localStorage.getItem(premiumKey);
+    if (ls === "1") return true;
+    if (ls === "0") return false;
+    return Boolean(tpl.is_premium);
   });
   const setPremium = (v: boolean) => {
     setPremiumState(v);
