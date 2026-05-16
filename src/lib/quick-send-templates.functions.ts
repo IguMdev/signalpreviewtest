@@ -7,6 +7,7 @@ import {
   sendPhotoWithPremiumEmojiCaption,
   sendTextWithPremiumEmojis,
 } from "@/lib/premium-send.server";
+import { mirrorIfMarked } from "@/lib/forwarder.server";
 
 const UpsertInput = z.object({
   id: z.string().uuid().optional(),
@@ -179,6 +180,14 @@ export const sendQuickTemplate = createServerFn({ method: "POST" })
       else {
         failed++;
         lastError = r.description ?? "erro";
+      }
+      if (r.ok) {
+        await mirrorIfMarked({
+          roomId: data.roomId,
+          fromChatId: c.chat_id,
+          messageId: r.result?.message_id ?? null,
+          origin: { kind: "template", id: data.id },
+        }).catch(() => undefined);
       }
     }
     return { ok: sent > 0, sent, failed, error: lastError };
