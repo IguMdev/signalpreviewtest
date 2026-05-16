@@ -225,8 +225,8 @@ function EncaminhadorPage() {
 
               <ItemList
                 title="Modelos da sala"
-                empty="Nenhum modelo configurado para esta sala."
-                items={(itemsQ.data?.templates ?? []).map((t) => ({ id: t.kind, label: templateKindLabel(t.kind) }))}
+                empty="Nenhum modelo de envio rápido vinculado a esta sala. Defina a sala padrão em Modelos para que apareçam aqui."
+                items={(itemsQ.data?.templates ?? []).map((t) => ({ id: t.id, label: t.name }))}
                 value={markedTemplates}
                 onChange={setMarkedTemplates}
               />
