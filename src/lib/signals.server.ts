@@ -79,15 +79,16 @@ export function buildSlots(startHHMM: string, endHHMM: string, qty: number): str
   const end = toMin(endHHMM);
   const total = Math.max(0, end - start);
   if (qty <= 0 || total <= 0) return [];
-  // Disponibilidade real: cada minuto inteiro entre start e end (inclusive).
-  // Limita qty ao número de minutos disponíveis para evitar duplicatas.
-  const available = total + 1;
+  // end_time é EXCLUSIVO: o último sinal cai antes do fim da janela
+  // (uma janela 14:30→15:30 nunca dispara às 15:30).
+  // Minutos disponíveis: start .. end-1.
+  const available = total;
   const effectiveQty = Math.min(qty, available);
   const slots = new Set<string>();
   for (let i = 0; i < effectiveQty; i++) {
-    // distribuição uniforme com arredondamento (cobre os extremos start e end)
-    const offset =
-      effectiveQty === 1 ? 0 : Math.round((i * total) / (effectiveQty - 1));
+    // distribuição uniforme: passo = total / qty, primeiro slot em start,
+    // último slot em start + total*(qty-1)/qty (sempre < end).
+    const offset = Math.floor((i * total) / effectiveQty);
     const m = start + offset;
     const hh = String(Math.floor(m / 60)).padStart(2, "0");
     const mm = String(m % 60).padStart(2, "0");
