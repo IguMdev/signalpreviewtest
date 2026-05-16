@@ -375,6 +375,19 @@ function QuickTemplateDialog({
               </label>
             )}
           </div>
+
+          <div className="flex items-center justify-between rounded-md border border-border/60 px-3 py-2">
+            <div className="flex items-center gap-2 text-sm">
+              <Sparkles className="size-4 text-primary" />
+              <div>
+                <div className="font-medium">Usar conta Premium por padrão</div>
+                <div className="text-xs text-muted-foreground">
+                  Quando OFF: tokens {"{EMOJI}"} são enviados como texto puro (preview), sem usar a conta Premium.
+                </div>
+              </div>
+            </div>
+            <Switch checked={isPremium} onCheckedChange={setIsPremium} />
+          </div>
         </div>
 
         <DialogFooter>
