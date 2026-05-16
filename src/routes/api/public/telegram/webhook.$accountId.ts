@@ -4,6 +4,7 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { sendMetaEvent } from "@/lib/meta-capi.server";
 import { callTelegram } from "@/lib/telegram.server";
 import { sendTextWithPremiumEmojis, sendPhotoWithPremiumEmojiCaption } from "@/lib/premium-send.server";
+import { forwardWithPremiumEmojis, hasPremiumEmojiEntities, type BotApiPost } from "@/lib/forwarder-premium.server";
 
 function safeEqual(a: string, b: string): boolean {
   const left = Buffer.from(a);
@@ -272,6 +273,7 @@ async function runForwarder(opts: {
   fromChatId: number;
   messageId: number;
   messageType: string;
+  post: BotApiPost;
 }) {
   if (!opts.botToken) return;
   const { data: cfgs } = await supabaseAdmin
@@ -308,18 +310,55 @@ async function runForwarder(opts: {
 
   const targets = new Set<number>();
   for (const c of cfgs) for (const t of (c.forwarder_target_chat_ids ?? [])) targets.add(t);
+  const hasPremiumEmoji = hasPremiumEmojiEntities(opts.post);
   for (const target of targets) {
     if (target === opts.fromChatId) continue;
-    const r = await callTelegram(opts.botToken, "copyMessage", {
-      chat_id: target,
-      from_chat_id: opts.fromChatId,
-      message_id: opts.messageId,
-    });
+    let okSent = false;
+    let errStr: string | null = null;
+    let via: "bot-api" | "premium-mtproto" = "bot-api";
+
+    if (hasPremiumEmoji) {
+      via = "premium-mtproto";
+      const pr = await forwardWithPremiumEmojis({
+        userId: opts.userId,
+        botToken: opts.botToken,
+        post: opts.post,
+        targetChatId: target,
+      }).catch((e) => ({ applied: true as const, ok: false as const, error: e instanceof Error ? e.message : String(e) }));
+      if (pr.applied && pr.ok) {
+        okSent = true;
+      } else if (pr.applied && !pr.ok) {
+        okSent = false;
+        errStr = pr.error;
+      } else {
+        // applied:false → cai para Bot API (sem premium account ou mídia não suportada)
+        via = "bot-api";
+        const r = await callTelegram(opts.botToken, "copyMessage", {
+          chat_id: target,
+          from_chat_id: opts.fromChatId,
+          message_id: opts.messageId,
+        });
+        okSent = !!r?.ok;
+        errStr = r?.ok ? null : (r?.description ?? "telegram error");
+        if (okSent) {
+          errStr = "premium emojis removidos (sem conta Premium ativa) — usei Bot API";
+        }
+      }
+    } else {
+      const r = await callTelegram(opts.botToken, "copyMessage", {
+        chat_id: target,
+        from_chat_id: opts.fromChatId,
+        message_id: opts.messageId,
+      });
+      okSent = !!r?.ok;
+      errStr = r?.ok ? null : (r?.description ?? "telegram error");
+    }
+
     await logBot({
       userId: opts.userId, accountId: opts.accountId, botType: "encaminhador",
-      event: r?.ok ? "sent" : "failed", chatId: opts.fromChatId, targetChatId: target,
-      error: r?.ok ? null : (r?.description ?? "telegram error"),
-      details: { message_id: opts.messageId, type: opts.messageType },
+      event: okSent ? "sent" : "failed", chatId: opts.fromChatId, targetChatId: target,
+      error: okSent ? null : errStr,
+      details: { message_id: opts.messageId, type: opts.messageType, via, premium_emojis: hasPremiumEmoji, note: okSent ? errStr : undefined },
     });
   }
 }
@@ -463,6 +502,7 @@ export const Route = createFileRoute("/api/public/telegram/webhook/$accountId")(
             fromChatId: post.chat.id,
             messageId: post.message_id,
             messageType,
+            post: post as BotApiPost,
           }).catch((e) => console.error("[forwarder] failed:", e));
         }
 
