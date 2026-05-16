@@ -179,35 +179,40 @@ function EncaminhadorPage() {
               </div>
             </div>
 
-            <div className="space-y-1.5">
-              <Label>Tipos de mensagem permitidos</Label>
-              <p className="text-xs text-muted-foreground">Marque o que pode ser encaminhado. Tudo que estiver desmarcado será ignorado.</p>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 border rounded-md p-3">
-                {[
-                  { id: "text", label: "Texto" },
-                  { id: "photo", label: "Foto" },
-                  { id: "video", label: "Vídeo" },
-                  { id: "video_note", label: "Vídeo redondo" },
-                  { id: "animation", label: "GIF / Animação" },
-                  { id: "document", label: "Documento" },
-                  { id: "audio", label: "Áudio (música)" },
-                  { id: "voice", label: "Mensagem de voz" },
-                  { id: "sticker", label: "Sticker" },
-                  { id: "poll", label: "Enquete" },
-                  { id: "location", label: "Localização" },
-                  { id: "contact", label: "Contato" },
-                ].map((t) => {
-                  const checked = allowedTypes.includes(t.id);
-                  return (
-                    <label key={t.id} className="flex items-center gap-2 text-sm">
-                      <Checkbox checked={checked} onCheckedChange={(v) => {
-                        setAllowedTypes((prev) => v ? [...prev, t.id] : prev.filter((x) => x !== t.id));
-                      }} />
-                      <span>{t.label}</span>
-                    </label>
-                  );
-                })}
+            <div className="space-y-3">
+              <div>
+                <Label>Itens da sala para encaminhar</Label>
+                <p className="text-xs text-muted-foreground">
+                  Marque os modelos e agendamentos que devem ser copiados para os canais de destino quando dispararem no canal de origem. O que não estiver marcado fica somente no canal de origem.
+                </p>
               </div>
+
+              <ItemList
+                title="Modelos da sala"
+                empty="Nenhum modelo configurado para esta sala."
+                items={(itemsQ.data?.templates ?? []).map((t) => ({ id: t.kind, label: templateKindLabel(t.kind) }))}
+                value={markedTemplates}
+                onChange={setMarkedTemplates}
+              />
+
+              <ItemList
+                title="Agendamentos recorrentes"
+                empty="Nenhum agendamento recorrente nesta sala."
+                items={(itemsQ.data?.recurring ?? []).map((r) => ({ id: r.id, label: `${r.title}${r.is_active ? "" : " (inativo)"}` }))}
+                value={markedRecurring}
+                onChange={setMarkedRecurring}
+              />
+
+              <ItemList
+                title="Agendamentos únicos"
+                empty="Nenhum agendamento único nesta sala."
+                items={(itemsQ.data?.scheduled ?? []).map((s) => ({
+                  id: s.id,
+                  label: `${new Date(s.scheduled_at).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })} — ${(s.content ?? "").slice(0, 60) || "(sem texto)"}`,
+                }))}
+                value={markedScheduled}
+                onChange={setMarkedScheduled}
+              />
             </div>
 
             <Button onClick={() => save.mutate()} disabled={save.isPending}>{save.isPending ? "Salvando..." : "Salvar"}</Button>
