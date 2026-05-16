@@ -123,7 +123,7 @@ function TrackeamentoListPage() {
                     <SelectItem value="none">Nenhum (escolher depois)</SelectItem>
                     {accounts.data?.map(a => (
                       <SelectItem key={a.id} value={a.id}>
-                        @{a.bot_username ?? "(sem username)"} {a.name ? `— ${a.name}` : ""}
+                        @{a.bot_username ?? "(sem username)"}
                       </SelectItem>
                     ))}
                   </SelectContent>
