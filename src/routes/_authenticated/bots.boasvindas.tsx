@@ -14,6 +14,7 @@ import { MessageCircle, Plus, Trash2, ArrowUp, ArrowDown, ImageIcon } from "luci
 import { toast } from "sonner";
 import { getWelcomeBotConfig, upsertWelcomeBotConfig } from "@/lib/engagement.functions";
 import { PremiumEmojiPicker } from "@/components/PremiumEmojiPicker";
+import { getPremiumAccountAvatar } from "@/lib/premium-account.functions";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 function publicUrl(bucket: string, path: string) {
@@ -26,12 +27,47 @@ function getInitials(name?: string) {
   if (!name) return "?";
   return name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase();
 }
-function stringToColor(str?: string) {
-  if (!str) return "#64748b";
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash);
-  const c = (hash & 0x00ffffff).toString(16).padStart(6, "0");
-  return `#${c}`;
+
+type PremiumAccountSummary = {
+  id: string;
+  label: string;
+  bot_username: string | null;
+  phone: string | null;
+};
+
+function PremiumAccountIdentity({ account, compact = false }: { account: PremiumAccountSummary; compact?: boolean }) {
+  const avatarQ = useQuery({
+    queryKey: ["premium-avatar", account.id],
+    queryFn: () => getPremiumAccountAvatar({ data: { accountId: account.id } }),
+    enabled: Boolean(account?.id),
+    staleTime: 1000 * 60 * 60,
+    refetchOnWindowFocus: false,
+  });
+  const handle = account.bot_username ? `@${account.bot_username}` : account.phone || "";
+  const avatarUrl = avatarQ.data?.dataUrl ?? null;
+  const sizeClass = compact ? "w-7 h-7" : "w-8 h-8";
+
+  return (
+    <div className="flex items-center gap-2 mt-1">
+      {avatarUrl ? (
+        <img
+          src={avatarUrl}
+          alt={account.label}
+          className={`${sizeClass} rounded-full object-cover border border-border/60 shrink-0`}
+        />
+      ) : (
+        <div
+          className={`${sizeClass} rounded-full flex items-center justify-center bg-primary text-[10px] font-bold text-primary-foreground shrink-0`}
+          title={account.label}
+        >
+          {getInitials(account.label)}
+        </div>
+      )}
+      <p className="text-[11px] text-muted-foreground">
+        Conectada como <span className="font-medium text-foreground">{account.label}</span>{handle ? ` (${handle})` : ""}.
+      </p>
+    </div>
+  );
 }
 
 export const Route = createFileRoute("/_authenticated/bots/boasvindas")({
@@ -54,7 +90,7 @@ function BoasVindasPage() {
 
   const premiumAccountsQ = useQuery({
     queryKey: ["premium-accounts-pick"],
-    queryFn: async () => (await supabase.from("telegram_accounts").select("id, label, status, bot_username, phone, bot_first_name").eq("account_type", "premium").eq("is_active", true).order("label")).data ?? [],
+    queryFn: async () => (await supabase.from("telegram_accounts").select("id, label, status, bot_username, phone, bot_first_name, last_error").eq("account_type", "premium").eq("is_active", true).order("label")).data ?? [],
   });
 
   const [roomId, setRoomId] = useState<string>("");
@@ -215,24 +251,9 @@ function BoasVindasPage() {
                     </SelectContent>
                   </Select>
                    {premiumAccountId && (() => {
-                     const acc = (premiumAccountsQ.data ?? []).find((a: any) => a.id === premiumAccountId) as any;
-                     if (!acc) return null;
-                      const handle = acc.bot_username ? `@${acc.bot_username}` : acc.phone || "";
-                      return (
-                        <div className="flex items-center gap-2 mt-1">
-                          <div
-                            className="w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0"
-                            style={{ backgroundColor: stringToColor(acc.id) }}
-                            title={acc.label}
-                          >
-                            {getInitials(acc.label)}
-                          </div>
-                          <p className="text-[11px] text-muted-foreground">
-                            Conectada como <span className="font-medium text-foreground">{acc.label}</span>{handle ? ` (${handle})` : ""}.
-                          </p>
-                        </div>
-                      );
-                   })()}
+                      const acc = (premiumAccountsQ.data ?? []).find((a: any) => a.id === premiumAccountId) as any;
+                      return acc ? <PremiumAccountIdentity account={acc} /> : null;
+                    })()}
                    {(premiumAccountsQ.data ?? []).length === 0 && (
                     <p className="text-[11px] text-amber-500">Nenhuma conta Premium conectada. Conecte uma em "Contas Telegram".</p>
                   )}
@@ -493,22 +514,7 @@ function ExtraEditor({
             </Select>
             {premiumAccountId && (() => {
               const acc = premiumAccounts.find((a: any) => a.id === premiumAccountId) as any;
-              if (!acc) return null;
-              const handle = acc.bot_username ? `@${acc.bot_username}` : acc.phone || "";
-              return (
-                <div className="flex items-center gap-2 mt-1">
-                  <div
-                    className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0"
-                    style={{ backgroundColor: stringToColor(acc.id) }}
-                    title={acc.label}
-                  >
-                    {getInitials(acc.label)}
-                  </div>
-                  <p className="text-[11px] text-muted-foreground">
-                    Conectada como <span className="font-medium text-foreground">{acc.label}</span>{handle ? ` (${handle})` : ""}.
-                  </p>
-                </div>
-              );
+              return acc ? <PremiumAccountIdentity account={acc} compact /> : null;
             })()}
           </div>
         )}
