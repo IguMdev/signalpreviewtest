@@ -9,6 +9,7 @@ import {
   sendTextWithPremiumEmojis,
 } from "./premium-send.server";
 import { renderEmojiTokens, renderEmojiTokensToHtml } from "./premium-emoji-render";
+import { renderTemplate } from "./signals.server";
 
 export const verifyAccount = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -214,7 +215,35 @@ export const sendRoomTest = createServerFn({ method: "POST" })
       .maybeSingle();
     if (!acc) throw new Error("Bot da sala não encontrado");
 
-    const text = data.text?.trim() || "";
+    // Substitui macros de sinal ({ATIVO}, {TIMEFRAME}, etc.) com valores de exemplo
+    // para que o "Testar" mostre a mensagem como sairia em produção.
+    let sampleAsset = "EURUSD";
+    try {
+      const { data: ra } = await supabase
+        .from("room_assets")
+        .select("asset_code")
+        .eq("room_id", room.id)
+        .eq("is_open", true)
+        .limit(1)
+        .maybeSingle();
+      if (ra?.asset_code) sampleAsset = ra.asset_code;
+    } catch { /* mantém fallback */ }
+    const now = new Date();
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const hhmm = (d: Date) => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    const entry = new Date(Math.ceil((now.getTime() + 1) / 60000) * 60000);
+    const rawText = data.text?.trim() || "";
+    const text = rawText
+      ? renderTemplate(rawText, {
+          ATIVO: sampleAsset,
+          TIMEFRAME: "M1",
+          DIRECAO: "🟢 COMPRA",
+          ENTRADA: hhmm(entry),
+          ENTRADAGALE1: hhmm(new Date(entry.getTime() + 60_000)),
+          ENTRADAGALE2: hhmm(new Date(entry.getTime() + 120_000)),
+          MARTINGALE: "2",
+        })
+      : "";
     const emojiLookup = await getUserEmojiLookup(userId);
     const { data: buttons } = await supabase
       .from("room_template_buttons")
