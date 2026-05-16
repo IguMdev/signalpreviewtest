@@ -29,6 +29,7 @@ import { Route as AuthenticatedBotsEncaminhadorRouteImport } from './routes/_aut
 import { Route as AuthenticatedBotsBoasvindasRouteImport } from './routes/_authenticated/bots.boasvindas'
 import { Route as ApiPublicKirvanoWebhookRouteImport } from './routes/api/public/kirvano/webhook'
 import { Route as ApiPublicCronDispatchSignalsRouteImport } from './routes/api/public/cron/dispatch-signals'
+import { Route as ApiPublicCronDispatchSessionsRouteImport } from './routes/api/public/cron/dispatch-sessions'
 import { Route as ApiPublicCronDispatchRecurringRouteImport } from './routes/api/public/cron/dispatch-recurring'
 import { Route as AuthenticatedRoomsRoomIdEditRouteImport } from './routes/_authenticated/rooms.$roomId.edit'
 import { Route as ApiPublicTelegramWebhookAccountIdRouteImport } from './routes/api/public/telegram/webhook.$accountId'
@@ -138,6 +139,12 @@ const ApiPublicCronDispatchSignalsRoute =
     path: '/api/public/cron/dispatch-signals',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicCronDispatchSessionsRoute =
+  ApiPublicCronDispatchSessionsRouteImport.update({
+    id: '/api/public/cron/dispatch-sessions',
+    path: '/api/public/cron/dispatch-sessions',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicCronDispatchRecurringRoute =
   ApiPublicCronDispatchRecurringRouteImport.update({
     id: '/api/public/cron/dispatch-recurring',
@@ -177,6 +184,7 @@ export interface FileRoutesByFullPath {
   '/rooms/': typeof AuthenticatedRoomsIndexRoute
   '/rooms/$roomId/edit': typeof AuthenticatedRoomsRoomIdEditRoute
   '/api/public/cron/dispatch-recurring': typeof ApiPublicCronDispatchRecurringRoute
+  '/api/public/cron/dispatch-sessions': typeof ApiPublicCronDispatchSessionsRoute
   '/api/public/cron/dispatch-signals': typeof ApiPublicCronDispatchSignalsRoute
   '/api/public/kirvano/webhook': typeof ApiPublicKirvanoWebhookRoute
   '/api/public/telegram/webhook/$accountId': typeof ApiPublicTelegramWebhookAccountIdRoute
@@ -201,6 +209,7 @@ export interface FileRoutesByTo {
   '/rooms': typeof AuthenticatedRoomsIndexRoute
   '/rooms/$roomId/edit': typeof AuthenticatedRoomsRoomIdEditRoute
   '/api/public/cron/dispatch-recurring': typeof ApiPublicCronDispatchRecurringRoute
+  '/api/public/cron/dispatch-sessions': typeof ApiPublicCronDispatchSessionsRoute
   '/api/public/cron/dispatch-signals': typeof ApiPublicCronDispatchSignalsRoute
   '/api/public/kirvano/webhook': typeof ApiPublicKirvanoWebhookRoute
   '/api/public/telegram/webhook/$accountId': typeof ApiPublicTelegramWebhookAccountIdRoute
@@ -227,6 +236,7 @@ export interface FileRoutesById {
   '/_authenticated/rooms/': typeof AuthenticatedRoomsIndexRoute
   '/_authenticated/rooms/$roomId/edit': typeof AuthenticatedRoomsRoomIdEditRoute
   '/api/public/cron/dispatch-recurring': typeof ApiPublicCronDispatchRecurringRoute
+  '/api/public/cron/dispatch-sessions': typeof ApiPublicCronDispatchSessionsRoute
   '/api/public/cron/dispatch-signals': typeof ApiPublicCronDispatchSignalsRoute
   '/api/public/kirvano/webhook': typeof ApiPublicKirvanoWebhookRoute
   '/api/public/telegram/webhook/$accountId': typeof ApiPublicTelegramWebhookAccountIdRoute
@@ -253,6 +263,7 @@ export interface FileRouteTypes {
     | '/rooms/'
     | '/rooms/$roomId/edit'
     | '/api/public/cron/dispatch-recurring'
+    | '/api/public/cron/dispatch-sessions'
     | '/api/public/cron/dispatch-signals'
     | '/api/public/kirvano/webhook'
     | '/api/public/telegram/webhook/$accountId'
@@ -277,6 +288,7 @@ export interface FileRouteTypes {
     | '/rooms'
     | '/rooms/$roomId/edit'
     | '/api/public/cron/dispatch-recurring'
+    | '/api/public/cron/dispatch-sessions'
     | '/api/public/cron/dispatch-signals'
     | '/api/public/kirvano/webhook'
     | '/api/public/telegram/webhook/$accountId'
@@ -302,6 +314,7 @@ export interface FileRouteTypes {
     | '/_authenticated/rooms/'
     | '/_authenticated/rooms/$roomId/edit'
     | '/api/public/cron/dispatch-recurring'
+    | '/api/public/cron/dispatch-sessions'
     | '/api/public/cron/dispatch-signals'
     | '/api/public/kirvano/webhook'
     | '/api/public/telegram/webhook/$accountId'
@@ -312,6 +325,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   SignupRoute: typeof SignupRoute
   ApiPublicCronDispatchRecurringRoute: typeof ApiPublicCronDispatchRecurringRoute
+  ApiPublicCronDispatchSessionsRoute: typeof ApiPublicCronDispatchSessionsRoute
   ApiPublicCronDispatchSignalsRoute: typeof ApiPublicCronDispatchSignalsRoute
   ApiPublicKirvanoWebhookRoute: typeof ApiPublicKirvanoWebhookRoute
   ApiPublicTelegramWebhookAccountIdRoute: typeof ApiPublicTelegramWebhookAccountIdRoute
@@ -459,6 +473,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicCronDispatchSignalsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/cron/dispatch-sessions': {
+      id: '/api/public/cron/dispatch-sessions'
+      path: '/api/public/cron/dispatch-sessions'
+      fullPath: '/api/public/cron/dispatch-sessions'
+      preLoaderRoute: typeof ApiPublicCronDispatchSessionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/cron/dispatch-recurring': {
       id: '/api/public/cron/dispatch-recurring'
       path: '/api/public/cron/dispatch-recurring'
@@ -530,6 +551,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   SignupRoute: SignupRoute,
   ApiPublicCronDispatchRecurringRoute: ApiPublicCronDispatchRecurringRoute,
+  ApiPublicCronDispatchSessionsRoute: ApiPublicCronDispatchSessionsRoute,
   ApiPublicCronDispatchSignalsRoute: ApiPublicCronDispatchSignalsRoute,
   ApiPublicKirvanoWebhookRoute: ApiPublicKirvanoWebhookRoute,
   ApiPublicTelegramWebhookAccountIdRoute:
