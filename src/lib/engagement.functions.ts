@@ -326,6 +326,38 @@ export const listAccountChats = createServerFn({ method: "GET" })
     return data ?? [];
   });
 
+// Lista os itens (modelos / agendamentos / recorrentes) vinculados à sala
+// para o usuário marcar quais o encaminhador deve mirror-ar para os destinos.
+export const listForwarderSourceItems = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ roomId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    const [tpls, scheds, recs] = await Promise.all([
+      supabase
+        .from("room_templates")
+        .select("id, kind")
+        .eq("room_id", data.roomId),
+      supabase
+        .from("scheduled_messages")
+        .select("id, content, scheduled_at, status")
+        .eq("room_id", data.roomId)
+        .in("status", ["pending", "sent"])
+        .order("scheduled_at", { ascending: true })
+        .limit(100),
+      supabase
+        .from("recurring_schedules")
+        .select("id, title, is_active")
+        .eq("room_id", data.roomId)
+        .order("title", { ascending: true }),
+    ]);
+    return {
+      templates: tpls.data ?? [],
+      scheduled: scheds.data ?? [],
+      recurring: recs.data ?? [],
+    };
+  });
+
 async function callSmmPanel(params: Record<string, string | number>) {
   const key = process.env.JAP_API_KEY || process.env.SMM_PANEL_API_KEY;
   if (!key) throw new Error("JAP_API_KEY não configurado");
