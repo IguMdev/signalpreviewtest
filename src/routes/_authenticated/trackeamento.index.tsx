@@ -42,7 +42,7 @@ function TrackeamentoListPage() {
   const accounts = useQuery({
     queryKey: ["telegram-accounts-mini"],
     queryFn: async () => {
-      const { data } = await supabase.from("telegram_accounts").select("id,bot_username,name").order("created_at", { ascending: false });
+      const { data } = await supabase.from("telegram_accounts").select("id,bot_username").order("created_at", { ascending: false });
       return data ?? [];
     },
   });

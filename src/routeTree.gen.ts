@@ -22,6 +22,7 @@ import { Route as AuthenticatedPerfilRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedMensagensRouteImport } from './routes/_authenticated/mensagens'
 import { Route as AuthenticatedMembrosRouteImport } from './routes/_authenticated/membros'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedTrackeamentoIndexRouteImport } from './routes/_authenticated/trackeamento.index'
 import { Route as AuthenticatedRoomsIndexRouteImport } from './routes/_authenticated/rooms.index'
 import { Route as AuthenticatedIntegracoesMetaRouteImport } from './routes/_authenticated/integracoes.meta'
 import { Route as AuthenticatedBotsLogsRouteImport } from './routes/_authenticated/bots.logs'
@@ -104,6 +105,12 @@ const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedTrackeamentoIndexRoute =
+  AuthenticatedTrackeamentoIndexRouteImport.update({
+    id: '/trackeamento/',
+    path: '/trackeamento/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedRoomsIndexRoute = AuthenticatedRoomsIndexRouteImport.update({
   id: '/rooms/',
   path: '/rooms/',
@@ -209,6 +216,7 @@ export interface FileRoutesByFullPath {
   '/bots/logs': typeof AuthenticatedBotsLogsRoute
   '/integracoes/meta': typeof AuthenticatedIntegracoesMetaRoute
   '/rooms/': typeof AuthenticatedRoomsIndexRoute
+  '/trackeamento/': typeof AuthenticatedTrackeamentoIndexRoute
   '/rooms/$roomId/edit': typeof AuthenticatedRoomsRoomIdEditRoute
   '/api/public/cron/dispatch-market-tips': typeof ApiPublicCronDispatchMarketTipsRoute
   '/api/public/cron/dispatch-recurring': typeof ApiPublicCronDispatchRecurringRoute
@@ -238,6 +246,7 @@ export interface FileRoutesByTo {
   '/bots/logs': typeof AuthenticatedBotsLogsRoute
   '/integracoes/meta': typeof AuthenticatedIntegracoesMetaRoute
   '/rooms': typeof AuthenticatedRoomsIndexRoute
+  '/trackeamento': typeof AuthenticatedTrackeamentoIndexRoute
   '/rooms/$roomId/edit': typeof AuthenticatedRoomsRoomIdEditRoute
   '/api/public/cron/dispatch-market-tips': typeof ApiPublicCronDispatchMarketTipsRoute
   '/api/public/cron/dispatch-recurring': typeof ApiPublicCronDispatchRecurringRoute
@@ -269,6 +278,7 @@ export interface FileRoutesById {
   '/_authenticated/bots/logs': typeof AuthenticatedBotsLogsRoute
   '/_authenticated/integracoes/meta': typeof AuthenticatedIntegracoesMetaRoute
   '/_authenticated/rooms/': typeof AuthenticatedRoomsIndexRoute
+  '/_authenticated/trackeamento/': typeof AuthenticatedTrackeamentoIndexRoute
   '/_authenticated/rooms/$roomId/edit': typeof AuthenticatedRoomsRoomIdEditRoute
   '/api/public/cron/dispatch-market-tips': typeof ApiPublicCronDispatchMarketTipsRoute
   '/api/public/cron/dispatch-recurring': typeof ApiPublicCronDispatchRecurringRoute
@@ -300,6 +310,7 @@ export interface FileRouteTypes {
     | '/bots/logs'
     | '/integracoes/meta'
     | '/rooms/'
+    | '/trackeamento/'
     | '/rooms/$roomId/edit'
     | '/api/public/cron/dispatch-market-tips'
     | '/api/public/cron/dispatch-recurring'
@@ -329,6 +340,7 @@ export interface FileRouteTypes {
     | '/bots/logs'
     | '/integracoes/meta'
     | '/rooms'
+    | '/trackeamento'
     | '/rooms/$roomId/edit'
     | '/api/public/cron/dispatch-market-tips'
     | '/api/public/cron/dispatch-recurring'
@@ -359,6 +371,7 @@ export interface FileRouteTypes {
     | '/_authenticated/bots/logs'
     | '/_authenticated/integracoes/meta'
     | '/_authenticated/rooms/'
+    | '/_authenticated/trackeamento/'
     | '/_authenticated/rooms/$roomId/edit'
     | '/api/public/cron/dispatch-market-tips'
     | '/api/public/cron/dispatch-recurring'
@@ -477,6 +490,13 @@ declare module '@tanstack/react-router' {
       path: '/dashboard'
       fullPath: '/dashboard'
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/trackeamento/': {
+      id: '/_authenticated/trackeamento/'
+      path: '/trackeamento'
+      fullPath: '/trackeamento/'
+      preLoaderRoute: typeof AuthenticatedTrackeamentoIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/rooms/': {
@@ -603,6 +623,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedBotsLogsRoute: typeof AuthenticatedBotsLogsRoute
   AuthenticatedIntegracoesMetaRoute: typeof AuthenticatedIntegracoesMetaRoute
   AuthenticatedRoomsIndexRoute: typeof AuthenticatedRoomsIndexRoute
+  AuthenticatedTrackeamentoIndexRoute: typeof AuthenticatedTrackeamentoIndexRoute
   AuthenticatedRoomsRoomIdEditRoute: typeof AuthenticatedRoomsRoomIdEditRoute
 }
 
@@ -622,6 +643,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedBotsLogsRoute: AuthenticatedBotsLogsRoute,
   AuthenticatedIntegracoesMetaRoute: AuthenticatedIntegracoesMetaRoute,
   AuthenticatedRoomsIndexRoute: AuthenticatedRoomsIndexRoute,
+  AuthenticatedTrackeamentoIndexRoute: AuthenticatedTrackeamentoIndexRoute,
   AuthenticatedRoomsRoomIdEditRoute: AuthenticatedRoomsRoomIdEditRoute,
 }
 
