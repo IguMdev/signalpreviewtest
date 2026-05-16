@@ -51,6 +51,7 @@ export type QuickTemplate = {
   default_room_id: string | null;
   default_account_id: string | null;
   sort_order: number;
+  is_premium: boolean;
 };
 
 type Room = { id: string; name: string; default_account_id: string | null };
@@ -78,7 +79,7 @@ export function QuickTemplatesBar({
       const { data } = await supabase
         .from("quick_send_templates")
         .select(
-          "id, name, content, parse_mode, image_path, image_mime, default_room_id, default_account_id, sort_order",
+          "id, name, content, parse_mode, image_path, image_mime, default_room_id, default_account_id, sort_order, is_premium",
         )
         .order("sort_order", { ascending: true })
         .order("created_at", { ascending: true });
@@ -222,6 +223,7 @@ function QuickTemplateDialog({
     defaultRoomId: string | null;
     defaultAccountId: string | null;
     sortOrder: number;
+    isPremium: boolean;
   }) => Promise<void>;
 }) {
   const [name, setName] = useState(initial?.name ?? "");
@@ -231,6 +233,7 @@ function QuickTemplateDialog({
   const [imagePath, setImagePath] = useState<string | null>(initial?.image_path ?? null);
   const [imageMime, setImageMime] = useState<string | null>(initial?.image_mime ?? null);
   const [uploading, setUploading] = useState(false);
+  const [isPremium, setIsPremium] = useState<boolean>(initial?.is_premium ?? false);
 
   // Auto-pick the room's default bot when room changes and no bot chosen yet.
   useEffect(() => {
@@ -391,6 +394,7 @@ function QuickTemplateDialog({
                 defaultRoomId: roomId || null,
                 defaultAccountId: accountId || null,
                 sortOrder: initial?.sort_order ?? 0,
+                isPremium,
               });
             }}
           >
