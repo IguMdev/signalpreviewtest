@@ -38,8 +38,8 @@ import {
   X,
   Sparkles,
 } from "lucide-react";
-import { Switch } from "@/components/ui/switch";
 import { PremiumEmojiPicker } from "@/components/PremiumEmojiPicker";
+import { Switch } from "@/components/ui/switch";
 
 export type QuickTemplate = {
   id: string;
@@ -51,6 +51,7 @@ export type QuickTemplate = {
   default_room_id: string | null;
   default_account_id: string | null;
   sort_order: number;
+  is_premium: boolean;
 };
 
 type Room = { id: string; name: string; default_account_id: string | null };
@@ -78,7 +79,7 @@ export function QuickTemplatesBar({
       const { data } = await supabase
         .from("quick_send_templates")
         .select(
-          "id, name, content, parse_mode, image_path, image_mime, default_room_id, default_account_id, sort_order",
+          "id, name, content, parse_mode, image_path, image_mime, default_room_id, default_account_id, sort_order, is_premium",
         )
         .order("sort_order", { ascending: true })
         .order("created_at", { ascending: true });
@@ -222,6 +223,7 @@ function QuickTemplateDialog({
     defaultRoomId: string | null;
     defaultAccountId: string | null;
     sortOrder: number;
+    isPremium: boolean;
   }) => Promise<void>;
 }) {
   const [name, setName] = useState(initial?.name ?? "");
@@ -231,6 +233,7 @@ function QuickTemplateDialog({
   const [imagePath, setImagePath] = useState<string | null>(initial?.image_path ?? null);
   const [imageMime, setImageMime] = useState<string | null>(initial?.image_mime ?? null);
   const [uploading, setUploading] = useState(false);
+  const [isPremium, setIsPremium] = useState<boolean>(initial?.is_premium ?? false);
 
   // Auto-pick the room's default bot when room changes and no bot chosen yet.
   useEffect(() => {
@@ -372,6 +375,19 @@ function QuickTemplateDialog({
               </label>
             )}
           </div>
+
+          <div className="flex items-center justify-between rounded-md border border-border/60 px-3 py-2">
+            <div className="flex items-center gap-2 text-sm">
+              <Sparkles className="size-4 text-primary" />
+              <div>
+                <div className="font-medium">Usar conta Premium por padrão</div>
+                <div className="text-xs text-muted-foreground">
+                  Quando OFF: tokens {"{EMOJI}"} são enviados como texto puro (preview), sem usar a conta Premium.
+                </div>
+              </div>
+            </div>
+            <Switch checked={isPremium} onCheckedChange={setIsPremium} />
+          </div>
         </div>
 
         <DialogFooter>
@@ -391,6 +407,7 @@ function QuickTemplateDialog({
                 defaultRoomId: roomId || null,
                 defaultAccountId: accountId || null,
                 sortOrder: initial?.sort_order ?? 0,
+                isPremium,
               });
             }}
           >
@@ -430,8 +447,12 @@ function QuickSendDialog({
   const [submitting, setSubmitting] = useState(false);
   const premiumKey = `qst:premium:${tpl.id}`;
   const [premium, setPremiumState] = useState<boolean>(() => {
+    // Default: usa o is_premium do modelo; localStorage como override
     if (typeof window === "undefined") return false;
-    return window.localStorage.getItem(premiumKey) === "1";
+    const ls = window.localStorage.getItem(premiumKey);
+    if (ls === "1") return true;
+    if (ls === "0") return false;
+    return Boolean(tpl.is_premium);
   });
   const setPremium = (v: boolean) => {
     setPremiumState(v);

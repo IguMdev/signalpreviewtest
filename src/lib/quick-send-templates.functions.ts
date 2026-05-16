@@ -6,12 +6,10 @@ import { callTelegram } from "@/lib/telegram.server";
 import {
   sendPhotoWithPremiumEmojiCaptionRetry,
   sendTextWithPremiumEmojisRetry,
+  getUserEmojiLookup,
 } from "@/lib/premium-send.server";
 import { mirrorIfMarked } from "@/lib/forwarder.server";
-import { hasEmojiTokens } from "@/lib/premium-emoji-render";
-
-const PREMIUM_LOCK_ERROR =
-  "Envio bloqueado: a mensagem contém tokens {EMOJI} que não foram processados. Conecte uma conta Telegram Premium ativa e cadastre os emojis em Premium Emojis para liberar o envio.";
+import { hasEmojiTokens, renderEmojiTokensPlain } from "@/lib/premium-emoji-render";
 
 const UpsertInput = z.object({
   id: z.string().uuid().optional(),
@@ -24,6 +22,7 @@ const UpsertInput = z.object({
   defaultRoomId: z.string().uuid().nullable().optional(),
   defaultAccountId: z.string().uuid().nullable().optional(),
   sortOrder: z.number().int().min(0).max(9999).default(0),
+  isPremium: z.boolean().default(false),
 });
 
 export const upsertQuickTemplate = createServerFn({ method: "POST" })
@@ -42,6 +41,7 @@ export const upsertQuickTemplate = createServerFn({ method: "POST" })
       default_room_id: data.defaultRoomId ?? null,
       default_account_id: data.defaultAccountId ?? null,
       sort_order: data.sortOrder,
+      is_premium: data.isPremium,
     };
     if (data.id) {
       const { error } = await supabase
@@ -90,7 +90,7 @@ export const sendQuickTemplate = createServerFn({ method: "POST" })
     const { userId } = context;
     const { data: tpl, error } = await supabaseAdmin
       .from("quick_send_templates")
-      .select("id, user_id, image_path")
+      .select("id, user_id, image_path, is_premium")
       .eq("id", data.id)
       .maybeSingle();
     if (error) throw new Error(error.message);
@@ -121,76 +121,113 @@ export const sendQuickTemplate = createServerFn({ method: "POST" })
       ? supabaseAdmin.storage.from("room-images").getPublicUrl(imagePath).data.publicUrl
       : null;
 
+    // Toggle global por sala (forwarder_premium_enabled funciona como master).
+    // O toggle por item vem em `data.premium` (vindo da UI do dialog).
+    const { data: roomCfg } = await supabaseAdmin
+      .from("room_engagement_settings")
+      .select("forwarder_premium_enabled")
+      .eq("room_id", data.roomId)
+      .maybeSingle();
+    const globalPremiumOn = roomCfg?.forwarder_premium_enabled !== false; // default ON se não houver registro
+    const itemPremiumOn = data.premium === true;
+    const wantsPremium = globalPremiumOn && itemPremiumOn;
+    const hasTokens = hasEmojiTokens(data.content);
+
+    console.log(
+      `[quick-send] tpl=${data.id} room=${data.roomId} globalPremium=${globalPremiumOn} itemPremium=${itemPremiumOn} hasTokens=${hasTokens} -> wantsPremium=${wantsPremium}`,
+    );
+
+    // Quando o usuário desativou o toggle Premium mas o texto tem {EMOJI},
+    // renderizamos os tokens em texto puro (preview_char) e seguimos via Bot API.
+    let effectiveContent = data.content;
+    let plainForced = false;
+    if (!wantsPremium && hasTokens) {
+      const lookup = await getUserEmojiLookup(userId);
+      effectiveContent = renderEmojiTokensPlain(data.content, lookup);
+      plainForced = true;
+      console.log(`[quick-send] toggle Premium OFF: renderizando {EMOJI} como texto puro`);
+    }
+
     for (const c of chats) {
       let r: { ok: boolean; result?: { message_id?: number }; description?: string };
-      const wantsPremium = data.premium || hasEmojiTokens(data.content);
+      let premiumStatus:
+        | "premium_sent"
+        | "premium_blocked"
+        | "no_premium_account"
+        | "plain"
+        | "plain_forced" = plainForced ? "plain_forced" : "plain";
+
       if (wantsPremium && imagePath && publicUrl) {
         const p = await sendPhotoWithPremiumEmojiCaptionRetry({
           userId,
           chatId: c.chat_id,
           photoUrl: publicUrl,
-          caption: data.content,
+          caption: effectiveContent,
           strict: true,
         });
         if (p.applied) {
+          premiumStatus = p.ok ? "premium_sent" : "premium_blocked";
           r = p.ok
             ? { ok: true, result: { message_id: p.messageId ?? undefined } }
             : { ok: false, description: p.error };
-        } else if (hasEmojiTokens(data.content)) {
-          r = { ok: false, description: PREMIUM_LOCK_ERROR };
         } else {
+          // Premium não pôde aplicar (sem conta ativa) → fallback plain
+          premiumStatus = "no_premium_account";
+          const lookup = await getUserEmojiLookup(userId);
+          const fallback = renderEmojiTokensPlain(data.content, lookup);
           r = await callTelegram<{ message_id: number }>(acc.bot_token, "sendPhoto", {
             chat_id: c.chat_id,
             photo: publicUrl,
-            caption: data.content || undefined,
-            parse_mode: data.content ? data.parseMode : undefined,
+            caption: fallback || undefined,
+            parse_mode: fallback ? data.parseMode : undefined,
           });
         }
-      } else if (wantsPremium && !imagePath && data.content) {
+      } else if (wantsPremium && !imagePath && effectiveContent) {
         const p = await sendTextWithPremiumEmojisRetry({
           userId,
           chatId: c.chat_id,
-          text: data.content,
+          text: effectiveContent,
           strict: true,
         });
         if (p.applied) {
+          premiumStatus = p.ok ? "premium_sent" : "premium_blocked";
           r = p.ok
             ? { ok: true, result: { message_id: p.messageId ?? undefined } }
             : { ok: false, description: p.error };
-        } else if (hasEmojiTokens(data.content)) {
-          r = { ok: false, description: PREMIUM_LOCK_ERROR };
         } else {
+          premiumStatus = "no_premium_account";
+          const lookup = await getUserEmojiLookup(userId);
+          const fallback = renderEmojiTokensPlain(data.content, lookup);
           r = await callTelegram<{ message_id: number }>(acc.bot_token, "sendMessage", {
             chat_id: c.chat_id,
-            text: data.content,
+            text: fallback,
             parse_mode: data.parseMode,
           });
         }
       } else if (imagePath && publicUrl) {
-        if (hasEmojiTokens(data.content)) {
-          r = { ok: false, description: PREMIUM_LOCK_ERROR };
-        } else
         r = await callTelegram<{ message_id: number }>(acc.bot_token, "sendPhoto", {
           chat_id: c.chat_id,
           photo: publicUrl,
-          caption: data.content || undefined,
-          parse_mode: data.content ? data.parseMode : undefined,
+          caption: effectiveContent || undefined,
+          parse_mode: effectiveContent ? data.parseMode : undefined,
         });
-      } else if (hasEmojiTokens(data.content)) {
-        r = { ok: false, description: PREMIUM_LOCK_ERROR };
       } else {
         r = await callTelegram<{ message_id: number }>(acc.bot_token, "sendMessage", {
           chat_id: c.chat_id,
-          text: data.content,
+          text: effectiveContent,
           parse_mode: data.parseMode,
         });
       }
+      console.log(
+        `[quick-send] tpl=${data.id} chat=${c.chat_id} premium_status=${premiumStatus} ok=${r.ok} ${r.ok ? "" : `err="${r.description}"`}`,
+      );
       await supabaseAdmin.from("message_logs").insert({
         user_id: userId,
         chat_id: c.chat_id,
         ok: r.ok,
         telegram_message_id: r.result?.message_id ?? null,
         error: r.ok ? null : r.description ?? "erro",
+        premium_status: premiumStatus,
       } as never);
       if (r.ok) sent++;
       else {

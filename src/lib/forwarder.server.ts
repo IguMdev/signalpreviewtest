@@ -38,6 +38,29 @@ function buttonRowsFromMarkup(markup: MirrorPayload["replyMarkup"]): PremiumButt
 
 type PremiumMirrorStatus = "sent" | "no-account" | "blocked" | "skip";
 
+async function logForwarder(opts: {
+  userId: string;
+  roomId: string;
+  origin: Origin;
+  status: "mirror_premium" | "mirror_copy" | "mirror_premium_blocked" | "mirror_premium_no_account" | "mirror_skip";
+  targetChatId?: number | string;
+  detail?: string;
+}) {
+  try {
+    await supabaseAdmin.from("bot_execution_logs").insert({
+      user_id: opts.userId,
+      bot_type: "encaminhador",
+      event: opts.status,
+      message: opts.detail ?? null,
+      room_id: opts.roomId,
+      target_chat_id: opts.targetChatId != null ? Number(opts.targetChatId) : null,
+      details: { origin: opts.origin },
+    } as never);
+  } catch {
+    /* logging must never throw */
+  }
+}
+
 function isNoPremiumAccount(result: { applied: boolean; ok?: boolean; reason?: string }): boolean {
   return result.reason === "no-premium-account" || result.reason === "no-active-premium-account";
 }
@@ -152,19 +175,67 @@ export async function mirrorIfMarked(opts: {
 
   for (const t of targets) {
     if (String(t) === String(opts.fromChatId)) continue;
-    if (opts.payload?.content && hasEmojiTokens(opts.payload.content)) {
+    const wantsPremium =
+      Boolean(cfg.forwarder_premium_enabled) &&
+      Boolean(opts.payload?.content) &&
+      hasEmojiTokens(opts.payload?.content ?? "");
+    if (wantsPremium) {
+      console.log(`[forwarder] sendPremiumMirror origin=${opts.origin.kind}:${opts.origin.id} target=${t}`);
       const status = await sendPremiumMirror({
-        payload: opts.payload,
+        payload: opts.payload!,
         targetChatId: t,
-        userId: opts.payload.userId ?? cfg.user_id,
+        userId: opts.payload?.userId ?? cfg.user_id,
         premiumAccountId: cfg.forwarder_premium_account_id,
       }).catch(() => "blocked" as const);
-      if (status === "sent" || status === "blocked") continue;
+      if (status === "sent") {
+        await logForwarder({
+          userId: cfg.user_id,
+          roomId: opts.roomId,
+          origin: opts.origin,
+          status: "mirror_premium",
+          targetChatId: t,
+          detail: "Enviado via conta Premium (custom_emoji preservados)",
+        });
+        continue;
+      }
+      if (status === "blocked") {
+        await logForwarder({
+          userId: cfg.user_id,
+          roomId: opts.roomId,
+          origin: opts.origin,
+          status: "mirror_premium_blocked",
+          targetChatId: t,
+          detail: "Premium falhou no envio (bloqueado, sem fallback)",
+        });
+        continue;
+      }
+      if (status === "no-account") {
+        await logForwarder({
+          userId: cfg.user_id,
+          roomId: opts.roomId,
+          origin: opts.origin,
+          status: "mirror_premium_no_account",
+          targetChatId: t,
+          detail: "Sem conta Premium ativa — caindo para copyMessage",
+        });
+        // segue para copyMessage abaixo
+      }
     }
+    console.log(`[forwarder] copyMessage origin=${opts.origin.kind}:${opts.origin.id} target=${t} (premium_enabled=${cfg.forwarder_premium_enabled})`);
     await callTelegram(acc.bot_token, "copyMessage", {
       chat_id: t,
       from_chat_id: opts.fromChatId,
       message_id: opts.messageId,
     }).catch(() => undefined);
+    await logForwarder({
+      userId: cfg.user_id,
+      roomId: opts.roomId,
+      origin: opts.origin,
+      status: "mirror_copy",
+      targetChatId: t,
+      detail: cfg.forwarder_premium_enabled
+        ? "copyMessage (sem tokens premium ou sem conta)"
+        : "copyMessage (toggle Premium desativado)",
+    });
   }
 }

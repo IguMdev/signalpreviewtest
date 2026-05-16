@@ -218,6 +218,7 @@ export type Database = {
           error: string | null
           id: string
           ok: boolean
+          premium_status: string | null
           scheduled_message_id: string | null
           telegram_message_id: number | null
           user_id: string
@@ -228,6 +229,7 @@ export type Database = {
           error?: string | null
           id?: string
           ok: boolean
+          premium_status?: string | null
           scheduled_message_id?: string | null
           telegram_message_id?: number | null
           user_id: string
@@ -238,6 +240,7 @@ export type Database = {
           error?: string | null
           id?: string
           ok?: boolean
+          premium_status?: string | null
           scheduled_message_id?: string | null
           telegram_message_id?: number | null
           user_id?: string
@@ -388,6 +391,7 @@ export type Database = {
           image_ext: string | null
           image_mime: string | null
           image_path: string | null
+          is_premium: boolean
           name: string
           parse_mode: string
           sort_order: number
@@ -403,6 +407,7 @@ export type Database = {
           image_ext?: string | null
           image_mime?: string | null
           image_path?: string | null
+          is_premium?: boolean
           name: string
           parse_mode?: string
           sort_order?: number
@@ -418,6 +423,7 @@ export type Database = {
           image_ext?: string | null
           image_mime?: string | null
           image_path?: string | null
+          is_premium?: boolean
           name?: string
           parse_mode?: string
           sort_order?: number
@@ -1029,6 +1035,7 @@ export type Database = {
           end_time: string
           id: string
           is_active: boolean
+          last_session_fire: Json
           martingale: number
           max_losses: number
           name: string
@@ -1048,6 +1055,7 @@ export type Database = {
           end_time: string
           id?: string
           is_active?: boolean
+          last_session_fire?: Json
           martingale?: number
           max_losses?: number
           name: string
@@ -1067,6 +1075,7 @@ export type Database = {
           end_time?: string
           id?: string
           is_active?: boolean
+          last_session_fire?: Json
           martingale?: number
           max_losses?: number
           name?: string
@@ -1170,6 +1179,7 @@ export type Database = {
           content: string | null
           created_at: string
           id: string
+          is_premium: boolean
           last_error: string | null
           parse_mode: string
           room_id: string
@@ -1184,6 +1194,7 @@ export type Database = {
           content?: string | null
           created_at?: string
           id?: string
+          is_premium?: boolean
           last_error?: string | null
           parse_mode?: string
           room_id: string
@@ -1198,6 +1209,7 @@ export type Database = {
           content?: string | null
           created_at?: string
           id?: string
+          is_premium?: boolean
           last_error?: string | null
           parse_mode?: string
           room_id?: string
