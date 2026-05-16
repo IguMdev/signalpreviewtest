@@ -14,6 +14,7 @@ import { MessageCircle, Plus, Trash2, ArrowUp, ArrowDown, ImageIcon } from "luci
 import { toast } from "sonner";
 import { getWelcomeBotConfig, upsertWelcomeBotConfig } from "@/lib/engagement.functions";
 import { PremiumEmojiPicker } from "@/components/PremiumEmojiPicker";
+import { getPremiumAccountAvatar } from "@/lib/premium-account.functions";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 function publicUrl(bucket: string, path: string) {
@@ -32,6 +33,42 @@ function stringToColor(str?: string) {
   for (let i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash);
   const c = (hash & 0x00ffffff).toString(16).padStart(6, "0");
   return `#${c}`;
+}
+
+function PremiumAccountIdentity({ account, compact = false }: { account: any; compact?: boolean }) {
+  const avatarQ = useQuery({
+    queryKey: ["premium-avatar", account.id],
+    queryFn: () => getPremiumAccountAvatar({ data: { accountId: account.id } }),
+    enabled: Boolean(account?.id),
+    staleTime: 1000 * 60 * 60,
+    refetchOnWindowFocus: false,
+  });
+  const handle = account.bot_username ? `@${account.bot_username}` : account.phone || "";
+  const avatarUrl = avatarQ.data?.dataUrl ?? null;
+  const sizeClass = compact ? "w-7 h-7" : "w-8 h-8";
+
+  return (
+    <div className="flex items-center gap-2 mt-1">
+      {avatarUrl ? (
+        <img
+          src={avatarUrl}
+          alt={account.label}
+          className={`${sizeClass} rounded-full object-cover border border-border/60 shrink-0`}
+        />
+      ) : (
+        <div
+          className={`${sizeClass} rounded-full flex items-center justify-center text-[10px] font-bold text-primary-foreground shrink-0`}
+          style={{ backgroundColor: stringToColor(account.id) }}
+          title={account.label}
+        >
+          {getInitials(account.label)}
+        </div>
+      )}
+      <p className="text-[11px] text-muted-foreground">
+        Conectada como <span className="font-medium text-foreground">{account.label}</span>{handle ? ` (${handle})` : ""}.
+      </p>
+    </div>
+  );
 }
 
 export const Route = createFileRoute("/_authenticated/bots/boasvindas")({
