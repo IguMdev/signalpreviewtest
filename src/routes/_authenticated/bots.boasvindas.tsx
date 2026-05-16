@@ -515,22 +515,7 @@ function ExtraEditor({
             </Select>
             {premiumAccountId && (() => {
               const acc = premiumAccounts.find((a: any) => a.id === premiumAccountId) as any;
-              if (!acc) return null;
-              const handle = acc.bot_username ? `@${acc.bot_username}` : acc.phone || "";
-              return (
-                <div className="flex items-center gap-2 mt-1">
-                  <div
-                    className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0"
-                    style={{ backgroundColor: stringToColor(acc.id) }}
-                    title={acc.label}
-                  >
-                    {getInitials(acc.label)}
-                  </div>
-                  <p className="text-[11px] text-muted-foreground">
-                    Conectada como <span className="font-medium text-foreground">{acc.label}</span>{handle ? ` (${handle})` : ""}.
-                  </p>
-                </div>
-              );
+              return acc ? <PremiumAccountIdentity account={acc} compact /> : null;
             })()}
           </div>
         )}
