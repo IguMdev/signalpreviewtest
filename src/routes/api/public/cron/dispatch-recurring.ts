@@ -275,8 +275,9 @@ export const Route = createFileRoute("/api/public/cron/dispatch-recurring")({
           let okAny = false;
           for (const c of chats) {
             let r: { ok: boolean; result?: { message_id?: number }; description?: string };
+            const wantsPremium = s.is_premium || hasEmojiTokens(s.content);
             const premium =
-              s.is_premium && !s.image_path && !video && s.content
+              wantsPremium && !s.image_path && !video && s.content
                 ? await sendTextWithPremiumEmojis({
                     userId: s.user_id,
                     chatId: c.chat_id,
@@ -299,7 +300,7 @@ export const Route = createFileRoute("/api/public/cron/dispatch-recurring")({
                     const { data: pub } = supabaseAdmin.storage
                       .from("room-images")
                       .getPublicUrl(s.image_path!);
-                    if (s.is_premium) {
+                    if (wantsPremium) {
                       const premiumPhoto = await sendPhotoWithPremiumEmojiCaption({
                         userId: s.user_id,
                         chatId: c.chat_id,
@@ -497,7 +498,7 @@ export const Route = createFileRoute("/api/public/cron/dispatch-recurring")({
                 .eq("id", p.schedule_id)
                 .maybeSingle()
             : { data: null };
-          const isPremium = Boolean(parentSchedule?.is_premium);
+          const isPremium = Boolean(parentSchedule?.is_premium) || hasEmojiTokens(p.content);
           const pReplyMarkup = undefined;
           const pIsNormalVideo = video && video.kind === "normal";
           for (const c of chats) {
