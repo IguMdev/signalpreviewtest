@@ -336,13 +336,14 @@ async function sendScheduled(): Promise<number> {
       MARTINGALE: String(s.max_gales),
     });
 
+    const signalReplyMarkup = await buildReplyMarkup(ctx.room.user_id, ctx.buttons, "signal");
     const ids = await sendToRoom({
       userId: ctx.room.user_id,
       botToken: ctx.botToken,
       chatIds: ctx.chatIds,
       text,
       parseMode: tpl.parse_mode,
-      replyMarkup: await buildReplyMarkup(ctx.room.user_id, ctx.buttons, "signal"),
+      replyMarkup: signalReplyMarkup,
     });
 
     await supabaseAdmin
@@ -358,6 +359,12 @@ async function sendScheduled(): Promise<number> {
         fromChatId: Number(cid),
         messageId: mid,
         origin: { kind: "template", id: "signal" },
+        payload: {
+          userId: ctx.room.user_id,
+          content: text,
+          parseMode: tpl.parse_mode,
+          replyMarkup: signalReplyMarkup,
+        },
       });
     }
     sent++;
@@ -435,6 +442,7 @@ async function postResult(
   });
 
   const replyTo = asMessageIds(s.signal_message_ids);
+  const resultReplyMarkup = await buildReplyMarkup(ctx.room.user_id, ctx.buttons, tplKind);
   const ids = await sendToRoom({
     userId: ctx.room.user_id,
     botToken: ctx.botToken,
@@ -443,7 +451,7 @@ async function postResult(
     parseMode: tpl.parse_mode,
     imagePath: tpl.image_path,
     replyTo,
-    replyMarkup: await buildReplyMarkup(ctx.room.user_id, ctx.buttons, tplKind),
+    replyMarkup: resultReplyMarkup,
   });
   for (const [cid, mid] of Object.entries(ids)) {
     await mirrorIfMarked({
@@ -451,6 +459,13 @@ async function postResult(
       fromChatId: Number(cid),
       messageId: mid,
       origin: { kind: "template", id: tplKind },
+      payload: {
+        userId: ctx.room.user_id,
+        content: text,
+        parseMode: tpl.parse_mode,
+        imagePath: tpl.image_path,
+        replyMarkup: resultReplyMarkup,
+      },
     });
   }
 
