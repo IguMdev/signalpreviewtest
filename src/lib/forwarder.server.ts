@@ -159,6 +159,19 @@ export async function mirrorIfMarked(opts: {
   else marked = (cfg.forwarder_marked_templates ?? []).includes(opts.origin.id);
   if (!marked) return;
 
+  // Marca esta mensagem (chat+message_id da origem) como "já tratada pelo mirror interno".
+  // O webhook do BotEncaminhador consulta esta tabela e pula o copyMessage,
+  // evitando que a mesma mensagem seja encaminhada duas vezes ao destino.
+  await supabaseAdmin
+    .from("forwarder_dedupe")
+    .upsert(
+      { chat_id: Number(opts.fromChatId), message_id: Number(opts.messageId) } as never,
+      { onConflict: "chat_id,message_id" },
+    )
+    .then(() => undefined, (e) => {
+      console.error("[forwarder] dedupe insert failed:", e);
+    });
+
   const { data: room } = await supabaseAdmin
     .from("rooms")
     .select("default_account_id")
