@@ -12,6 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Forward, ImageIcon, RefreshCw, Sparkles, CheckCircle2, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { getForwarderConfig, upsertForwarderConfig, listAccountChats, listForwarderSourceItems } from "@/lib/engagement.functions";
+import { getPremiumAccountAvatar } from "@/lib/premium-account.functions";
 
 export const Route = createFileRoute("/_authenticated/bots/encaminhador")({
   component: EncaminhadorPage,
@@ -24,6 +25,25 @@ function templateKindLabel(kind: string): string {
     buy_direction: "Direção compra", sell_direction: "Direção venda",
   };
   return map[kind] ?? kind;
+}
+
+function PremiumAvatar({ accountId, label }: { accountId: string; label: string }) {
+  const avatarQ = useQuery({
+    queryKey: ["premium-avatar", accountId],
+    queryFn: () => getPremiumAccountAvatar({ data: { accountId } }),
+    enabled: Boolean(accountId),
+    staleTime: 1000 * 60 * 60,
+    refetchOnWindowFocus: false,
+  });
+  const url = avatarQ.data?.dataUrl ?? null;
+  const initials = label.split(/\s+/).map((p) => p[0]).filter(Boolean).slice(0, 2).join("").toUpperCase();
+  return url ? (
+    <img src={url} alt={label} className="size-7 rounded-full object-cover border border-border/60 shrink-0" />
+  ) : (
+    <div className="size-7 rounded-full flex items-center justify-center bg-primary text-[10px] font-bold text-primary-foreground shrink-0">
+      {initials || "?"}
+    </div>
+  );
 }
 
 function ItemList({ title, empty, items, value, onChange }: {
@@ -252,8 +272,14 @@ function EncaminhadorPage() {
                         </SelectContent>
                       </Select>
                       {premiumAccountId && (
-                        <div className="flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400">
-                          <CheckCircle2 className="size-3.5" /> Conta conectada e pronta para uso.
+                        <div className="flex items-center gap-2 mt-1">
+                          {(() => {
+                            const acc = activePremiumAccounts.find((a) => a.id === premiumAccountId);
+                            return acc ? <PremiumAvatar accountId={acc.id} label={acc.label} /> : null;
+                          })()}
+                          <div className="flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400">
+                            <CheckCircle2 className="size-3.5" /> Conta conectada e pronta para uso.
+                          </div>
                         </div>
                       )}
                       <p className="text-[11px] text-muted-foreground">
