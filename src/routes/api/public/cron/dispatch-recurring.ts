@@ -178,6 +178,9 @@ async function sendOne(
         );
       }
     }
+    if (hasEmojiTokens(msg.content)) {
+      return { ok: false, description: PREMIUM_LOCK_ERROR };
+    }
     return await callTelegram<{ message_id: number }>(botToken, "sendPhoto", {
       chat_id: chatId,
       photo: pub.publicUrl,
@@ -185,6 +188,9 @@ async function sendOne(
       parse_mode: msg.content ? msg.parse_mode : undefined,
       reply_markup: msg.reply_markup,
     });
+  }
+  if (hasEmojiTokens(msg.content)) {
+    return { ok: false, description: PREMIUM_LOCK_ERROR };
   }
   return await callTelegram<{ message_id: number }>(botToken, "sendMessage", {
     chat_id: chatId,
