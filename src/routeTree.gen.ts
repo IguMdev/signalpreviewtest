@@ -27,13 +27,16 @@ import { Route as AuthenticatedIntegracoesMetaRouteImport } from './routes/_auth
 import { Route as AuthenticatedBotsLogsRouteImport } from './routes/_authenticated/bots.logs'
 import { Route as AuthenticatedBotsEncaminhadorRouteImport } from './routes/_authenticated/bots.encaminhador'
 import { Route as AuthenticatedBotsBoasvindasRouteImport } from './routes/_authenticated/bots.boasvindas'
+import { Route as ApiPublicTrackClickRouteImport } from './routes/api/public/track/click'
 import { Route as ApiPublicKirvanoWebhookRouteImport } from './routes/api/public/kirvano/webhook'
 import { Route as ApiPublicCronDispatchSignalsRouteImport } from './routes/api/public/cron/dispatch-signals'
 import { Route as ApiPublicCronDispatchSessionsRouteImport } from './routes/api/public/cron/dispatch-sessions'
 import { Route as ApiPublicCronDispatchRecurringRouteImport } from './routes/api/public/cron/dispatch-recurring'
 import { Route as ApiPublicCronDispatchMarketTipsRouteImport } from './routes/api/public/cron/dispatch-market-tips'
 import { Route as AuthenticatedRoomsRoomIdEditRouteImport } from './routes/_authenticated/rooms.$roomId.edit'
+import { Route as ApiPublicTrackPostbackPixelIdRouteImport } from './routes/api/public/track/postback.$pixelId'
 import { Route as ApiPublicTelegramWebhookAccountIdRouteImport } from './routes/api/public/telegram/webhook.$accountId'
+import { Route as ApiPublicTrackGClickIdOfferSlugRouteImport } from './routes/api/public/track/g.$clickId.$offerSlug'
 
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
@@ -129,6 +132,11 @@ const AuthenticatedBotsBoasvindasRoute =
     path: '/bots/boasvindas',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const ApiPublicTrackClickRoute = ApiPublicTrackClickRouteImport.update({
+  id: '/api/public/track/click',
+  path: '/api/public/track/click',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicKirvanoWebhookRoute = ApiPublicKirvanoWebhookRouteImport.update({
   id: '/api/public/kirvano/webhook',
   path: '/api/public/kirvano/webhook',
@@ -164,10 +172,22 @@ const AuthenticatedRoomsRoomIdEditRoute =
     path: '/rooms/$roomId/edit',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const ApiPublicTrackPostbackPixelIdRoute =
+  ApiPublicTrackPostbackPixelIdRouteImport.update({
+    id: '/api/public/track/postback/$pixelId',
+    path: '/api/public/track/postback/$pixelId',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicTelegramWebhookAccountIdRoute =
   ApiPublicTelegramWebhookAccountIdRouteImport.update({
     id: '/api/public/telegram/webhook/$accountId',
     path: '/api/public/telegram/webhook/$accountId',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicTrackGClickIdOfferSlugRoute =
+  ApiPublicTrackGClickIdOfferSlugRouteImport.update({
+    id: '/api/public/track/g/$clickId/$offerSlug',
+    path: '/api/public/track/g/$clickId/$offerSlug',
     getParentRoute: () => rootRouteImport,
   } as any)
 
@@ -195,7 +215,10 @@ export interface FileRoutesByFullPath {
   '/api/public/cron/dispatch-sessions': typeof ApiPublicCronDispatchSessionsRoute
   '/api/public/cron/dispatch-signals': typeof ApiPublicCronDispatchSignalsRoute
   '/api/public/kirvano/webhook': typeof ApiPublicKirvanoWebhookRoute
+  '/api/public/track/click': typeof ApiPublicTrackClickRoute
   '/api/public/telegram/webhook/$accountId': typeof ApiPublicTelegramWebhookAccountIdRoute
+  '/api/public/track/postback/$pixelId': typeof ApiPublicTrackPostbackPixelIdRoute
+  '/api/public/track/g/$clickId/$offerSlug': typeof ApiPublicTrackGClickIdOfferSlugRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
@@ -221,7 +244,10 @@ export interface FileRoutesByTo {
   '/api/public/cron/dispatch-sessions': typeof ApiPublicCronDispatchSessionsRoute
   '/api/public/cron/dispatch-signals': typeof ApiPublicCronDispatchSignalsRoute
   '/api/public/kirvano/webhook': typeof ApiPublicKirvanoWebhookRoute
+  '/api/public/track/click': typeof ApiPublicTrackClickRoute
   '/api/public/telegram/webhook/$accountId': typeof ApiPublicTelegramWebhookAccountIdRoute
+  '/api/public/track/postback/$pixelId': typeof ApiPublicTrackPostbackPixelIdRoute
+  '/api/public/track/g/$clickId/$offerSlug': typeof ApiPublicTrackGClickIdOfferSlugRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -249,7 +275,10 @@ export interface FileRoutesById {
   '/api/public/cron/dispatch-sessions': typeof ApiPublicCronDispatchSessionsRoute
   '/api/public/cron/dispatch-signals': typeof ApiPublicCronDispatchSignalsRoute
   '/api/public/kirvano/webhook': typeof ApiPublicKirvanoWebhookRoute
+  '/api/public/track/click': typeof ApiPublicTrackClickRoute
   '/api/public/telegram/webhook/$accountId': typeof ApiPublicTelegramWebhookAccountIdRoute
+  '/api/public/track/postback/$pixelId': typeof ApiPublicTrackPostbackPixelIdRoute
+  '/api/public/track/g/$clickId/$offerSlug': typeof ApiPublicTrackGClickIdOfferSlugRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -277,7 +306,10 @@ export interface FileRouteTypes {
     | '/api/public/cron/dispatch-sessions'
     | '/api/public/cron/dispatch-signals'
     | '/api/public/kirvano/webhook'
+    | '/api/public/track/click'
     | '/api/public/telegram/webhook/$accountId'
+    | '/api/public/track/postback/$pixelId'
+    | '/api/public/track/g/$clickId/$offerSlug'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/login'
@@ -303,7 +335,10 @@ export interface FileRouteTypes {
     | '/api/public/cron/dispatch-sessions'
     | '/api/public/cron/dispatch-signals'
     | '/api/public/kirvano/webhook'
+    | '/api/public/track/click'
     | '/api/public/telegram/webhook/$accountId'
+    | '/api/public/track/postback/$pixelId'
+    | '/api/public/track/g/$clickId/$offerSlug'
   id:
     | '__root__'
     | '/_authenticated'
@@ -330,7 +365,10 @@ export interface FileRouteTypes {
     | '/api/public/cron/dispatch-sessions'
     | '/api/public/cron/dispatch-signals'
     | '/api/public/kirvano/webhook'
+    | '/api/public/track/click'
     | '/api/public/telegram/webhook/$accountId'
+    | '/api/public/track/postback/$pixelId'
+    | '/api/public/track/g/$clickId/$offerSlug'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -342,7 +380,10 @@ export interface RootRouteChildren {
   ApiPublicCronDispatchSessionsRoute: typeof ApiPublicCronDispatchSessionsRoute
   ApiPublicCronDispatchSignalsRoute: typeof ApiPublicCronDispatchSignalsRoute
   ApiPublicKirvanoWebhookRoute: typeof ApiPublicKirvanoWebhookRoute
+  ApiPublicTrackClickRoute: typeof ApiPublicTrackClickRoute
   ApiPublicTelegramWebhookAccountIdRoute: typeof ApiPublicTelegramWebhookAccountIdRoute
+  ApiPublicTrackPostbackPixelIdRoute: typeof ApiPublicTrackPostbackPixelIdRoute
+  ApiPublicTrackGClickIdOfferSlugRoute: typeof ApiPublicTrackGClickIdOfferSlugRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -473,6 +514,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedBotsBoasvindasRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/api/public/track/click': {
+      id: '/api/public/track/click'
+      path: '/api/public/track/click'
+      fullPath: '/api/public/track/click'
+      preLoaderRoute: typeof ApiPublicTrackClickRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/kirvano/webhook': {
       id: '/api/public/kirvano/webhook'
       path: '/api/public/kirvano/webhook'
@@ -515,11 +563,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedRoomsRoomIdEditRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/api/public/track/postback/$pixelId': {
+      id: '/api/public/track/postback/$pixelId'
+      path: '/api/public/track/postback/$pixelId'
+      fullPath: '/api/public/track/postback/$pixelId'
+      preLoaderRoute: typeof ApiPublicTrackPostbackPixelIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/telegram/webhook/$accountId': {
       id: '/api/public/telegram/webhook/$accountId'
       path: '/api/public/telegram/webhook/$accountId'
       fullPath: '/api/public/telegram/webhook/$accountId'
       preLoaderRoute: typeof ApiPublicTelegramWebhookAccountIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/track/g/$clickId/$offerSlug': {
+      id: '/api/public/track/g/$clickId/$offerSlug'
+      path: '/api/public/track/g/$clickId/$offerSlug'
+      fullPath: '/api/public/track/g/$clickId/$offerSlug'
+      preLoaderRoute: typeof ApiPublicTrackGClickIdOfferSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -576,8 +638,11 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicCronDispatchSessionsRoute: ApiPublicCronDispatchSessionsRoute,
   ApiPublicCronDispatchSignalsRoute: ApiPublicCronDispatchSignalsRoute,
   ApiPublicKirvanoWebhookRoute: ApiPublicKirvanoWebhookRoute,
+  ApiPublicTrackClickRoute: ApiPublicTrackClickRoute,
   ApiPublicTelegramWebhookAccountIdRoute:
     ApiPublicTelegramWebhookAccountIdRoute,
+  ApiPublicTrackPostbackPixelIdRoute: ApiPublicTrackPostbackPixelIdRoute,
+  ApiPublicTrackGClickIdOfferSlugRoute: ApiPublicTrackGClickIdOfferSlugRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
