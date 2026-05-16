@@ -335,9 +335,10 @@ export const listForwarderSourceItems = createServerFn({ method: "GET" })
     const { supabase } = context;
     const [tpls, scheds, recs] = await Promise.all([
       supabase
-        .from("room_templates")
-        .select("id, kind")
-        .eq("room_id", data.roomId),
+        .from("quick_send_templates")
+        .select("id, name, sort_order")
+        .eq("default_room_id", data.roomId)
+        .order("sort_order", { ascending: true }),
       supabase
         .from("scheduled_messages")
         .select("id, content, scheduled_at, status")
