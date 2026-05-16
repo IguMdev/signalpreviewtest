@@ -5,7 +5,7 @@ import { callTelegram } from "./telegram.server";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { dispatchVideoNote } from "./videos.functions";
 import { triggerSignalReactions } from "./engagement.functions";
-import { sendTextWithPremiumEmojis } from "./premium-send.server";
+import { sendTextWithPremiumEmojisRetry } from "./premium-send.server";
 import { mirrorIfMarked } from "./forwarder.server";
 import { hasEmojiTokens } from "./premium-emoji-render";
 
@@ -96,7 +96,7 @@ export const dispatchDue = createServerFn({ method: "POST" }).handler(async () =
       let r: { ok: boolean; result?: { message_id?: number }; description?: string };
       const premium =
         !video && msg.content
-          ? await sendTextWithPremiumEmojis({
+          ? await sendTextWithPremiumEmojisRetry({
               userId: msg.user_id,
               chatId: c.chat_id,
               text: msg.content,
