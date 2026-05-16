@@ -7,6 +7,10 @@ import { dispatchVideoNote } from "./videos.functions";
 import { triggerSignalReactions } from "./engagement.functions";
 import { sendTextWithPremiumEmojis } from "./premium-send.server";
 import { mirrorIfMarked } from "./forwarder.server";
+import { hasEmojiTokens } from "./premium-emoji-render";
+
+const PREMIUM_LOCK_ERROR =
+  "Envio bloqueado: a mensagem contém tokens {EMOJI} que não foram processados. Conecte uma conta Telegram Premium ativa e cadastre os emojis em Premium Emojis para liberar o envio.";
 
 export const scheduleMessage = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -102,6 +106,8 @@ export const dispatchDue = createServerFn({ method: "POST" }).handler(async () =
         r = premium.ok
           ? { ok: true, result: { message_id: premium.messageId ?? undefined } }
           : { ok: false, description: premium.error };
+      } else if (hasEmojiTokens(msg.content)) {
+        r = { ok: false, description: PREMIUM_LOCK_ERROR };
       } else r = video
         ? await dispatchVideoNote({
             botToken: acc.bot_token,

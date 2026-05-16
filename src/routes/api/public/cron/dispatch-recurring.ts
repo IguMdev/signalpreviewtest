@@ -11,6 +11,9 @@ import {
 import { renderEmojiTokensPlain, hasEmojiTokens } from "@/lib/premium-emoji-render";
 import { mirrorIfMarked } from "@/lib/forwarder.server";
 
+const PREMIUM_LOCK_ERROR =
+  "Envio bloqueado: a mensagem contém tokens {EMOJI} que não foram processados. Conecte uma conta Telegram Premium ativa e cadastre os emojis em Premium Emojis para liberar o envio.";
+
 async function renderButtonTextForUser(
   userId: string,
   buttonText: string | null | undefined,
@@ -175,6 +178,9 @@ async function sendOne(
         );
       }
     }
+    if (hasEmojiTokens(msg.content)) {
+      return { ok: false, description: PREMIUM_LOCK_ERROR };
+    }
     return await callTelegram<{ message_id: number }>(botToken, "sendPhoto", {
       chat_id: chatId,
       photo: pub.publicUrl,
@@ -182,6 +188,9 @@ async function sendOne(
       parse_mode: msg.content ? msg.parse_mode : undefined,
       reply_markup: msg.reply_markup,
     });
+  }
+  if (hasEmojiTokens(msg.content)) {
+    return { ok: false, description: PREMIUM_LOCK_ERROR };
   }
   return await callTelegram<{ message_id: number }>(botToken, "sendMessage", {
     chat_id: chatId,
@@ -322,6 +331,9 @@ export const Route = createFileRoute("/api/public/cron/dispatch-recurring")({
                         );
                       }
                     }
+                    if (hasEmojiTokens(s.content)) {
+                      return { ok: false, description: PREMIUM_LOCK_ERROR };
+                    }
                     return await callTelegram<{ message_id: number }>(acc.bot_token, "sendPhoto", {
                       chat_id: c.chat_id,
                       photo: pub.publicUrl,
@@ -351,7 +363,9 @@ export const Route = createFileRoute("/api/public/cron/dispatch-recurring")({
                         mimeType: video.mime_type,
                         filename: (video.title || "video").replace(/[^\w.-]+/g, "_") + ".mp4",
                       })
-                  : await callTelegram<{ message_id: number }>(acc.bot_token, "sendMessage", {
+                  : hasEmojiTokens(s.content)
+                    ? { ok: false, description: PREMIUM_LOCK_ERROR }
+                    : await callTelegram<{ message_id: number }>(acc.bot_token, "sendMessage", {
                       chat_id: c.chat_id,
                       text: s.content ?? "",
                       parse_mode: s.parse_mode,

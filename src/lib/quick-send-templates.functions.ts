@@ -8,6 +8,10 @@ import {
   sendTextWithPremiumEmojis,
 } from "@/lib/premium-send.server";
 import { mirrorIfMarked } from "@/lib/forwarder.server";
+import { hasEmojiTokens } from "@/lib/premium-emoji-render";
+
+const PREMIUM_LOCK_ERROR =
+  "Envio bloqueado: a mensagem contém tokens {EMOJI} que não foram processados. Conecte uma conta Telegram Premium ativa e cadastre os emojis em Premium Emojis para liberar o envio.";
 
 const UpsertInput = z.object({
   id: z.string().uuid().optional(),
@@ -119,17 +123,21 @@ export const sendQuickTemplate = createServerFn({ method: "POST" })
 
     for (const c of chats) {
       let r: { ok: boolean; result?: { message_id?: number }; description?: string };
-      if (data.premium && imagePath && publicUrl) {
+      const wantsPremium = data.premium || hasEmojiTokens(data.content);
+      if (wantsPremium && imagePath && publicUrl) {
         const p = await sendPhotoWithPremiumEmojiCaption({
           userId,
           chatId: c.chat_id,
           photoUrl: publicUrl,
           caption: data.content,
+          strict: true,
         });
         if (p.applied) {
           r = p.ok
             ? { ok: true, result: { message_id: p.messageId ?? undefined } }
             : { ok: false, description: p.error };
+        } else if (hasEmojiTokens(data.content)) {
+          r = { ok: false, description: PREMIUM_LOCK_ERROR };
         } else {
           r = await callTelegram<{ message_id: number }>(acc.bot_token, "sendPhoto", {
             chat_id: c.chat_id,
@@ -138,16 +146,19 @@ export const sendQuickTemplate = createServerFn({ method: "POST" })
             parse_mode: data.content ? data.parseMode : undefined,
           });
         }
-      } else if (data.premium && !imagePath && data.content) {
+      } else if (wantsPremium && !imagePath && data.content) {
         const p = await sendTextWithPremiumEmojis({
           userId,
           chatId: c.chat_id,
           text: data.content,
+          strict: true,
         });
         if (p.applied) {
           r = p.ok
             ? { ok: true, result: { message_id: p.messageId ?? undefined } }
             : { ok: false, description: p.error };
+        } else if (hasEmojiTokens(data.content)) {
+          r = { ok: false, description: PREMIUM_LOCK_ERROR };
         } else {
           r = await callTelegram<{ message_id: number }>(acc.bot_token, "sendMessage", {
             chat_id: c.chat_id,
@@ -156,12 +167,17 @@ export const sendQuickTemplate = createServerFn({ method: "POST" })
           });
         }
       } else if (imagePath && publicUrl) {
+        if (hasEmojiTokens(data.content)) {
+          r = { ok: false, description: PREMIUM_LOCK_ERROR };
+        } else
         r = await callTelegram<{ message_id: number }>(acc.bot_token, "sendPhoto", {
           chat_id: c.chat_id,
           photo: publicUrl,
           caption: data.content || undefined,
           parse_mode: data.content ? data.parseMode : undefined,
         });
+      } else if (hasEmojiTokens(data.content)) {
+        r = { ok: false, description: PREMIUM_LOCK_ERROR };
       } else {
         r = await callTelegram<{ message_id: number }>(acc.bot_token, "sendMessage", {
           chat_id: c.chat_id,
