@@ -36,7 +36,11 @@ function buttonRowsFromMarkup(markup: MirrorPayload["replyMarkup"]): PremiumButt
   return rows?.length ? rows : undefined;
 }
 
-type PremiumMirrorStatus = "sent" | "blocked" | "skip";
+type PremiumMirrorStatus = "sent" | "no-account" | "blocked" | "skip";
+
+function isNoPremiumAccount(result: { applied: boolean; ok?: boolean; reason?: string }): boolean {
+  return result.reason === "no-premium-account" || result.reason === "no-active-premium-account";
+}
 
 async function sendPremiumMirror(opts: {
   payload: MirrorPayload;
@@ -63,6 +67,7 @@ async function sendPremiumMirror(opts: {
       strict: true,
       buttonRows,
     });
+    if (isNoPremiumAccount(result)) return "no-account";
     return result.applied && result.ok ? "sent" : "blocked";
   }
 
@@ -77,6 +82,7 @@ async function sendPremiumMirror(opts: {
       strict: true,
       buttonRows,
     });
+    if (isNoPremiumAccount(result)) return "no-account";
     return result.applied && result.ok ? "sent" : "blocked";
   }
 
@@ -88,6 +94,7 @@ async function sendPremiumMirror(opts: {
     strict: true,
     buttonRows,
   });
+  if (isNoPremiumAccount(result)) return "no-account";
   return result.applied && result.ok ? "sent" : "blocked";
 }
 
@@ -145,14 +152,14 @@ export async function mirrorIfMarked(opts: {
 
   for (const t of targets) {
     if (String(t) === String(opts.fromChatId)) continue;
-    if (cfg.forwarder_premium_enabled && opts.payload?.content && hasEmojiTokens(opts.payload.content)) {
+    if (opts.payload?.content && hasEmojiTokens(opts.payload.content)) {
       const status = await sendPremiumMirror({
         payload: opts.payload,
         targetChatId: t,
         userId: opts.payload.userId ?? cfg.user_id,
         premiumAccountId: cfg.forwarder_premium_account_id,
       }).catch(() => "blocked" as const);
-      if (status !== "skip") continue;
+      if (status === "sent" || status === "blocked") continue;
     }
     await callTelegram(acc.bot_token, "copyMessage", {
       chat_id: t,
