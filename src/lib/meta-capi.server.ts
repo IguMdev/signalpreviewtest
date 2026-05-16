@@ -28,8 +28,97 @@ export type MetaCustomData = {
   content_name?: string;
   content_ids?: string[];
   content_type?: string;
+  search_string?: string;
+  predicted_ltv?: number;
+  num_items?: number;
+  status?: string;
   [k: string]: unknown;
 };
+
+/**
+ * Specs por evento padrão do Meta:
+ *  - `required`: campos obrigatórios (Meta retorna erro / não atribui se faltar).
+ *  - `recommended`: campos recomendados para qualidade de matching/atribuição.
+ *  - `monetary`: se true, garantimos value+currency com defaults seguros
+ *    quando o caller não passou (evita rejeição em Purchase/Subscribe/StartTrial).
+ * Referência: https://developers.facebook.com/docs/meta-pixel/reference
+ */
+export const META_EVENT_SPECS: Record<
+  string,
+  { required: string[]; recommended: string[]; monetary?: boolean }
+> = {
+  // Conversão de valor — value+currency são OBRIGATÓRIOS
+  Purchase: { required: ["value", "currency"], recommended: ["content_ids", "content_type", "num_items"], monetary: true },
+  Subscribe: { required: ["value", "currency"], recommended: ["predicted_ltv"], monetary: true },
+  StartTrial: { required: ["value", "currency"], recommended: ["predicted_ltv"], monetary: true },
+
+  // Eventos com value/currency RECOMENDADOS (não falham se ausentes, mas perdem otimização)
+  AddPaymentInfo: { required: [], recommended: ["value", "currency", "content_ids", "content_category"] },
+  AddToCart: { required: [], recommended: ["value", "currency", "content_ids", "content_type", "content_name"] },
+  AddToWishlist: { required: [], recommended: ["value", "currency", "content_name", "content_category"] },
+  InitiateCheckout: { required: [], recommended: ["value", "currency", "content_ids", "num_items"] },
+  Donate: { required: [], recommended: ["value", "currency"] },
+
+  // Conteúdo / leads
+  ViewContent: { required: [], recommended: ["content_ids", "content_type", "content_name", "value", "currency"] },
+  Search: { required: [], recommended: ["search_string", "content_ids", "content_category"] },
+  Lead: { required: [], recommended: ["content_name", "content_category", "value", "currency"] },
+  CompleteRegistration: { required: [], recommended: ["content_name", "status", "value", "currency"] },
+  Contact: { required: [], recommended: [] },
+  CustomizeProduct: { required: [], recommended: [] },
+  FindLocation: { required: [], recommended: [] },
+  Schedule: { required: [], recommended: [] },
+  SubmitApplication: { required: [], recommended: [] },
+
+  // App / engajamento
+  Rate: { required: [], recommended: [] },
+  SpentCredits: { required: [], recommended: ["value"] },
+  AchievementUnlocked: { required: [], recommended: [] },
+  ActivateApp: { required: [], recommended: [] },
+  CompleteTutorial: { required: [], recommended: [] },
+  LevelAchieved: { required: [], recommended: [] },
+  UnlockAchievement: { required: [], recommended: [] },
+
+  // Pixel-equivalentes
+  PageView: { required: [], recommended: [] },
+  AdImpression: { required: [], recommended: [] },
+  AdClick: { required: [], recommended: [] },
+};
+
+/**
+ * Aplica defaults seguros e valida required fields do evento.
+ * - Para eventos monetários, garante value=0 / currency="BRL" se ausentes.
+ * - Retorna lista de campos required ausentes (vazia = OK).
+ */
+export function applyMetaEventDefaults(
+  eventName: string,
+  customData: MetaCustomData | undefined,
+): { customData: MetaCustomData; missingRequired: string[]; warnings: string[] } {
+  const spec = META_EVENT_SPECS[eventName];
+  const data: MetaCustomData = { ...(customData ?? {}) };
+
+  if (spec?.monetary) {
+    if (data.value == null || Number.isNaN(Number(data.value))) data.value = 0;
+    if (!data.currency) data.currency = "BRL";
+  }
+
+  const missingRequired: string[] = [];
+  const warnings: string[] = [];
+  if (spec) {
+    for (const f of spec.required) {
+      const v = (data as Record<string, unknown>)[f];
+      if (v == null || v === "") missingRequired.push(f);
+    }
+    for (const f of spec.recommended) {
+      const v = (data as Record<string, unknown>)[f];
+      if (v == null || v === "") warnings.push(`missing recommended field: ${f}`);
+    }
+  } else {
+    warnings.push(`unknown event "${eventName}" — sending as custom event`);
+  }
+
+  return { customData: data, missingRequired, warnings };
+}
 
 /**
  * Envia um evento via Meta Conversions API para o Pixel do usuário.
@@ -46,6 +135,28 @@ export async function sendMetaEvent(opts: {
   customData?: MetaCustomData;
 }): Promise<{ ok: boolean; error?: string }> {
   try {
+    // 1. Validação de schema do evento — bloqueia envios inválidos (ex.: Purchase sem value)
+    const { customData: finalCustomData, missingRequired, warnings } = applyMetaEventDefaults(
+      opts.eventName,
+      opts.customData,
+    );
+    if (missingRequired.length > 0) {
+      const err = `Evento "${opts.eventName}" inválido: campos obrigatórios ausentes em custom_data: ${missingRequired.join(", ")}`;
+      try {
+        await supabaseAdmin.from("meta_event_logs").insert({
+          user_id: opts.userId,
+          event_name: opts.eventName,
+          event_id: opts.eventId ?? null,
+          ok: false,
+          error: err,
+        });
+      } catch {}
+      return { ok: false, error: err };
+    }
+    if (warnings.length > 0) {
+      console.warn("[meta-capi]", opts.eventName, warnings.join("; "));
+    }
+
     const { data: integ } = await supabaseAdmin
       .from("meta_integrations")
       .select("pixel_id, access_token, test_event_code, is_active")
@@ -78,7 +189,7 @@ export async function sendMetaEvent(opts: {
       event_id: opts.eventId,
       event_source_url: opts.eventSourceUrl,
       user_data: userData,
-      custom_data: opts.customData,
+      custom_data: finalCustomData,
     };
     Object.keys(event).forEach((k) => event[k] === undefined && delete event[k]);
 
