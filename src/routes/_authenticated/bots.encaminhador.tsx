@@ -272,8 +272,14 @@ function EncaminhadorPage() {
                         </SelectContent>
                       </Select>
                       {premiumAccountId && (
-                        <div className="flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400">
-                          <CheckCircle2 className="size-3.5" /> Conta conectada e pronta para uso.
+                        <div className="flex items-center gap-2 mt-1">
+                          {(() => {
+                            const acc = activePremiumAccounts.find((a) => a.id === premiumAccountId);
+                            return acc ? <PremiumAvatar accountId={acc.id} label={acc.label} /> : null;
+                          })()}
+                          <div className="flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400">
+                            <CheckCircle2 className="size-3.5" /> Conta conectada e pronta para uso.
+                          </div>
                         </div>
                       )}
                       <p className="text-[11px] text-muted-foreground">
