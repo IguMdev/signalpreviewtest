@@ -9,7 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Forward, ImageIcon } from "lucide-react";
+import { Forward, ImageIcon, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { getForwarderConfig, upsertForwarderConfig, listAccountChats } from "@/lib/engagement.functions";
 
@@ -35,6 +35,19 @@ function EncaminhadorPage() {
   const selectedRoom = (roomsQ.data ?? []).find((r: any) => r.id === roomId);
   const [roomPhotoError, setRoomPhotoError] = useState(false);
   useEffect(() => { setRoomPhotoError(false); }, [roomId]);
+
+  const roomAccountQ = useQuery({
+    queryKey: ["room-forwarder-account", roomId],
+    enabled: !!roomId,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("rooms")
+        .select("default_account_id, telegram_accounts:default_account_id(id, label, bot_username, bot_first_name)")
+        .eq("id", roomId)
+        .maybeSingle();
+      return data as unknown as { default_account_id: string | null; telegram_accounts: { id: string; label: string; bot_username: string | null; bot_first_name: string | null } | null } | null;
+    },
+  });
 
   const cfgQ = useQuery({ queryKey: ["fwd-cfg", roomId], enabled: !!roomId, queryFn: () => get({ data: { roomId } }) });
 
@@ -66,7 +79,9 @@ function EncaminhadorPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const chats = (chatsQ.data ?? []) as any[];
+  const roomAccount = roomAccountQ.data?.telegram_accounts;
+  const roomBotName = roomAccount?.bot_username ? `@${roomAccount.bot_username}` : (roomAccount?.bot_first_name ?? roomAccount?.label ?? "bot padrão da sala");
+  const chats = ((chatsQ.data ?? []) as any[]).filter((c) => !roomAccountQ.data?.default_account_id || c.account_id === roomAccountQ.data.default_account_id);
 
   return (
     <div className="space-y-6 max-w-3xl">
@@ -123,7 +138,20 @@ function EncaminhadorPage() {
                   {chats.map((c) => <SelectItem key={c.chat_id} value={String(c.chat_id)}>{c.title ?? c.username ?? c.chat_id}</SelectItem>)}
                 </SelectContent>
               </Select>
-              {chats.length === 0 && <p className="text-xs text-muted-foreground">Nenhum chat detectado. Adicione o bot como admin em um canal e envie qualquer mensagem para ele aparecer aqui.</p>}
+              {chats.length === 0 && (
+                <div className="rounded-md border border-border bg-muted/40 p-3 text-xs text-muted-foreground space-y-2">
+                  <p>Nenhum chat detectado para o bot desta sala.</p>
+                  <ol className="list-decimal pl-4 space-y-1">
+                    <li>Use o bot da sala: <span className="font-medium text-foreground">{roomBotName}</span>.</li>
+                    <li>Na página Contas Telegram, clique em <span className="font-medium text-foreground">Ativar rastreamento</span> nesse bot.</li>
+                    <li>Adicione esse bot como administrador no canal/grupo e envie uma mensagem nova no canal.</li>
+                    <li>Volte aqui e clique em atualizar.</li>
+                  </ol>
+                  <Button type="button" variant="outline" size="sm" className="gap-2" onClick={() => chatsQ.refetch()}>
+                    <RefreshCw className="size-3.5" /> Atualizar chats
+                  </Button>
+                </div>
+              )}
             </div>
 
             <div className="space-y-1.5">
