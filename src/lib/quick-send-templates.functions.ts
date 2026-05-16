@@ -203,6 +203,12 @@ export const sendQuickTemplate = createServerFn({ method: "POST" })
           fromChatId: c.chat_id,
           messageId: r.result?.message_id ?? null,
           origin: { kind: "template", id: data.id },
+          payload: {
+            userId,
+            content: data.content,
+            parseMode: data.parseMode,
+            imagePath,
+          },
         }).catch(() => undefined);
       }
     }
