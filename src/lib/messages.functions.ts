@@ -145,6 +145,11 @@ export const dispatchDue = createServerFn({ method: "POST" }).handler(async () =
           fromChatId: c.chat_id,
           messageId: r.result.message_id,
           origin: { kind: "scheduled", id: msg.id },
+          payload: {
+            userId: msg.user_id,
+            content: msg.content,
+            parseMode: msg.parse_mode,
+          },
         });
       }
     }
