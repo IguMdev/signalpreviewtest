@@ -14,6 +14,63 @@ export type PremiumSendResult =
 
 export type PremiumButtonRow = { text: string; url: string }[];
 
+const TRANSIENT_REASONS = new Set([
+  "flood-wait",
+  "client-send-threw",
+  "media-invalid",
+  "slowmode",
+  "peer-invalid",
+]);
+
+function isTransientReason(reason: string | undefined | null): boolean {
+  return reason ? TRANSIENT_REASONS.has(reason) : false;
+}
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * Tenta enviar via rota premium; em caso de falha transitória (flood-wait,
+ * timeout de rede, mídia rejeitada, slowmode, peer ainda não conhecido),
+ * espera com backoff e tenta novamente até `maxAttempts` vezes. Falhas
+ * permanentes (sem premium, sem token cadastrado, sem permissão, banido)
+ * encerram imediatamente.
+ */
+export async function sendTextWithPremiumEmojisRetry(
+  opts: Parameters<typeof sendTextWithPremiumEmojis>[0],
+  maxAttempts = 3,
+): Promise<PremiumSendResult> {
+  let last: PremiumSendResult = { applied: false, reason: "not-attempted" };
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    last = await sendTextWithPremiumEmojis(opts);
+    if (!last.applied) return last;
+    if (last.ok) return last;
+    if (!isTransientReason(last.reason)) return last;
+    if (attempt < maxAttempts) {
+      console.warn("[premium-send] retry text", { attempt, reason: last.reason });
+      await sleep(1000 * attempt);
+    }
+  }
+  return last;
+}
+
+export async function sendPhotoWithPremiumEmojiCaptionRetry(
+  opts: Parameters<typeof sendPhotoWithPremiumEmojiCaption>[0],
+  maxAttempts = 3,
+): Promise<PremiumSendResult> {
+  let last: PremiumSendResult = { applied: false, reason: "not-attempted" };
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    last = await sendPhotoWithPremiumEmojiCaption(opts);
+    if (!last.applied) return last;
+    if (last.ok) return last;
+    if (!isTransientReason((last as { reason?: string }).reason)) return last;
+    if (attempt < maxAttempts) {
+      console.warn("[premium-send] retry photo", { attempt, reason: (last as { reason?: string }).reason });
+      await sleep(1000 * attempt);
+    }
+  }
+  return last;
+}
+
 async function buildInlineMarkup(buttonRows?: PremiumButtonRow[]) {
   if (!buttonRows || !buttonRows.length) return undefined;
   const { Api } = await import("telegram");
