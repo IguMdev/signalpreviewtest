@@ -4,8 +4,8 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { callTelegram } from "@/lib/telegram.server";
 import {
-  sendPhotoWithPremiumEmojiCaption,
-  sendTextWithPremiumEmojis,
+  sendPhotoWithPremiumEmojiCaptionRetry,
+  sendTextWithPremiumEmojisRetry,
 } from "@/lib/premium-send.server";
 import { mirrorIfMarked } from "@/lib/forwarder.server";
 import { hasEmojiTokens } from "@/lib/premium-emoji-render";
@@ -125,7 +125,7 @@ export const sendQuickTemplate = createServerFn({ method: "POST" })
       let r: { ok: boolean; result?: { message_id?: number }; description?: string };
       const wantsPremium = data.premium || hasEmojiTokens(data.content);
       if (wantsPremium && imagePath && publicUrl) {
-        const p = await sendPhotoWithPremiumEmojiCaption({
+        const p = await sendPhotoWithPremiumEmojiCaptionRetry({
           userId,
           chatId: c.chat_id,
           photoUrl: publicUrl,
@@ -147,7 +147,7 @@ export const sendQuickTemplate = createServerFn({ method: "POST" })
           });
         }
       } else if (wantsPremium && !imagePath && data.content) {
-        const p = await sendTextWithPremiumEmojis({
+        const p = await sendTextWithPremiumEmojisRetry({
           userId,
           chatId: c.chat_id,
           text: data.content,

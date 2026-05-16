@@ -6,6 +6,8 @@ import { triggerSignalReactions } from "@/lib/engagement.functions";
 import {
   sendPhotoWithPremiumEmojiCaption,
   sendTextWithPremiumEmojis,
+  sendPhotoWithPremiumEmojiCaptionRetry,
+  sendTextWithPremiumEmojisRetry,
   getUserEmojiLookup,
 } from "@/lib/premium-send.server";
 import { renderEmojiTokensPlain, hasEmojiTokens } from "@/lib/premium-emoji-render";
@@ -140,7 +142,7 @@ async function sendOne(
   },
 ): Promise<{ ok: boolean; result?: { message_id?: number }; description?: string }> {
   if (!msg.image_path && msg.content && msg.user_id && msg.is_premium) {
-    const premium = await sendTextWithPremiumEmojis({
+    const premium = await sendTextWithPremiumEmojisRetry({
       userId: msg.user_id,
       chatId,
       text: msg.content,
@@ -160,7 +162,7 @@ async function sendOne(
   if (msg.image_path) {
     const { data: pub } = supabaseAdmin.storage.from("room-images").getPublicUrl(msg.image_path);
     if (msg.is_premium && msg.user_id) {
-      const premiumPhoto = await sendPhotoWithPremiumEmojiCaption({
+      const premiumPhoto = await sendPhotoWithPremiumEmojiCaptionRetry({
         userId: msg.user_id,
         chatId,
         photoUrl: pub.publicUrl,
@@ -287,7 +289,7 @@ export const Route = createFileRoute("/api/public/cron/dispatch-recurring")({
             const wantsPremium = s.is_premium || hasEmojiTokens(s.content);
             const premium =
               wantsPremium && !s.image_path && !video && s.content
-                ? await sendTextWithPremiumEmojis({
+                ? await sendTextWithPremiumEmojisRetry({
                     userId: s.user_id,
                     chatId: c.chat_id,
                     text: s.content,
@@ -310,7 +312,7 @@ export const Route = createFileRoute("/api/public/cron/dispatch-recurring")({
                       .from("room-images")
                       .getPublicUrl(s.image_path!);
                     if (wantsPremium) {
-                      const premiumPhoto = await sendPhotoWithPremiumEmojiCaption({
+                      const premiumPhoto = await sendPhotoWithPremiumEmojiCaptionRetry({
                         userId: s.user_id,
                         chatId: c.chat_id,
                         photoUrl: pub.publicUrl,
