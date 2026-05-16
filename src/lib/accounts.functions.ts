@@ -215,29 +215,47 @@ export const sendRoomTest = createServerFn({ method: "POST" })
       .maybeSingle();
     if (!acc) throw new Error("Bot da sala não encontrado");
 
-    // Substitui macros de sinal ({ATIVO}, {TIMEFRAME}, etc.) com valores de exemplo
-    // para que o "Testar" mostre a mensagem como sairia em produção.
+    // Substitui macros ({ATIVO}, {TIMEFRAME}, {DIRECAO}, {ENTRADA}...) com os
+    // valores do último sinal enviado nesta sala — assim o "Testar" reflete
+    // exatamente o que sairia depois de um sinal real (ex.: WIN no BTCUSD).
     let sampleAsset = "EURUSD";
+    let sampleTimeframe = "M1";
+    let sampleDirection: "buy" | "sell" = "buy";
+    let sampleEntryAt: Date | null = null;
     try {
-      const { data: ra } = await supabase
-        .from("room_assets")
-        .select("asset_code")
+      const { data: lastSig } = await supabase
+        .from("signal_events")
+        .select("asset_code, timeframe, direction, entry_at")
         .eq("room_id", room.id)
-        .eq("is_open", true)
+        .order("entry_at", { ascending: false })
         .limit(1)
         .maybeSingle();
-      if (ra?.asset_code) sampleAsset = ra.asset_code;
-    } catch { /* mantém fallback */ }
+      if (lastSig?.asset_code) {
+        sampleAsset = lastSig.asset_code;
+        sampleTimeframe = lastSig.timeframe ?? sampleTimeframe;
+        sampleDirection = (lastSig.direction as "buy" | "sell") ?? sampleDirection;
+        sampleEntryAt = lastSig.entry_at ? new Date(lastSig.entry_at) : null;
+      } else {
+        const { data: ra } = await supabase
+          .from("room_assets")
+          .select("asset_code")
+          .eq("room_id", room.id)
+          .eq("is_open", true)
+          .limit(1)
+          .maybeSingle();
+        if (ra?.asset_code) sampleAsset = ra.asset_code;
+      }
+    } catch { /* mantém fallbacks */ }
     const now = new Date();
     const pad = (n: number) => String(n).padStart(2, "0");
     const hhmm = (d: Date) => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
-    const entry = new Date(Math.ceil((now.getTime() + 1) / 60000) * 60000);
+    const entry = sampleEntryAt ?? new Date(Math.ceil((now.getTime() + 1) / 60000) * 60000);
     const rawText = data.text?.trim() || "";
     const text = rawText
       ? renderTemplate(rawText, {
           ATIVO: sampleAsset,
-          TIMEFRAME: "M1",
-          DIRECAO: "🟢 COMPRA",
+          TIMEFRAME: sampleTimeframe,
+          DIRECAO: sampleDirection === "sell" ? "🔴 VENDA" : "🟢 COMPRA",
           ENTRADA: hhmm(entry),
           ENTRADAGALE1: hhmm(new Date(entry.getTime() + 60_000)),
           ENTRADAGALE2: hhmm(new Date(entry.getTime() + 120_000)),
