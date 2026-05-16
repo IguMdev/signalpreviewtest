@@ -17,6 +17,42 @@ export const Route = createFileRoute("/_authenticated/bots/encaminhador")({
   component: EncaminhadorPage,
 });
 
+function templateKindLabel(kind: string): string {
+  const map: Record<string, string> = {
+    entry: "Entrada", gain: "Ganho", loss: "Perda", event: "Evento",
+    signal: "Sinal", win: "Win", win_martingale: "Win martingale",
+    buy_direction: "Direção compra", sell_direction: "Direção venda",
+  };
+  return map[kind] ?? kind;
+}
+
+function ItemList({ title, empty, items, value, onChange }: {
+  title: string; empty: string;
+  items: { id: string; label: string }[];
+  value: string[]; onChange: (v: string[]) => void;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <p className="text-xs font-medium text-foreground">{title}</p>
+      <div className="border rounded-md p-3 max-h-48 overflow-auto space-y-2">
+        {items.length === 0 ? (
+          <p className="text-xs text-muted-foreground">{empty}</p>
+        ) : items.map((it) => {
+          const checked = value.includes(it.id);
+          return (
+            <label key={it.id} className="flex items-center gap-2 text-sm">
+              <Checkbox checked={checked} onCheckedChange={(v) => {
+                onChange(v ? [...value, it.id] : value.filter((x) => x !== it.id));
+              }} />
+              <span className="truncate">{it.label}</span>
+            </label>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function EncaminhadorPage() {
   const qc = useQueryClient();
   const get = useServerFn(getForwarderConfig);
