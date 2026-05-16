@@ -11,17 +11,54 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Forward, ImageIcon, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
-import { getForwarderConfig, upsertForwarderConfig, listAccountChats } from "@/lib/engagement.functions";
+import { getForwarderConfig, upsertForwarderConfig, listAccountChats, listForwarderSourceItems } from "@/lib/engagement.functions";
 
 export const Route = createFileRoute("/_authenticated/bots/encaminhador")({
   component: EncaminhadorPage,
 });
+
+function templateKindLabel(kind: string): string {
+  const map: Record<string, string> = {
+    entry: "Entrada", gain: "Ganho", loss: "Perda", event: "Evento",
+    signal: "Sinal", win: "Win", win_martingale: "Win martingale",
+    buy_direction: "Direção compra", sell_direction: "Direção venda",
+  };
+  return map[kind] ?? kind;
+}
+
+function ItemList({ title, empty, items, value, onChange }: {
+  title: string; empty: string;
+  items: { id: string; label: string }[];
+  value: string[]; onChange: (v: string[]) => void;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <p className="text-xs font-medium text-foreground">{title}</p>
+      <div className="border rounded-md p-3 max-h-48 overflow-auto space-y-2">
+        {items.length === 0 ? (
+          <p className="text-xs text-muted-foreground">{empty}</p>
+        ) : items.map((it) => {
+          const checked = value.includes(it.id);
+          return (
+            <label key={it.id} className="flex items-center gap-2 text-sm">
+              <Checkbox checked={checked} onCheckedChange={(v) => {
+                onChange(v ? [...value, it.id] : value.filter((x) => x !== it.id));
+              }} />
+              <span className="truncate">{it.label}</span>
+            </label>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 function EncaminhadorPage() {
   const qc = useQueryClient();
   const get = useServerFn(getForwarderConfig);
   const upsert = useServerFn(upsertForwarderConfig);
   const listChats = useServerFn(listAccountChats);
+  const listItems = useServerFn(listForwarderSourceItems);
 
   const roomsQ = useQuery({
     queryKey: ["rooms-pick"],
@@ -50,11 +87,14 @@ function EncaminhadorPage() {
   });
 
   const cfgQ = useQuery({ queryKey: ["fwd-cfg", roomId], enabled: !!roomId, queryFn: () => get({ data: { roomId } }) });
+  const itemsQ = useQuery({ queryKey: ["fwd-items", roomId], enabled: !!roomId, queryFn: () => listItems({ data: { roomId } }) });
 
   const [enabled, setEnabled] = useState(false);
   const [source, setSource] = useState<string>("");
   const [targets, setTargets] = useState<number[]>([]);
-  const [allowedTypes, setAllowedTypes] = useState<string[]>([]);
+  const [markedTemplates, setMarkedTemplates] = useState<string[]>([]);
+  const [markedScheduled, setMarkedScheduled] = useState<string[]>([]);
+  const [markedRecurring, setMarkedRecurring] = useState<string[]>([]);
 
   useEffect(() => {
     const c = cfgQ.data;
@@ -62,7 +102,9 @@ function EncaminhadorPage() {
     setEnabled(c.forwarder_enabled ?? false);
     setSource(c.forwarder_source_chat_id ? String(c.forwarder_source_chat_id) : "");
     setTargets((c.forwarder_target_chat_ids ?? []) as number[]);
-    setAllowedTypes(((c as any).forwarder_allowed_types ?? []) as string[]);
+    setMarkedTemplates(((c as any).forwarder_marked_templates ?? []) as string[]);
+    setMarkedScheduled(((c as any).forwarder_marked_scheduled ?? []) as string[]);
+    setMarkedRecurring(((c as any).forwarder_marked_recurring ?? []) as string[]);
   }, [cfgQ.data]);
 
   const save = useMutation({
@@ -72,7 +114,9 @@ function EncaminhadorPage() {
         enabled,
         sourceChatId: source ? Number(source) : null,
         targetChatIds: targets,
-        allowedTypes,
+        markedTemplates,
+        markedScheduled,
+        markedRecurring,
       },
     }),
     onSuccess: () => { toast.success("Salvo"); qc.invalidateQueries({ queryKey: ["fwd-cfg", roomId] }); },
@@ -171,35 +215,40 @@ function EncaminhadorPage() {
               </div>
             </div>
 
-            <div className="space-y-1.5">
-              <Label>Tipos de mensagem permitidos</Label>
-              <p className="text-xs text-muted-foreground">Marque o que pode ser encaminhado. Tudo que estiver desmarcado será ignorado.</p>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 border rounded-md p-3">
-                {[
-                  { id: "text", label: "Texto" },
-                  { id: "photo", label: "Foto" },
-                  { id: "video", label: "Vídeo" },
-                  { id: "video_note", label: "Vídeo redondo" },
-                  { id: "animation", label: "GIF / Animação" },
-                  { id: "document", label: "Documento" },
-                  { id: "audio", label: "Áudio (música)" },
-                  { id: "voice", label: "Mensagem de voz" },
-                  { id: "sticker", label: "Sticker" },
-                  { id: "poll", label: "Enquete" },
-                  { id: "location", label: "Localização" },
-                  { id: "contact", label: "Contato" },
-                ].map((t) => {
-                  const checked = allowedTypes.includes(t.id);
-                  return (
-                    <label key={t.id} className="flex items-center gap-2 text-sm">
-                      <Checkbox checked={checked} onCheckedChange={(v) => {
-                        setAllowedTypes((prev) => v ? [...prev, t.id] : prev.filter((x) => x !== t.id));
-                      }} />
-                      <span>{t.label}</span>
-                    </label>
-                  );
-                })}
+            <div className="space-y-3">
+              <div>
+                <Label>Itens da sala para encaminhar</Label>
+                <p className="text-xs text-muted-foreground">
+                  Marque os modelos e agendamentos que devem ser copiados para os canais de destino quando dispararem no canal de origem. O que não estiver marcado fica somente no canal de origem.
+                </p>
               </div>
+
+              <ItemList
+                title="Modelos da sala"
+                empty="Nenhum modelo configurado para esta sala."
+                items={(itemsQ.data?.templates ?? []).map((t) => ({ id: t.kind, label: templateKindLabel(t.kind) }))}
+                value={markedTemplates}
+                onChange={setMarkedTemplates}
+              />
+
+              <ItemList
+                title="Agendamentos recorrentes"
+                empty="Nenhum agendamento recorrente nesta sala."
+                items={(itemsQ.data?.recurring ?? []).map((r) => ({ id: r.id, label: `${r.title}${r.is_active ? "" : " (inativo)"}` }))}
+                value={markedRecurring}
+                onChange={setMarkedRecurring}
+              />
+
+              <ItemList
+                title="Agendamentos únicos"
+                empty="Nenhum agendamento único nesta sala."
+                items={(itemsQ.data?.scheduled ?? []).map((s) => ({
+                  id: s.id,
+                  label: `${new Date(s.scheduled_at).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })} — ${(s.content ?? "").slice(0, 60) || "(sem texto)"}`,
+                }))}
+                value={markedScheduled}
+                onChange={setMarkedScheduled}
+              />
             </div>
 
             <Button onClick={() => save.mutate()} disabled={save.isPending}>{save.isPending ? "Salvando..." : "Salvar"}</Button>

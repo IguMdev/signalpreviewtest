@@ -9,6 +9,7 @@ import {
   getUserEmojiLookup,
 } from "@/lib/premium-send.server";
 import { renderEmojiTokensPlain, hasEmojiTokens } from "@/lib/premium-emoji-render";
+import { mirrorIfMarked } from "@/lib/forwarder.server";
 
 async function renderButtonTextForUser(
   userId: string,
@@ -371,6 +372,12 @@ export const Route = createFileRoute("/api/public/cron/dispatch-recurring")({
                 chatId: c.chat_id,
                 telegramMessageId: r.result.message_id,
                 roomId: s.room_id,
+              });
+              await mirrorIfMarked({
+                roomId: s.room_id,
+                fromChatId: c.chat_id,
+                messageId: r.result.message_id,
+                origin: { kind: "recurring", id: s.id },
               });
             }
           }
