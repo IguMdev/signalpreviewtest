@@ -278,7 +278,7 @@ async function runForwarder(opts: {
   if (!opts.botToken) return;
   const { data: cfgs } = await supabaseAdmin
     .from("room_engagement_settings")
-    .select("forwarder_enabled, forwarder_target_chat_ids, forwarder_allowed_types")
+    .select("forwarder_enabled, forwarder_target_chat_ids, forwarder_allowed_types, forwarder_premium_enabled, forwarder_premium_account_id")
     .eq("user_id", opts.userId)
     .eq("forwarder_enabled", true)
     .eq("forwarder_source_chat_id", opts.fromChatId);
@@ -310,7 +310,9 @@ async function runForwarder(opts: {
 
   const targets = new Set<number>();
   for (const c of cfgs) for (const t of (c.forwarder_target_chat_ids ?? [])) targets.add(t);
-  const hasPremiumEmoji = hasPremiumEmojiEntities(opts.post);
+  const premiumEnabled = cfgs.some((c) => (c as { forwarder_premium_enabled?: boolean }).forwarder_premium_enabled);
+  const premiumAccountId = (cfgs.find((c) => (c as { forwarder_premium_account_id?: string | null }).forwarder_premium_account_id) as { forwarder_premium_account_id?: string | null } | undefined)?.forwarder_premium_account_id ?? null;
+  const hasPremiumEmoji = premiumEnabled && hasPremiumEmojiEntities(opts.post);
   for (const target of targets) {
     if (target === opts.fromChatId) continue;
     let okSent = false;
@@ -324,6 +326,7 @@ async function runForwarder(opts: {
         botToken: opts.botToken,
         post: opts.post,
         targetChatId: target,
+        premiumAccountId,
       }).catch((e) => ({ applied: true as const, ok: false as const, error: e instanceof Error ? e.message : String(e) }));
       if (pr.applied && pr.ok) {
         okSent = true;
