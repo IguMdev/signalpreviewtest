@@ -1616,12 +1616,22 @@ function ReportsCard({ roomId }: { roomId: string }) {
   const onTest = async () => {
     try {
       setTesting(true);
-      const sample = (tpl || "📊 RELATÓRIO {SESSAO_NOME}\n✅ Wins: {TOTAL_WINS}\n🔴 Losses: {TOTAL_LOSSES}\n📈 Operações: {TOTAL_OPERACOES}\n🎯 Win rate: {WIN_RATE}%")
+      const sampleList = [
+        "13:36 LTCUSDT ✅",
+        "13:41 ETHUSDT ✅",
+        "13:49 LTCUSDT ✅",
+        "13:53 BTCUSDT ✅",
+        "13:59 ADAUSDT ✅",
+        "14:05 ETHUSDT ❌",
+        "14:13 LTCUSDT ✅",
+      ].join("\n");
+      const sample = (tpl || "📊 RELATÓRIO {SESSAO_NOME}\n{OPERACOES_LISTA}\n\n✅ Wins: {TOTAL_WINS}\n🔴 Losses: {TOTAL_LOSSES}\n📈 Operações: {TOTAL_OPERACOES}\n🎯 Win rate: {WIN_RATE}%")
         .replaceAll("{SESSAO_NOME}", "Sessão Teste")
         .replaceAll("{TOTAL_WINS}", "7")
         .replaceAll("{TOTAL_LOSSES}", "3")
         .replaceAll("{TOTAL_OPERACOES}", "10")
-        .replaceAll("{WIN_RATE}", "70");
+        .replaceAll("{WIN_RATE}", "70")
+        .replaceAll("{OPERACOES_LISTA}", sampleList);
       await sendTest({ data: { roomId, text: sample, imagePath: imagePath ?? undefined, imageMime: imageMime ?? undefined, imageExt: imageExt ?? undefined } });
       toast.success("Teste enviado");
     } catch (e: any) { toast.error(e.message); }
@@ -1630,7 +1640,7 @@ function ReportsCard({ roomId }: { roomId: string }) {
 
   const [enabled, setEnabled] = useState<boolean>(false);
   const [delay, setDelay] = useState<string>("1");
-  const REPORT_DEFAULT = "📊 RELATÓRIO {SESSAO_NOME}\n✅ Wins: {TOTAL_WINS}\n🔴 Losses: {TOTAL_LOSSES}\n📈 Operações: {TOTAL_OPERACOES}\n🎯 Win rate: {WIN_RATE}%";
+  const REPORT_DEFAULT = "📊 RELATÓRIO {SESSAO_NOME}\n{OPERACOES_LISTA}\n\n✅ Wins: {TOTAL_WINS}\n🔴 Losses: {TOTAL_LOSSES}\n📈 Operações: {TOTAL_OPERACOES}\n🎯 Win rate: {WIN_RATE}%";
   const [tpl, setTpl] = useState<string>(REPORT_DEFAULT);
   const [includeStats, setIncludeStats] = useState<boolean>(true);
   const [imagePath, setImagePath] = useState<string | null>(null);
@@ -1686,7 +1696,8 @@ function ReportsCard({ roomId }: { roomId: string }) {
       </div>
       <p className="text-xs text-muted-foreground">
         Envia um resumo automático ao final de cada janela de operação.
-        Macros disponíveis: <code>{`{SESSAO_NOME}, {TOTAL_WINS}, {TOTAL_LOSSES}, {WIN_RATE}, {TOTAL_OPERACOES}`}</code>.
+        Macros disponíveis: <code>{`{SESSAO_NOME}, {OPERACOES_LISTA}, {TOTAL_WINS}, {TOTAL_LOSSES}, {WIN_RATE}, {TOTAL_OPERACOES}`}</code>.
+        {" "}<code>{`{OPERACOES_LISTA}`}</code> expande para cada operação no formato <code>HH:MM ATIVO ✅/❌</code>.
       </p>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-1.5">
@@ -1703,8 +1714,8 @@ function ReportsCard({ roomId }: { roomId: string }) {
         <div className="flex justify-end -mb-1">
           <PremiumEmojiPicker value={tpl} onChange={setTpl} />
         </div>
-        <Textarea value={tpl} onChange={(e) => setTpl(e.target.value)} rows={6} className="font-mono text-sm"
-          placeholder={"📊 RELATÓRIO {SESSAO_NOME}\n✅ Wins: {TOTAL_WINS}\n🔴 Losses: {TOTAL_LOSSES}\n📈 Operações: {TOTAL_OPERACOES}\n🎯 Win rate: {WIN_RATE}%"} />
+        <Textarea value={tpl} onChange={(e) => setTpl(e.target.value)} rows={8} className="font-mono text-sm"
+          placeholder={"📊 RELATÓRIO {SESSAO_NOME}\n{OPERACOES_LISTA}\n\n✅ Wins: {TOTAL_WINS}\n🔴 Losses: {TOTAL_LOSSES}\n📈 Operações: {TOTAL_OPERACOES}\n🎯 Win rate: {WIN_RATE}%"} />
       </div>
       <ImageAttachment
         tone="RELATÓRIO"
