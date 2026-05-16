@@ -47,9 +47,7 @@ function SignupPage() {
       <div className="absolute -bottom-32 -left-32 size-[520px] rounded-full cyber-gradient opacity-30 blur-3xl pointer-events-none" />
       <Card className="relative w-full max-w-md p-8 space-y-6 glass-strong cyber-border neon-glow rounded-2xl border-0">
         <div className="flex flex-col items-center gap-2">
-          <div className="size-14 rounded-2xl cyber-gradient text-primary-foreground grid place-items-center neon-glow animate-pulse-neon">
-            <Send className="size-6" />
-          </div>
+          <img src="/favicon.png" alt="Logo" className="size-16 rounded-2xl neon-glow" />
           <h1 className="text-3xl font-bold tracking-tight cyber-text">Criar conta</h1>
           <p className="text-sm text-muted-foreground">Comece a enviar sinais</p>
         </div>
