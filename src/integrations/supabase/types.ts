@@ -1533,6 +1533,248 @@ export type Database = {
         }
         Relationships: []
       }
+      tracking_clicks: {
+        Row: {
+          click_id: string
+          clicked_offer_at: string | null
+          created_at: string
+          deposited_at: string | null
+          external_id: string | null
+          external_user_id: string | null
+          fbc: string | null
+          fbclid: string | null
+          fbp: string | null
+          gclid: string | null
+          id: string
+          ip: string | null
+          joined_at: string | null
+          kwai_click_id: string | null
+          landing_url: string | null
+          meta_events_sent: Json
+          pixel_id: string
+          referrer: string | null
+          registered_at: string | null
+          sale_currency: string | null
+          sale_value: number | null
+          tg_user_id: number | null
+          tg_username: string | null
+          ttclid: string | null
+          user_agent: string | null
+          user_id: string
+          utm_campaign: string | null
+          utm_content: string | null
+          utm_medium: string | null
+          utm_source: string | null
+          utm_term: string | null
+        }
+        Insert: {
+          click_id: string
+          clicked_offer_at?: string | null
+          created_at?: string
+          deposited_at?: string | null
+          external_id?: string | null
+          external_user_id?: string | null
+          fbc?: string | null
+          fbclid?: string | null
+          fbp?: string | null
+          gclid?: string | null
+          id?: string
+          ip?: string | null
+          joined_at?: string | null
+          kwai_click_id?: string | null
+          landing_url?: string | null
+          meta_events_sent?: Json
+          pixel_id: string
+          referrer?: string | null
+          registered_at?: string | null
+          sale_currency?: string | null
+          sale_value?: number | null
+          tg_user_id?: number | null
+          tg_username?: string | null
+          ttclid?: string | null
+          user_agent?: string | null
+          user_id: string
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
+        }
+        Update: {
+          click_id?: string
+          clicked_offer_at?: string | null
+          created_at?: string
+          deposited_at?: string | null
+          external_id?: string | null
+          external_user_id?: string | null
+          fbc?: string | null
+          fbclid?: string | null
+          fbp?: string | null
+          gclid?: string | null
+          id?: string
+          ip?: string | null
+          joined_at?: string | null
+          kwai_click_id?: string | null
+          landing_url?: string | null
+          meta_events_sent?: Json
+          pixel_id?: string
+          referrer?: string | null
+          registered_at?: string | null
+          sale_currency?: string | null
+          sale_value?: number | null
+          tg_user_id?: number | null
+          tg_username?: string | null
+          ttclid?: string | null
+          user_agent?: string | null
+          user_id?: string
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tracking_clicks_pixel_id_fkey"
+            columns: ["pixel_id"]
+            isOneToOne: false
+            referencedRelation: "tracking_pixels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tracking_offers: {
+        Row: {
+          created_at: string
+          default_currency: string
+          default_event: string
+          default_value: number | null
+          destination_url: string
+          id: string
+          name: string
+          pixel_id: string
+          slug: string
+          subid_param: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          default_currency?: string
+          default_event?: string
+          default_value?: number | null
+          destination_url: string
+          id?: string
+          name: string
+          pixel_id: string
+          slug: string
+          subid_param?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          default_currency?: string
+          default_event?: string
+          default_value?: number | null
+          destination_url?: string
+          id?: string
+          name?: string
+          pixel_id?: string
+          slug?: string
+          subid_param?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tracking_offers_pixel_id_fkey"
+            columns: ["pixel_id"]
+            isOneToOne: false
+            referencedRelation: "tracking_pixels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tracking_pixels: {
+        Row: {
+          account_id: string | null
+          bot_username: string | null
+          created_at: string
+          event_on_deposit: string
+          event_on_join: string
+          event_on_offer_click: string
+          event_on_register: string
+          id: string
+          is_active: boolean
+          meta_integration_id: string | null
+          name: string
+          postback_secret: string
+          room_id: string | null
+          updated_at: string
+          user_id: string
+          vertical: string
+        }
+        Insert: {
+          account_id?: string | null
+          bot_username?: string | null
+          created_at?: string
+          event_on_deposit?: string
+          event_on_join?: string
+          event_on_offer_click?: string
+          event_on_register?: string
+          id?: string
+          is_active?: boolean
+          meta_integration_id?: string | null
+          name: string
+          postback_secret?: string
+          room_id?: string | null
+          updated_at?: string
+          user_id: string
+          vertical?: string
+        }
+        Update: {
+          account_id?: string | null
+          bot_username?: string | null
+          created_at?: string
+          event_on_deposit?: string
+          event_on_join?: string
+          event_on_offer_click?: string
+          event_on_register?: string
+          id?: string
+          is_active?: boolean
+          meta_integration_id?: string | null
+          name?: string
+          postback_secret?: string
+          room_id?: string | null
+          updated_at?: string
+          user_id?: string
+          vertical?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tracking_pixels_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "telegram_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tracking_pixels_meta_integration_id_fkey"
+            columns: ["meta_integration_id"]
+            isOneToOne: false
+            referencedRelation: "meta_integrations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tracking_pixels_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_engagement_subscriptions: {
         Row: {
           bot_type: Database["public"]["Enums"]["engagement_bot_type"] | null
@@ -1717,6 +1959,23 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      tracking_attribution: {
+        Args: {
+          _from: string
+          _group_col: string
+          _pixel_id: string
+          _to: string
+        }
+        Returns: {
+          clicks: number
+          deposits: number
+          dimension: string
+          joins: number
+          offer_clicks: number
+          registers: number
+          revenue: number
+        }[]
       }
     }
     Enums: {
