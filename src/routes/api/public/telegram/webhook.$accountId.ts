@@ -324,6 +324,29 @@ async function runForwarder(opts: {
   }
 }
 
+async function cacheDetectedChat(opts: {
+  userId: string;
+  accountId: string;
+  chat?: { id?: number; type?: string; title?: string; username?: string } | null;
+}) {
+  const chat = opts.chat;
+  if (!chat?.id || !chat.type) return;
+  if (!['group', 'supergroup', 'channel'].includes(chat.type)) return;
+
+  await supabaseAdmin.from("telegram_chats").upsert(
+    {
+      account_id: opts.accountId,
+      user_id: opts.userId,
+      chat_id: chat.id,
+      title: chat.title ?? null,
+      type: chat.type,
+      username: chat.username ?? null,
+      cached_at: new Date().toISOString(),
+    },
+    { onConflict: "account_id,chat_id" },
+  );
+}
+
 export const Route = createFileRoute("/api/public/telegram/webhook/$accountId")({
   server: {
     handlers: {
@@ -347,6 +370,12 @@ export const Route = createFileRoute("/api/public/telegram/webhook/$accountId")(
 
         const update = await request.json().catch(() => null);
         if (!update) return Response.json({ ok: true });
+
+        await cacheDetectedChat({
+          userId: acc.user_id,
+          accountId: acc.id,
+          chat: update.channel_post?.chat ?? update.message?.chat ?? update.chat_member?.chat ?? update.my_chat_member?.chat,
+        }).catch((e) => console.error("[telegram-chat-cache] failed:", e));
 
         const cm = update.chat_member ?? update.my_chat_member;
         if (cm) {
