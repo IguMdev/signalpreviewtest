@@ -267,7 +267,7 @@ export const getForwarderConfig = createServerFn({ method: "GET" })
     const { supabase } = context;
     const { data: row } = await supabase
       .from("room_engagement_settings")
-      .select("forwarder_enabled, forwarder_source_chat_id, forwarder_target_chat_ids, forwarder_allowed_types, forwarder_marked_recurring, forwarder_marked_scheduled, forwarder_marked_templates")
+      .select("forwarder_enabled, forwarder_source_chat_id, forwarder_target_chat_ids, forwarder_allowed_types, forwarder_marked_recurring, forwarder_marked_scheduled, forwarder_marked_templates, forwarder_premium_enabled, forwarder_premium_account_id")
       .eq("room_id", data.roomId)
       .maybeSingle();
     return row;
@@ -285,6 +285,8 @@ export const upsertForwarderConfig = createServerFn({ method: "POST" })
       markedRecurring: z.array(z.string().uuid()).max(200).optional(),
       markedScheduled: z.array(z.string().uuid()).max(200).optional(),
       markedTemplates: z.array(z.string().min(1).max(64)).max(50).optional(),
+      premiumEnabled: z.boolean().optional(),
+      premiumAccountId: z.string().uuid().nullable().optional(),
     }).parse(d),
   )
   .handler(async ({ data, context }) => {
@@ -303,6 +305,8 @@ export const upsertForwarderConfig = createServerFn({ method: "POST" })
           forwarder_marked_recurring: data.markedRecurring ?? [],
           forwarder_marked_scheduled: data.markedScheduled ?? [],
           forwarder_marked_templates: data.markedTemplates ?? [],
+          forwarder_premium_enabled: data.premiumEnabled ?? false,
+          forwarder_premium_account_id: data.premiumAccountId ?? null,
         },
         { onConflict: "room_id" },
       );
