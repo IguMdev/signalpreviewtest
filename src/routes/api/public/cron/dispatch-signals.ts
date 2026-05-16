@@ -543,7 +543,7 @@ async function sendDueReports(): Promise<number> {
       const since = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
       const { data: stats } = await supabaseAdmin
         .from("signal_events")
-        .select("status, gale_level, max_gales, entry_at")
+        .select("status, gale_level, max_gales, entry_at, asset_code")
         .eq("room_id", report.room_id)
         .eq("window_id", w.id)
         .gte("entry_at", since);
@@ -551,12 +551,29 @@ async function sendDueReports(): Promise<number> {
         (stats ?? []) as { status: string; gale_level: number; max_gales: number; entry_at: string }[],
         { tz, now },
       );
-      const text = String(report.template || "📊 RELATÓRIO {SESSAO_NOME}\n✅ Wins: {TOTAL_WINS}\n🔴 Losses: {TOTAL_LOSSES}\n📈 Operações: {TOTAL_OPERACOES}\n🎯 Win rate: {WIN_RATE}%")
+      // Lista de operações terminais (HH:MM Ativo ✅/❌), ordenadas por horário.
+      const todayKey = reportDateKey(now, tz);
+      const terminalList = ((stats ?? []) as Array<{ status: string; gale_level: number | null; max_gales: number | null; entry_at: string; asset_code: string | null }>)
+        .filter((e) => reportDateKey(new Date(e.entry_at), tz) === todayKey)
+        .filter((e) => {
+          const st = String(e.status);
+          if (st === "win" || st === "win_g1" || st === "win_g2") return true;
+          if (st === "loss" && Number(e.gale_level ?? 0) >= Number(e.max_gales ?? 0)) return true;
+          return false;
+        })
+        .sort((a, b) => new Date(a.entry_at).getTime() - new Date(b.entry_at).getTime())
+        .map((e) => {
+          const isWin = String(e.status).startsWith("win");
+          return `${fmtHHMM(new Date(e.entry_at), tz)} ${e.asset_code ?? "—"} ${isWin ? "✅" : "❌"}`;
+        })
+        .join("\n");
+      const text = String(report.template || "📊 RELATÓRIO {SESSAO_NOME}\n{OPERACOES_LISTA}\n\n✅ Wins: {TOTAL_WINS}\n🔴 Losses: {TOTAL_LOSSES}\n📈 Operações: {TOTAL_OPERACOES}\n🎯 Win rate: {WIN_RATE}%")
         .replaceAll("{SESSAO_NOME}", w.name ?? "Sessão")
         .replaceAll("{TOTAL_WINS}", String(totalWins))
         .replaceAll("{TOTAL_LOSSES}", String(totalLosses))
         .replaceAll("{TOTAL_OPERACOES}", String(total))
-        .replaceAll("{WIN_RATE}", String(winRate));
+        .replaceAll("{WIN_RATE}", String(winRate))
+        .replaceAll("{OPERACOES_LISTA}", terminalList || "—");
       const ids = await sendToRoom({
         userId: report.user_id,
         botToken: ctx.botToken,
