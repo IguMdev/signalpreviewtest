@@ -37,10 +37,7 @@ function LoginPage() {
       <div className="absolute -bottom-32 -right-32 size-[520px] rounded-full cyber-gradient opacity-30 blur-3xl pointer-events-none" />
       <Card className="relative w-full max-w-md p-8 space-y-6 glass-strong cyber-border neon-glow rounded-2xl border-0">
         <div className="flex flex-col items-center gap-2">
-          <div className="size-14 rounded-2xl cyber-gradient text-primary-foreground grid place-items-center neon-glow animate-pulse-neon">
-            <Send className="size-6" />
-          </div>
-          <h1 className="text-3xl font-bold tracking-tight cyber-text">TelesinAIs - Automação Telegram</h1>
+          <img src="/favicon.png" alt="Logo" className="size-16 rounded-2xl neon-glow" />
           <p className="text-sm text-muted-foreground">Entre na sua conta</p>
         </div>
         <form onSubmit={onSubmit} className="space-y-4">
