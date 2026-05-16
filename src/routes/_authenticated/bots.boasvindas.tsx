@@ -27,15 +27,15 @@ function getInitials(name?: string) {
   if (!name) return "?";
   return name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase();
 }
-function stringToColor(str?: string) {
-  if (!str) return "#64748b";
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash);
-  const c = (hash & 0x00ffffff).toString(16).padStart(6, "0");
-  return `#${c}`;
-}
 
-function PremiumAccountIdentity({ account, compact = false }: { account: any; compact?: boolean }) {
+type PremiumAccountSummary = {
+  id: string;
+  label: string;
+  bot_username: string | null;
+  phone: string | null;
+};
+
+function PremiumAccountIdentity({ account, compact = false }: { account: PremiumAccountSummary; compact?: boolean }) {
   const avatarQ = useQuery({
     queryKey: ["premium-avatar", account.id],
     queryFn: () => getPremiumAccountAvatar({ data: { accountId: account.id } }),
@@ -57,8 +57,7 @@ function PremiumAccountIdentity({ account, compact = false }: { account: any; co
         />
       ) : (
         <div
-          className={`${sizeClass} rounded-full flex items-center justify-center text-[10px] font-bold text-primary-foreground shrink-0`}
-          style={{ backgroundColor: stringToColor(account.id) }}
+          className={`${sizeClass} rounded-full flex items-center justify-center bg-primary text-[10px] font-bold text-primary-foreground shrink-0`}
           title={account.label}
         >
           {getInitials(account.label)}
