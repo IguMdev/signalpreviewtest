@@ -213,35 +213,44 @@ export type Database = {
       }
       message_logs: {
         Row: {
+          account_id: string | null
           chat_id: number
           created_at: string
           error: string | null
           id: string
           ok: boolean
           premium_status: string | null
+          room_id: string | null
           scheduled_message_id: string | null
+          source: string | null
           telegram_message_id: number | null
           user_id: string
         }
         Insert: {
+          account_id?: string | null
           chat_id: number
           created_at?: string
           error?: string | null
           id?: string
           ok: boolean
           premium_status?: string | null
+          room_id?: string | null
           scheduled_message_id?: string | null
+          source?: string | null
           telegram_message_id?: number | null
           user_id: string
         }
         Update: {
+          account_id?: string | null
           chat_id?: number
           created_at?: string
           error?: string | null
           id?: string
           ok?: boolean
           premium_status?: string | null
+          room_id?: string | null
           scheduled_message_id?: string | null
+          source?: string | null
           telegram_message_id?: number | null
           user_id?: string
         }
