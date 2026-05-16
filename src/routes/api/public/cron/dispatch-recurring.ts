@@ -6,6 +6,8 @@ import { triggerSignalReactions } from "@/lib/engagement.functions";
 import {
   sendPhotoWithPremiumEmojiCaption,
   sendTextWithPremiumEmojis,
+  sendPhotoWithPremiumEmojiCaptionRetry,
+  sendTextWithPremiumEmojisRetry,
   getUserEmojiLookup,
 } from "@/lib/premium-send.server";
 import { renderEmojiTokensPlain, hasEmojiTokens } from "@/lib/premium-emoji-render";
