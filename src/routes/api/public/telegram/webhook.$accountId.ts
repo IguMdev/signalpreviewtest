@@ -284,6 +284,24 @@ async function runForwarder(opts: {
     .eq("forwarder_source_chat_id", opts.fromChatId);
   if (!cfgs?.length) return; // não loga: barulho de mensagens não relacionadas
 
+  // Dedupe: se esta mensagem foi enviada pelo nosso próprio sistema (quick-send/agendado/recorrente)
+  // e já replicada via mirrorIfMarked, pulamos para não duplicar no destino.
+  const { data: dedupeHit } = await supabaseAdmin
+    .from("forwarder_dedupe")
+    .select("chat_id")
+    .eq("chat_id", opts.fromChatId)
+    .eq("message_id", opts.messageId)
+    .maybeSingle();
+  if (dedupeHit) {
+    await logBot({
+      userId: opts.userId, accountId: opts.accountId, botType: "encaminhador",
+      event: "skipped", chatId: opts.fromChatId,
+      message: "Mensagem já replicada internamente (mirror) — evitando duplicação",
+      details: { message_id: opts.messageId, type: opts.messageType, dedupe: true },
+    });
+    return;
+  }
+
   await logBot({
     userId: opts.userId, accountId: opts.accountId, botType: "encaminhador",
     event: "received", chatId: opts.fromChatId, details: { message_id: opts.messageId, type: opts.messageType },
