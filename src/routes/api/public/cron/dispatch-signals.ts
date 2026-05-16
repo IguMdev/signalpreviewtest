@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { callTelegram } from "@/lib/telegram.server";
+import { mirrorIfMarked } from "@/lib/forwarder.server";
 import { getUserEmojiLookup, sendPhotoWithPremiumEmojiCaption, sendTextWithPremiumEmojis } from "@/lib/premium-send.server";
 import { renderEmojiTokens, renderEmojiTokensToHtml } from "@/lib/premium-emoji-render";
 import {
@@ -351,6 +352,14 @@ async function sendScheduled(): Promise<number> {
         signal_message_ids: ids,
       })
       .eq("id", s.id);
+    for (const [cid, mid] of Object.entries(ids)) {
+      await mirrorIfMarked({
+        roomId: s.room_id,
+        fromChatId: Number(cid),
+        messageId: mid,
+        origin: { kind: "template", id: "signal" },
+      });
+    }
     sent++;
   }
   return sent;
@@ -436,6 +445,14 @@ async function postResult(
     replyTo,
     replyMarkup: await buildReplyMarkup(ctx.room.user_id, ctx.buttons, tplKind),
   });
+  for (const [cid, mid] of Object.entries(ids)) {
+    await mirrorIfMarked({
+      roomId: s.room_id,
+      fromChatId: Number(cid),
+      messageId: mid,
+      origin: { kind: "template", id: tplKind },
+    });
+  }
 
   // se LOSS e ainda há gales disponíveis, encadeia próxima entrada
   if (outcome === "loss" && s.gale_level < (s.max_gales ?? 0)) {
