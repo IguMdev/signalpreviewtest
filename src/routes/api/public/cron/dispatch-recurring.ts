@@ -426,6 +426,18 @@ export const Route = createFileRoute("/api/public/cron/dispatch-recurring")({
                 fromChatId: c.chat_id,
                 messageId: r.result.message_id,
                 origin: { kind: "recurring", id: s.id },
+                payload: {
+                  userId: s.user_id,
+                  content: s.content,
+                  parseMode: s.parse_mode,
+                  imagePath: s.image_path,
+                  video: video && isNormalVideo ? {
+                    storagePath: video.storage_path,
+                    mimeType: video.mime_type,
+                    duration: video.duration_seconds,
+                    filename: (video.title || "video").replace(/[^\w.-]+/g, "_") + ".mp4",
+                  } : null,
+                },
               });
             }
           }
