@@ -1391,6 +1391,10 @@ export type Database = {
           label: string
           last_check_at: string | null
           last_error: string | null
+          member_tracking_enabled: boolean
+          member_tracking_last_check: string | null
+          member_tracking_last_error: string | null
+          member_tracking_recovered_at: string | null
           phone: string | null
           status: Database["public"]["Enums"]["account_status"]
           tg_api_hash: string | null
@@ -1412,6 +1416,10 @@ export type Database = {
           label: string
           last_check_at?: string | null
           last_error?: string | null
+          member_tracking_enabled?: boolean
+          member_tracking_last_check?: string | null
+          member_tracking_last_error?: string | null
+          member_tracking_recovered_at?: string | null
           phone?: string | null
           status?: Database["public"]["Enums"]["account_status"]
           tg_api_hash?: string | null
@@ -1433,6 +1441,10 @@ export type Database = {
           label?: string
           last_check_at?: string | null
           last_error?: string | null
+          member_tracking_enabled?: boolean
+          member_tracking_last_check?: string | null
+          member_tracking_last_error?: string | null
+          member_tracking_recovered_at?: string | null
           phone?: string | null
           status?: Database["public"]["Enums"]["account_status"]
           tg_api_hash?: string | null

@@ -11,29 +11,135 @@ function publicBaseUrl() {
   return `https://project--${projectId}-dev.lovable.app`;
 }
 
+const ALLOWED_UPDATES = ["chat_member", "my_chat_member", "message", "channel_post"];
+
+function webhookUrlFor(accountId: string) {
+  return `${publicBaseUrl()}/api/public/telegram/webhook/${accountId}`;
+}
+function webhookSecretFor(botToken: string) {
+  return createHash("sha256").update(`tg-tracking:${botToken}`).digest("base64url");
+}
+
+/**
+ * Drena os updates pendentes do Telegram chamando getUpdates em lote e
+ * reentregando cada update ao nosso próprio webhook (mesmo secret).
+ * Retorna a contagem de itens processados/erros.
+ * Requer que o webhook esteja DESREGISTRADO antes (Telegram retorna 409 caso contrário).
+ */
+async function* drainPendingUpdates(accountId: string, botToken: string) {
+  const url = webhookUrlFor(accountId);
+  const secret = webhookSecretFor(botToken);
+  let offset: number | undefined;
+  let processed = 0;
+  let errors = 0;
+  let total = 0;
+
+  for (let i = 0; i < 100; i++) {
+    const r = await callTelegram<Array<{ update_id: number }>>(botToken, "getUpdates", {
+      offset,
+      limit: 100,
+      timeout: 0,
+      allowed_updates: ALLOWED_UPDATES,
+    });
+    if (!r.ok) throw new Error(r.description ?? "getUpdates falhou");
+    const batch = r.result ?? [];
+    if (batch.length === 0) break;
+    total += batch.length;
+    yield { phase: "draining" as const, processed, errors, total };
+
+    for (const upd of batch) {
+      try {
+        const resp = await fetch(url, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-telegram-bot-api-secret-token": secret,
+          },
+          body: JSON.stringify(upd),
+        });
+        if (resp.ok) processed++;
+        else errors++;
+      } catch {
+        errors++;
+      }
+      offset = upd.update_id + 1;
+    }
+    yield { phase: "draining" as const, processed, errors, total };
+    if (batch.length < 100) break;
+  }
+  return { processed, errors, total };
+}
+
 export const enableMemberTracking = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ accountId: z.string().uuid() }).parse(d))
-  .handler(async ({ data, context }) => {
+  .handler(async function* ({ data, context }) {
     const { supabase } = context;
     const { data: acc, error } = await supabase
       .from("telegram_accounts")
       .select("id, bot_token")
       .eq("id", data.accountId)
       .maybeSingle();
-    if (error || !acc) throw new Error("Conta não encontrada");
+    if (error || !acc?.bot_token) throw new Error("Conta não encontrada");
 
-    const url = `${publicBaseUrl()}/api/public/telegram/webhook/${acc.id}`;
-    const secret = createHash("sha256").update(`tg-tracking:${acc.bot_token}`).digest("base64url");
+    const url = webhookUrlFor(acc.id);
+    const secret = webhookSecretFor(acc.bot_token);
 
+    yield { phase: "preparing" as const, processed: 0, errors: 0, total: 0 };
+
+    // 1) Remove webhook preservando a fila pendente
+    await callTelegram<boolean>(acc.bot_token, "deleteWebhook", { drop_pending_updates: false });
+
+    // 2) Drena tudo que está pendente, reentregando ao nosso próprio webhook
+    let processed = 0;
+    let errors = 0;
+    let total = 0;
+    try {
+      for await (const p of drainPendingUpdates(acc.id, acc.bot_token)) {
+        processed = p.processed;
+        errors = p.errors;
+        total = p.total;
+        yield p;
+      }
+    } catch (e) {
+      yield {
+        phase: "drain_error" as const,
+        processed,
+        errors,
+        total,
+        message: e instanceof Error ? e.message : String(e),
+      };
+    }
+
+    // 3) (Re)registra o webhook
+    yield { phase: "registering" as const, processed, errors, total };
     const r = await callTelegram<boolean>(acc.bot_token, "setWebhook", {
       url,
       secret_token: secret,
-      allowed_updates: ["chat_member", "my_chat_member", "message", "channel_post"],
+      allowed_updates: ALLOWED_UPDATES,
       drop_pending_updates: false,
     });
-    if (!r.ok) throw new Error(r.description ?? "Falha ao registrar webhook");
-    return { ok: true, url };
+    if (!r.ok) {
+      await supabase
+        .from("telegram_accounts")
+        .update({
+          member_tracking_last_check: new Date().toISOString(),
+          member_tracking_last_error: r.description ?? "setWebhook falhou",
+        })
+        .eq("id", acc.id);
+      throw new Error(r.description ?? "Falha ao registrar webhook");
+    }
+
+    await supabase
+      .from("telegram_accounts")
+      .update({
+        member_tracking_enabled: true,
+        member_tracking_last_check: new Date().toISOString(),
+        member_tracking_last_error: null,
+      })
+      .eq("id", acc.id);
+
+    yield { phase: "done" as const, processed, errors, total, url };
   });
 
 export const disableMemberTracking = createServerFn({ method: "POST" })
@@ -49,6 +155,10 @@ export const disableMemberTracking = createServerFn({ method: "POST" })
     if (!acc) throw new Error("Conta não encontrada");
     const r = await callTelegram<boolean>(acc.bot_token, "deleteWebhook", {});
     if (!r.ok) throw new Error(r.description ?? "Falha");
+    await supabase
+      .from("telegram_accounts")
+      .update({ member_tracking_enabled: false, member_tracking_last_check: new Date().toISOString() })
+      .eq("id", data.accountId);
     return { ok: true };
   });
 
