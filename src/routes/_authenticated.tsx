@@ -27,6 +27,13 @@ import {
   Forward,
   ScrollText,
   Crosshair,
+  Globe,
+  Code2,
+  Funnel,
+  BarChart3,
+  Repeat,
+  Link2,
+  Lock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -50,7 +57,20 @@ const navItems = [
 
 const connectionItems = [
   { to: "/integracoes/meta", label: "Meta Pixel", icon: Megaphone, tour: "nav-meta" },
-  { to: "/trackeamento", label: "Trackeamento", icon: Crosshair, tour: "nav-trackeamento" },
+] as const;
+
+const trackingItems = [
+  { to: "/trackeamento/dominios", label: "Domínios", icon: Globe },
+  { to: "/trackeamento/pixels", label: "Pixels", icon: Code2 },
+  { to: "/trackeamento/canal", label: "Canal", icon: Send },
+  { to: "/trackeamento/funis", label: "Funis", icon: Funnel },
+  { to: "/trackeamento/metricas", label: "Métricas", icon: BarChart3 },
+  { to: "/trackeamento/postbacks", label: "Postbacks", icon: Repeat },
+  { to: "/trackeamento/integracoes", label: "Integrações", icon: Link2 },
+] as const;
+
+const trackingLockedItems = [
+  { label: "Mensagens", icon: MessageCircle },
 ] as const;
 
 const botItems = [
@@ -253,6 +273,57 @@ function AuthenticatedLayout() {
                   </Link>
                 );
               })}
+            </CollapsibleContent>
+          </Collapsible>
+
+          {/* Trackeamento dropdown */}
+          <Collapsible defaultOpen={location.pathname.startsWith("/trackeamento")}>
+            <CollapsibleTrigger asChild>
+              <button
+                type="button"
+                data-tour="nav-trackeamento"
+                className="w-full relative flex items-center justify-between rounded-xl px-3 py-2.5 text-sm font-medium transition text-foreground/70 hover:bg-white/5 hover:text-foreground"
+              >
+                <span className="flex items-center gap-3">
+                  <Crosshair className="size-4" />
+                  Trackeamento
+                </span>
+                <ChevronDown className="size-4 transition-transform data-[state=open]:rotate-180" />
+              </button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="space-y-1 pl-2">
+              {trackingItems.map(({ to, label, icon: Icon }) => {
+                const active = location.pathname === to || location.pathname.startsWith(to + "/");
+                return (
+                  <Link
+                    key={to}
+                    to={to}
+                    onClick={() => setSidebarOpen(false)}
+                    className={cn(
+                      "relative flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition",
+                      active
+                        ? "cyber-gradient-soft text-foreground cyber-border"
+                        : "text-foreground/70 hover:bg-white/5 hover:text-foreground",
+                    )}
+                  >
+                    <Icon className={cn("size-4", active && "text-primary")} />
+                    {label}
+                  </Link>
+                );
+              })}
+              {trackingLockedItems.map(({ label, icon: Icon }) => (
+                <div
+                  key={label}
+                  className="relative flex items-center justify-between gap-3 rounded-xl px-3 py-2 text-sm font-medium text-foreground/40 cursor-not-allowed"
+                  title="Em breve"
+                >
+                  <span className="flex items-center gap-3">
+                    <Icon className="size-4" />
+                    {label}
+                  </span>
+                  <Lock className="size-3" />
+                </div>
+              ))}
             </CollapsibleContent>
           </Collapsible>
 
