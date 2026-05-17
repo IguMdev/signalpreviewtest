@@ -233,6 +233,78 @@ function RecargaPage() {
         </div>
       </section>
 
+      {/* Trackeamento — Track4You */}
+      <section className="space-y-3">
+        <div className="flex items-center gap-2">
+          <div className="size-9 rounded-md bg-primary/10 flex items-center justify-center">
+            <Target className="size-5 text-primary" />
+          </div>
+          <div>
+            <h2 className="font-semibold">Trackeamento</h2>
+            <p className="text-xs text-muted-foreground">
+              Planos Track4You — pixels, domínios e funis para escalar suas campanhas.
+            </p>
+          </div>
+        </div>
+
+        <div className="grid gap-3 md:grid-cols-3">
+          {trackingPlanos.map((p) => (
+            <Card key={p.id} className={p.destaque ? "border-primary" : ""}>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base flex items-center justify-between">
+                  <span>{p.nome}</span>
+                  {p.destaque && (
+                    <Badge className="text-[10px] gap-1">
+                      <Crown className="size-3" /> Vantagem
+                    </Badge>
+                  )}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="text-2xl font-bold">
+                  {p.preco != null ? (
+                    <>
+                      R$ {p.preco.toFixed(2).replace(".", ",")}
+                      <span className="text-xs font-normal text-muted-foreground"> / por mês</span>
+                    </>
+                  ) : (
+                    <span className="text-lg">{p.precoLabel}</span>
+                  )}
+                </div>
+                <div className="space-y-1.5 pt-1">
+                  <div className="text-xs font-semibold text-primary">Channel Tracking</div>
+                  <ul className="space-y-1">
+                    {p.features.map((f) => (
+                      <li key={f} className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <Check className="size-3 text-primary shrink-0" />
+                        <span>{f}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                {p.checkoutUrl ? (
+                  <Button asChild size="sm" className="w-full">
+                    <a href={p.checkoutUrl} target="_blank" rel="noreferrer">
+                      {p.ctaLabel}
+                      <ExternalLink className="size-3 ml-1" />
+                    </a>
+                  </Button>
+                ) : (
+                  <Button
+                    size="sm"
+                    className="w-full"
+                    variant={p.destaque ? "default" : "outline"}
+                    onClick={() => toast.info("Pagamento em breve disponível.")}
+                  >
+                    {p.ctaLabel}
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </section>
+
       {/* Engagement bots */}
       <div className="space-y-8">
         {BOT_ORDER.map((bot) => {
