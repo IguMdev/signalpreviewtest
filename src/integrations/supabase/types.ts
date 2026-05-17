@@ -1817,6 +1817,50 @@ export type Database = {
           },
         ]
       }
+      tracking_postbacks: {
+        Row: {
+          created_at: string
+          event: string
+          id: string
+          is_active: boolean
+          name: string
+          pixel_id: string
+          updated_at: string
+          url: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          event: string
+          id?: string
+          is_active?: boolean
+          name: string
+          pixel_id: string
+          updated_at?: string
+          url: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          event?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          pixel_id?: string
+          updated_at?: string
+          url?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tracking_postbacks_pixel_id_fkey"
+            columns: ["pixel_id"]
+            isOneToOne: false
+            referencedRelation: "tracking_pixels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_engagement_subscriptions: {
         Row: {
           bot_type: Database["public"]["Enums"]["engagement_bot_type"] | null
