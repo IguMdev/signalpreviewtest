@@ -570,11 +570,35 @@ function TelegramAccountsPage() {
                 if (confirm("Remover esta conta?")) deleteMut.mutate(a.id);
               }}
               onEnableTracking={async () => {
+                const tId = toast.loading("Reativando webhook…");
                 try {
-                  await enableTrack({ data: { accountId: a.id } });
-                  toast.success("Rastreamento de membros ativado. Adicione o bot como admin do grupo.");
+                  const stream = await enableTrack({ data: { accountId: a.id } });
+                  let last: { processed: number; errors: number; total: number; phase: string } = {
+                    processed: 0,
+                    errors: 0,
+                    total: 0,
+                    phase: "preparing",
+                  };
+                  for await (const ev of stream as AsyncIterable<typeof last>) {
+                    last = ev;
+                    const label =
+                      ev.phase === "preparing"
+                        ? "Verificando webhook…"
+                        : ev.phase === "draining"
+                          ? `Reprocessando pendentes: ${ev.processed}/${ev.total}${ev.errors ? ` (${ev.errors} erros)` : ""}`
+                          : ev.phase === "registering"
+                            ? "Registrando webhook…"
+                            : ev.phase === "done"
+                              ? `Webhook ativo • ${ev.processed} reprocessados${ev.errors ? `, ${ev.errors} erros` : ""}`
+                              : `Aviso: ${(ev as { message?: string }).message ?? "drain falhou"}`;
+                    toast.loading(label, { id: tId });
+                  }
+                  toast.success(
+                    `Rastreamento ativo. ${last.processed} updates reprocessados${last.errors ? `, ${last.errors} erros` : ""}. Adicione o bot como admin do grupo.`,
+                    { id: tId },
+                  );
                 } catch (e) {
-                  toast.error(e instanceof Error ? e.message : "Falha");
+                  toast.error(e instanceof Error ? e.message : "Falha", { id: tId });
                 }
               }}
               onSyncEmojis={async () => {
