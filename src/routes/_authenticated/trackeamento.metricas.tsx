@@ -34,9 +34,15 @@ function MetricasPage() {
   return (
     <div className="space-y-4">
       <PixelFilterBar pixelId={effectiveId} pixels={pixels} setPixel={setPixel} />
-      {effectiveId ? <MetricsView pixelId={effectiveId} /> : (
-        <p className="text-sm text-muted-foreground">Crie um pixel para visualizar métricas.</p>
+      {!effectiveId && (
+        <Card className="border-dashed">
+          <CardContent className="p-4 text-sm text-muted-foreground">
+            Configure um pixel em <span className="text-primary font-medium">Trackeamento → Pixels</span> para começar a receber dados.
+            Enquanto isso, a tela permanece disponível e os indicadores ficam zerados.
+          </CardContent>
+        </Card>
       )}
+      <MetricsView pixelId={effectiveId} />
     </div>
   );
 }
@@ -58,7 +64,7 @@ function detectDevice(ua: string | null | undefined): string {
   return "Outros";
 }
 
-function MetricsView({ pixelId }: { pixelId: string }) {
+function MetricsView({ pixelId }: { pixelId: string | null }) {
   const [range, setRange] = useState<DateRange | undefined>(undefined);
   const [filters, setFilters] = useState<ActiveFilter[]>([]);
   const days = rangeToDays(range);
@@ -66,8 +72,16 @@ function MetricsView({ pixelId }: { pixelId: string }) {
   const statsFn = useServerFn(getPixelStats);
   const clicksFn = useServerFn(listRecentClicks);
 
-  const stats = useQuery({ queryKey: ["m-stats", pixelId, days], queryFn: () => statsFn({ data: { pixel_id: pixelId, days } }) });
-  const clicks = useQuery({ queryKey: ["m-clicks", pixelId, days], queryFn: () => clicksFn({ data: { pixel_id: pixelId, limit: 500 } }) });
+  const stats = useQuery({
+    queryKey: ["m-stats", pixelId, days],
+    queryFn: () => statsFn({ data: { pixel_id: pixelId!, days } }),
+    enabled: !!pixelId,
+  });
+  const clicks = useQuery({
+    queryKey: ["m-clicks", pixelId, days],
+    queryFn: () => clicksFn({ data: { pixel_id: pixelId!, limit: 500 } }),
+    enabled: !!pixelId,
+  });
 
   const rows: any[] = (clicks.data ?? []) as any[];
 
