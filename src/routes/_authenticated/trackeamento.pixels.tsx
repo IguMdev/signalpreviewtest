@@ -160,24 +160,26 @@ function PixelsPage() {
 }
 
 function EditPixelDialog({ pixel, onClose }: { pixel: any | null; onClose: () => void }) {
+  return (
+    <Dialog open={!!pixel} onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader><DialogTitle>Editar pixel</DialogTitle></DialogHeader>
+        {pixel && <EditPixelForm key={pixel.id} pixel={pixel} onClose={onClose} />}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function EditPixelForm({ pixel, onClose }: { pixel: any; onClose: () => void }) {
   const qc = useQueryClient();
   const updFn = useServerFn(updatePixel);
-  const [name, setName] = useState("");
-  const [vertical, setVertical] = useState("outro");
-  const [isActive, setIsActive] = useState(true);
-  const [evJoin, setEvJoin] = useState("Lead");
-  const [evOffer, setEvOffer] = useState("InitiateCheckout");
-  const [evReg, setEvReg] = useState("CompleteRegistration");
-  const [evDep, setEvDep] = useState("Purchase");
-
-  // hidratar quando abre
-  useState(() => {
-    if (pixel) {
-      setName(pixel.name); setVertical(pixel.vertical); setIsActive(pixel.is_active);
-      setEvJoin(pixel.event_on_join); setEvOffer(pixel.event_on_offer_click);
-      setEvReg(pixel.event_on_register); setEvDep(pixel.event_on_deposit);
-    }
-  });
+  const [name, setName] = useState<string>(pixel.name);
+  const [vertical, setVertical] = useState<string>(pixel.vertical);
+  const [isActive, setIsActive] = useState<boolean>(pixel.is_active);
+  const [evJoin, setEvJoin] = useState<string>(pixel.event_on_join);
+  const [evOffer, setEvOffer] = useState<string>(pixel.event_on_offer_click);
+  const [evReg, setEvReg] = useState<string>(pixel.event_on_register);
+  const [evDep, setEvDep] = useState<string>(pixel.event_on_deposit);
 
   const save = useMutation({
     mutationFn: () => updFn({ data: {
@@ -192,47 +194,41 @@ function EditPixelDialog({ pixel, onClose }: { pixel: any | null; onClose: () =>
     },
     onError: (e: Error) => toast.error(e.message),
   });
-
   return (
-    <Dialog open={!!pixel} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader><DialogTitle>Editar pixel</DialogTitle></DialogHeader>
-        {pixel && (
-          <div className="space-y-4">
-            <div className="space-y-2"><Label>Nome</Label><Input defaultValue={pixel.name} onChange={(e) => setName(e.target.value)} /></div>
-            <div className="space-y-2">
-              <Label>Vertical</Label>
-              <Select defaultValue={pixel.vertical} onValueChange={setVertical}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>{VERTICALS.map(v => <SelectItem key={v} value={v}>{VERTICAL_LABEL[v]}</SelectItem>)}</SelectContent>
-              </Select>
-            </div>
-            <div className="flex items-center justify-between rounded-lg border p-3">
-              <div><p className="text-sm font-medium">Ativo</p><p className="text-xs text-muted-foreground">Desligado: nenhum evento é registrado.</p></div>
-              <Switch defaultChecked={pixel.is_active} onCheckedChange={setIsActive} />
-            </div>
-            <div className="space-y-3 pt-2 border-t">
-              <p className="text-sm font-semibold">Eventos Meta por etapa</p>
-              <EventRow label="Entrada no bot" defaultValue={pixel.event_on_join} onChange={setEvJoin} />
-              <EventRow label="Clique na oferta" defaultValue={pixel.event_on_offer_click} onChange={setEvOffer} />
-              <EventRow label="Cadastro" defaultValue={pixel.event_on_register} onChange={setEvReg} />
-              <EventRow label="Depósito" defaultValue={pixel.event_on_deposit} onChange={setEvDep} />
-            </div>
-          </div>
-        )}
-        <DialogFooter>
-          <Button onClick={() => save.mutate()} disabled={save.isPending}>Salvar</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <>
+      <div className="space-y-4">
+        <div className="space-y-2"><Label>Nome</Label><Input value={name} onChange={(e) => setName(e.target.value)} /></div>
+        <div className="space-y-2">
+          <Label>Vertical</Label>
+          <Select value={vertical} onValueChange={setVertical}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>{VERTICALS.map(v => <SelectItem key={v} value={v}>{VERTICAL_LABEL[v]}</SelectItem>)}</SelectContent>
+          </Select>
+        </div>
+        <div className="flex items-center justify-between rounded-lg border p-3">
+          <div><p className="text-sm font-medium">Ativo</p><p className="text-xs text-muted-foreground">Desligado: nenhum evento é registrado.</p></div>
+          <Switch checked={isActive} onCheckedChange={setIsActive} />
+        </div>
+        <div className="space-y-3 pt-2 border-t">
+          <p className="text-sm font-semibold">Eventos Meta por etapa</p>
+          <EventRow label="Entrada no bot" value={evJoin} onChange={setEvJoin} />
+          <EventRow label="Clique na oferta" value={evOffer} onChange={setEvOffer} />
+          <EventRow label="Cadastro" value={evReg} onChange={setEvReg} />
+          <EventRow label="Depósito" value={evDep} onChange={setEvDep} />
+        </div>
+      </div>
+      <DialogFooter className="mt-4">
+        <Button onClick={() => save.mutate()} disabled={save.isPending}>Salvar</Button>
+      </DialogFooter>
+    </>
   );
 }
 
-function EventRow({ label, defaultValue, onChange }: { label: string; defaultValue: string; onChange: (v: string) => void }) {
+function EventRow({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
   return (
     <div className="flex items-center justify-between gap-3">
       <Label className="text-sm">{label}</Label>
-      <Select defaultValue={defaultValue} onValueChange={onChange}>
+      <Select value={value} onValueChange={onChange}>
         <SelectTrigger className="w-56"><SelectValue /></SelectTrigger>
         <SelectContent>{EVENT_OPTIONS.map(o => <SelectItem key={o} value={o}>{o === "off" ? "Desativado" : o}</SelectItem>)}</SelectContent>
       </Select>
