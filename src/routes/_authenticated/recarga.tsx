@@ -14,7 +14,7 @@ import {
   DoorOpen, Sparkles, ExternalLink, Crown,
   Users, Heart, MessageCircle, Forward,
   History, CheckCircle2, Clock, XCircle, AlertCircle,
-  Send,
+  Send, Target, Check,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -49,6 +49,62 @@ const salasPlanos: SalaPlano[] = [
     preco: 300,
     descricao: "🟣Plano Premium\n✅ Acesso a todas a ferramentas básicas\n✅ Inclui 3 crédito de sala.\n✅ Opera 3 Bots Telegram.\n✅ Suporte 24/7 Prioritário.",
     destaque: true,
+  },
+];
+
+type TrackingPlano = {
+  id: string;
+  nome: string;
+  preco?: number;
+  precoLabel?: string;
+  features: string[];
+  destaque?: boolean;
+  ctaLabel: string;
+  checkoutUrl?: string;
+};
+
+const trackingPlanos: TrackingPlano[] = [
+  {
+    id: "track-starter",
+    nome: "Plano Starter",
+    preco: 297,
+    features: [
+      "2 pixels",
+      "2 domínios",
+      "6 funis",
+      "1 Canal Telegram",
+      "Implementação Plug & Play",
+      "Suporte Especializado",
+    ],
+    ctaLabel: "Assinar agora",
+  },
+  {
+    id: "track-pro",
+    nome: "Plano Pro",
+    preco: 397,
+    features: [
+      "4 pixels",
+      "4 domínios",
+      "12 funis",
+      "1 Canal Telegram",
+      "Implementação Plug & Play",
+      "Suporte Especializado",
+    ],
+    destaque: true,
+    ctaLabel: "Assinar agora",
+  },
+  {
+    id: "track-custom",
+    nome: "Plano Customizado",
+    precoLabel: "Contatar time de vendas",
+    features: [
+      "Suporte Prioritário",
+      "Onboarding Imediato",
+      "Garantia 7 dias",
+      "Implementação completa",
+      "Atendimento Especializado",
+    ],
+    ctaLabel: "Time de vendas",
   },
 ];
 
