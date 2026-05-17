@@ -329,10 +329,13 @@ function DonutCard({ title, data }: { title: string; data: { name: string; value
         <ClientOnly fallback={<div className="h-full" />}>
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
-              <Pie data={safe} dataKey="value" nameKey="name" innerRadius={45} outerRadius={70} stroke="hsl(var(--background))" strokeWidth={2}>
+              <Pie data={safe} dataKey="value" nameKey="name" name="Distribuicao" innerRadius={45} outerRadius={70} stroke="hsl(var(--background))" strokeWidth={2}>
                 {safe.map((_, i) => <Cell key={i} fill={DONUT_COLORS[i % DONUT_COLORS.length]} />)}
               </Pie>
-              <Tooltip contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 6, fontSize: 12 }} />
+              <Tooltip
+                contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 6, fontSize: 12 }}
+                formatter={(value: number) => [value, "Distribuicao"]}
+              />
             </PieChart>
           </ResponsiveContainer>
         </ClientOnly>
