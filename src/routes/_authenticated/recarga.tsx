@@ -27,6 +27,10 @@ export const Route = createFileRoute("/_authenticated/recarga")({
   component: RecargaPage,
 });
 
+// Central do Assinante da Kirvano — cliente faz login com o e-mail da compra
+// e cancela sozinho. O webhook SUBSCRIPTION_CANCELED desativa o plano aqui.
+const KIRVANO_CUSTOMER_PORTAL = "https://pay.kirvano.com/customer";
+
 type SalaPlano = {
   id: string;
   nome: string;
