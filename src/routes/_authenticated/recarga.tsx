@@ -388,16 +388,25 @@ function RecargaPage() {
                         </div>
                         <p className="text-xs text-muted-foreground min-h-[32px]">{p.description}</p>
                         {p.kirvano_checkout_url ? (
-                          <Button asChild size="sm" className="w-full" disabled={isCurrent}>
-                            <a
-                              href={`${p.kirvano_checkout_url}${p.kirvano_checkout_url.includes("?") ? "&" : "?"}utm_content=${user?.id ?? ""}`}
-                              target="_blank"
-                              rel="noreferrer"
-                            >
-                              {isCurrent ? "Plano atual" : "Adquirir agora"}
-                              <ExternalLink className="size-3 ml-1" />
-                            </a>
-                          </Button>
+                          isCurrent ? (
+                            <Button asChild size="sm" variant="outline" className="w-full">
+                              <a href={KIRVANO_CUSTOMER_PORTAL} target="_blank" rel="noreferrer">
+                                Gerenciar assinatura
+                                <ExternalLink className="size-3 ml-1" />
+                              </a>
+                            </Button>
+                          ) : (
+                            <Button asChild size="sm" className="w-full">
+                              <a
+                                href={`${p.kirvano_checkout_url}${p.kirvano_checkout_url.includes("?") ? "&" : "?"}utm_content=${user?.id ?? ""}`}
+                                target="_blank"
+                                rel="noreferrer"
+                              >
+                                Adquirir agora
+                                <ExternalLink className="size-3 ml-1" />
+                              </a>
+                            </Button>
+                          )
                         ) : (
                           <Button size="sm" className="w-full" disabled variant="secondary">
                             Em breve
@@ -477,16 +486,25 @@ function RecargaPage() {
                           </div>
                           <p className="text-xs text-muted-foreground min-h-[32px]">{p.description}</p>
                           {p.kirvano_checkout_url ? (
-                            <Button asChild size="sm" className="w-full" disabled={isCurrent}>
-                              <a
-                                href={`${p.kirvano_checkout_url}${p.kirvano_checkout_url.includes("?") ? "&" : "?"}utm_content=${user?.id ?? ""}`}
-                                target="_blank"
-                                rel="noreferrer"
-                              >
-                                {isCurrent ? "Plano atual" : "Adquirir agora"}
-                                <ExternalLink className="size-3 ml-1" />
-                              </a>
-                            </Button>
+                            isCurrent ? (
+                              <Button asChild size="sm" variant="outline" className="w-full">
+                                <a href={KIRVANO_CUSTOMER_PORTAL} target="_blank" rel="noreferrer">
+                                  Gerenciar assinatura
+                                  <ExternalLink className="size-3 ml-1" />
+                                </a>
+                              </Button>
+                            ) : (
+                              <Button asChild size="sm" className="w-full">
+                                <a
+                                  href={`${p.kirvano_checkout_url}${p.kirvano_checkout_url.includes("?") ? "&" : "?"}utm_content=${user?.id ?? ""}`}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                >
+                                  Adquirir agora
+                                  <ExternalLink className="size-3 ml-1" />
+                                </a>
+                              </Button>
+                            )
                           ) : (
                             <Button size="sm" className="w-full" disabled variant="secondary">
                               Em breve
