@@ -12,7 +12,17 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Globe, Plus, Trash2, ShieldCheck, Copy } from "lucide-react";
+import { Globe, Plus, Trash2, ShieldCheck, Copy, AlertTriangle } from "lucide-react";
+
+function validateDomain(value: string): string | null {
+  const v = value.trim();
+  if (!v) return null;
+  if (/^https?:\/\//i.test(v)) return "Não inclua https://, //, ou slugs. Digite apenas o domínio - ex: www.track4you.app";
+  if (v.startsWith("//")) return "Não inclua https://, //, ou slugs. Digite apenas o domínio - ex: www.track4you.app";
+  if (v.includes("/")) return "Não inclua https://, //, ou slugs. Digite apenas o domínio - ex: www.track4you.app";
+  if (!/^[a-z0-9.-]+\.[a-z]{2,}$/i.test(v)) return "Digite um domínio válido - ex: www.track4you.app";
+  return null;
+}
 
 export const Route = createFileRoute("/_authenticated/trackeamento/dominios")({
   component: DomainsPage,
@@ -28,6 +38,8 @@ function DomainsPage() {
   const domains = useQuery({ queryKey: ["tracking-domains"], queryFn: () => listFn() });
   const [open, setOpen] = useState(false);
   const [domain, setDomain] = useState("");
+  const domainError = validateDomain(domain);
+  const canSave = domain.trim().length > 0 && !domainError;
 
   const create = useMutation({
     mutationFn: () => createFn({ data: { domain } }),
@@ -57,19 +69,31 @@ function DomainsPage() {
             Use um domínio próprio nos seus links de redirect (ex.: <code>track.seusite.com/g/...</code>) em vez do domínio padrão. Isso melhora a entregabilidade e o branding.
           </p>
         </div>
-        <Dialog open={open} onOpenChange={setOpen}>
+        <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) setDomain(""); }}>
           <DialogTrigger asChild><Button><Plus className="size-4" /> Adicionar domínio</Button></DialogTrigger>
           <DialogContent>
             <DialogHeader><DialogTitle>Novo domínio</DialogTitle></DialogHeader>
             <div className="space-y-3">
               <div className="space-y-2">
-                <Label>Domínio ou subdomínio</Label>
-                <Input value={domain} onChange={(e) => setDomain(e.target.value.toLowerCase())} placeholder="track.seusite.com" />
-                <p className="text-xs text-muted-foreground">Sem https:// e sem barra. Use preferencialmente um subdomínio.</p>
+                <Input
+                  value={domain}
+                  onChange={(e) => setDomain(e.target.value.toLowerCase())}
+                  placeholder="www.track4you.app"
+                  className={domainError ? "border-destructive focus-visible:ring-destructive" : ""}
+                />
+                {domainError && (
+                  <div className="flex items-start gap-2 rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+                    <AlertTriangle className="size-4 shrink-0 mt-0.5" />
+                    <span>
+                      Não inclua <em>https://</em>, <em>//</em>, ou slugs. Digite apenas o domínio - ex: <em>www.track4you.app</em>
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
             <DialogFooter>
-              <Button onClick={() => create.mutate()} disabled={!domain || create.isPending}>Adicionar</Button>
+              <Button variant="ghost" onClick={() => setOpen(false)}>Cancelar</Button>
+              <Button onClick={() => create.mutate()} disabled={!canSave || create.isPending}>Salvar</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
