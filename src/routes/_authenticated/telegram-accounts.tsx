@@ -54,7 +54,10 @@ import {
   UserCircle,
   Activity,
   KeyRound,
+  GraduationCap,
+  ChevronDown,
 } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 const PREMIUM_REASON_LABELS: Record<string, string> = {
   "no-tokens": "A mensagem não contém tokens {NOME} para envio premium.",
@@ -315,6 +318,46 @@ function TelegramAccountsPage() {
 
   return (
     <div className="space-y-6">
+      <Collapsible defaultOpen>
+        <div className="rounded-xl border border-primary/30 bg-primary/5">
+          <CollapsibleTrigger className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left">
+            <span className="flex items-center gap-2 text-sm font-semibold">
+              <GraduationCap className="size-4 text-primary" />
+              Como cadastrar sua conta Telegram
+            </span>
+            <ChevronDown className="size-4 text-muted-foreground transition-transform data-[state=open]:rotate-180" />
+          </CollapsibleTrigger>
+          <CollapsibleContent className="px-4 pb-4">
+            <div className="space-y-3 text-sm text-muted-foreground">
+              <p>Siga os passos abaixo para conectar um <strong className="text-foreground">Bot</strong> ou uma <strong className="text-foreground">Conta Premium</strong>:</p>
+              <div className="grid gap-3 md:grid-cols-2">
+                <div className="rounded-lg border border-border/60 bg-background/40 p-3 space-y-2">
+                  <p className="font-semibold text-foreground flex items-center gap-2"><Bot className="size-4 text-primary" /> Conta Bot</p>
+                  <ol className="list-decimal list-inside space-y-1 text-xs">
+                    <li>No Telegram, abra <code className="text-primary">@BotFather</code> e use <code>/newbot</code>.</li>
+                    <li>Defina o nome e o username do bot e copie o <strong>token</strong> gerado.</li>
+                    <li>Clique em <strong>Adicionar Conta</strong>, escolha <strong>Bot</strong> e cole o token.</li>
+                    <li>Adicione o bot como <strong>administrador</strong> nos seus grupos/canais.</li>
+                    <li>Clique em <strong>Atualizar chats</strong> para listar os grupos disponíveis.</li>
+                  </ol>
+                </div>
+                <div className="rounded-lg border border-border/60 bg-background/40 p-3 space-y-2">
+                  <p className="font-semibold text-foreground flex items-center gap-2"><Sparkles className="size-4 text-primary" /> Conta Premium</p>
+                  <ol className="list-decimal list-inside space-y-1 text-xs">
+                    <li>Em <a className="text-primary underline" href="https://my.telegram.org" target="_blank" rel="noreferrer">my.telegram.org</a>, gere <strong>API ID</strong> e <strong>API Hash</strong>.</li>
+                    <li>Clique em <strong>Adicionar Conta</strong> e selecione <strong>Premium</strong>.</li>
+                    <li>Informe telefone, API ID e API Hash e solicite o código.</li>
+                    <li>Digite o código recebido no app oficial do Telegram.</li>
+                    <li>Use <strong>Sincronizar emojis</strong> para importar seus emojis premium.</li>
+                  </ol>
+                </div>
+              </div>
+              <p className="text-xs">Dica: ative o <strong className="text-foreground">rastreamento de membros</strong> nas contas Bot para contabilizar entradas e saídas automaticamente.</p>
+            </div>
+          </CollapsibleContent>
+        </div>
+      </Collapsible>
+
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Contas Telegram</h1>

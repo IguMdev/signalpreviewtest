@@ -46,12 +46,15 @@ export const Route = createFileRoute("/_authenticated")({
 const navItems = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, tour: "nav-dashboard" },
   { to: "/telegram-accounts", label: "Contas Telegram", icon: Send, tour: "nav-telegram-accounts" },
-  { to: "/premium-emojis", label: "Emojis Premium", icon: Sparkles, tour: "nav-premium-emojis" },
   { to: "/rooms", label: "Salas", icon: Users, tour: "nav-rooms" },
   { to: "/membros", label: "Membros", icon: UserPlus, tour: "nav-membros" },
   { to: "/mensagens", label: "Agendamentos", icon: CalendarClock, tour: "nav-mensagens" },
   { to: "/videos", label: "Vídeos", icon: Video, tour: "nav-videos" },
   { to: "/recarga", label: "Recarga", icon: Wallet, tour: "nav-recarga" },
+] as const;
+
+const lockedNavItems = [
+  { label: "Emojis Premium", icon: Sparkles },
 ] as const;
 
 const trackingItems = [
@@ -207,6 +210,20 @@ function AuthenticatedLayout() {
               </Link>
             );
           })}
+
+          {lockedNavItems.map(({ label, icon: Icon }) => (
+            <div
+              key={label}
+              className="relative flex items-center justify-between gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-foreground/40 cursor-not-allowed"
+              title="Faça a Assinatura em Recarga"
+            >
+              <span className="flex items-center gap-3">
+                <Icon className="size-4" />
+                {label}
+              </span>
+              <Lock className="size-3" />
+            </div>
+          ))}
 
           {/* Separador sutil */}
           <div className="my-2 border-t border-border/40" />
