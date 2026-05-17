@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, ClientOnly } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
@@ -308,14 +308,16 @@ function DonutCard({ title, data }: { title: string; data: { name: string; value
     <div className="rounded-lg border bg-card/50 p-4">
       <p className="text-center text-[11px] uppercase tracking-wider text-muted-foreground mb-2">{title}</p>
       <div className="h-48">
-        <ResponsiveContainer width="100%" height="100%">
-          <PieChart>
-            <Pie data={safe} dataKey="value" nameKey="name" innerRadius={45} outerRadius={70} stroke="hsl(var(--background))" strokeWidth={2}>
-              {safe.map((_, i) => <Cell key={i} fill={DONUT_COLORS[i % DONUT_COLORS.length]} />)}
-            </Pie>
-            <Tooltip contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 6, fontSize: 12 }} />
-          </PieChart>
-        </ResponsiveContainer>
+        <ClientOnly fallback={<div className="h-full" />}>
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie data={safe} dataKey="value" nameKey="name" innerRadius={45} outerRadius={70} stroke="hsl(var(--background))" strokeWidth={2}>
+                {safe.map((_, i) => <Cell key={i} fill={DONUT_COLORS[i % DONUT_COLORS.length]} />)}
+              </Pie>
+              <Tooltip contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 6, fontSize: 12 }} />
+            </PieChart>
+          </ResponsiveContainer>
+        </ClientOnly>
       </div>
       <div className="flex flex-wrap gap-x-3 gap-y-1 justify-center text-[11px] mt-1">
         {safe.map((d, i) => (
