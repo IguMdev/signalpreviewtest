@@ -24,6 +24,7 @@ import { Route as AuthenticatedMembrosRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedTrackeamentoIndexRouteImport } from './routes/_authenticated/trackeamento.index'
 import { Route as AuthenticatedRoomsIndexRouteImport } from './routes/_authenticated/rooms.index'
+import { Route as AuthenticatedTrackeamentoPixelsRouteImport } from './routes/_authenticated/trackeamento.pixels'
 import { Route as AuthenticatedTrackeamentoDominiosRouteImport } from './routes/_authenticated/trackeamento.dominios'
 import { Route as AuthenticatedTrackeamentoPixelIdRouteImport } from './routes/_authenticated/trackeamento.$pixelId'
 import { Route as AuthenticatedIntegracoesMetaRouteImport } from './routes/_authenticated/integracoes.meta'
@@ -118,6 +119,12 @@ const AuthenticatedRoomsIndexRoute = AuthenticatedRoomsIndexRouteImport.update({
   path: '/rooms/',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedTrackeamentoPixelsRoute =
+  AuthenticatedTrackeamentoPixelsRouteImport.update({
+    id: '/trackeamento/pixels',
+    path: '/trackeamento/pixels',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedTrackeamentoDominiosRoute =
   AuthenticatedTrackeamentoDominiosRouteImport.update({
     id: '/trackeamento/dominios',
@@ -231,6 +238,7 @@ export interface FileRoutesByFullPath {
   '/integracoes/meta': typeof AuthenticatedIntegracoesMetaRoute
   '/trackeamento/$pixelId': typeof AuthenticatedTrackeamentoPixelIdRoute
   '/trackeamento/dominios': typeof AuthenticatedTrackeamentoDominiosRoute
+  '/trackeamento/pixels': typeof AuthenticatedTrackeamentoPixelsRoute
   '/rooms/': typeof AuthenticatedRoomsIndexRoute
   '/trackeamento/': typeof AuthenticatedTrackeamentoIndexRoute
   '/rooms/$roomId/edit': typeof AuthenticatedRoomsRoomIdEditRoute
@@ -263,6 +271,7 @@ export interface FileRoutesByTo {
   '/integracoes/meta': typeof AuthenticatedIntegracoesMetaRoute
   '/trackeamento/$pixelId': typeof AuthenticatedTrackeamentoPixelIdRoute
   '/trackeamento/dominios': typeof AuthenticatedTrackeamentoDominiosRoute
+  '/trackeamento/pixels': typeof AuthenticatedTrackeamentoPixelsRoute
   '/rooms': typeof AuthenticatedRoomsIndexRoute
   '/trackeamento': typeof AuthenticatedTrackeamentoIndexRoute
   '/rooms/$roomId/edit': typeof AuthenticatedRoomsRoomIdEditRoute
@@ -297,6 +306,7 @@ export interface FileRoutesById {
   '/_authenticated/integracoes/meta': typeof AuthenticatedIntegracoesMetaRoute
   '/_authenticated/trackeamento/$pixelId': typeof AuthenticatedTrackeamentoPixelIdRoute
   '/_authenticated/trackeamento/dominios': typeof AuthenticatedTrackeamentoDominiosRoute
+  '/_authenticated/trackeamento/pixels': typeof AuthenticatedTrackeamentoPixelsRoute
   '/_authenticated/rooms/': typeof AuthenticatedRoomsIndexRoute
   '/_authenticated/trackeamento/': typeof AuthenticatedTrackeamentoIndexRoute
   '/_authenticated/rooms/$roomId/edit': typeof AuthenticatedRoomsRoomIdEditRoute
@@ -331,6 +341,7 @@ export interface FileRouteTypes {
     | '/integracoes/meta'
     | '/trackeamento/$pixelId'
     | '/trackeamento/dominios'
+    | '/trackeamento/pixels'
     | '/rooms/'
     | '/trackeamento/'
     | '/rooms/$roomId/edit'
@@ -363,6 +374,7 @@ export interface FileRouteTypes {
     | '/integracoes/meta'
     | '/trackeamento/$pixelId'
     | '/trackeamento/dominios'
+    | '/trackeamento/pixels'
     | '/rooms'
     | '/trackeamento'
     | '/rooms/$roomId/edit'
@@ -396,6 +408,7 @@ export interface FileRouteTypes {
     | '/_authenticated/integracoes/meta'
     | '/_authenticated/trackeamento/$pixelId'
     | '/_authenticated/trackeamento/dominios'
+    | '/_authenticated/trackeamento/pixels'
     | '/_authenticated/rooms/'
     | '/_authenticated/trackeamento/'
     | '/_authenticated/rooms/$roomId/edit'
@@ -532,6 +545,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedRoomsIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/trackeamento/pixels': {
+      id: '/_authenticated/trackeamento/pixels'
+      path: '/trackeamento/pixels'
+      fullPath: '/trackeamento/pixels'
+      preLoaderRoute: typeof AuthenticatedTrackeamentoPixelsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/trackeamento/dominios': {
       id: '/_authenticated/trackeamento/dominios'
       path: '/trackeamento/dominios'
@@ -664,6 +684,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedIntegracoesMetaRoute: typeof AuthenticatedIntegracoesMetaRoute
   AuthenticatedTrackeamentoPixelIdRoute: typeof AuthenticatedTrackeamentoPixelIdRoute
   AuthenticatedTrackeamentoDominiosRoute: typeof AuthenticatedTrackeamentoDominiosRoute
+  AuthenticatedTrackeamentoPixelsRoute: typeof AuthenticatedTrackeamentoPixelsRoute
   AuthenticatedRoomsIndexRoute: typeof AuthenticatedRoomsIndexRoute
   AuthenticatedTrackeamentoIndexRoute: typeof AuthenticatedTrackeamentoIndexRoute
   AuthenticatedRoomsRoomIdEditRoute: typeof AuthenticatedRoomsRoomIdEditRoute
@@ -687,6 +708,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedTrackeamentoPixelIdRoute: AuthenticatedTrackeamentoPixelIdRoute,
   AuthenticatedTrackeamentoDominiosRoute:
     AuthenticatedTrackeamentoDominiosRoute,
+  AuthenticatedTrackeamentoPixelsRoute: AuthenticatedTrackeamentoPixelsRoute,
   AuthenticatedRoomsIndexRoute: AuthenticatedRoomsIndexRoute,
   AuthenticatedTrackeamentoIndexRoute: AuthenticatedTrackeamentoIndexRoute,
   AuthenticatedRoomsRoomIdEditRoute: AuthenticatedRoomsRoomIdEditRoute,
