@@ -24,8 +24,10 @@ import { Route as AuthenticatedMembrosRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedTrackeamentoIndexRouteImport } from './routes/_authenticated/trackeamento.index'
 import { Route as AuthenticatedRoomsIndexRouteImport } from './routes/_authenticated/rooms.index'
+import { Route as AuthenticatedTrackeamentoPostbacksRouteImport } from './routes/_authenticated/trackeamento.postbacks'
 import { Route as AuthenticatedTrackeamentoPixelsRouteImport } from './routes/_authenticated/trackeamento.pixels'
 import { Route as AuthenticatedTrackeamentoMetricasRouteImport } from './routes/_authenticated/trackeamento.metricas'
+import { Route as AuthenticatedTrackeamentoIntegracoesRouteImport } from './routes/_authenticated/trackeamento.integracoes'
 import { Route as AuthenticatedTrackeamentoFunisRouteImport } from './routes/_authenticated/trackeamento.funis'
 import { Route as AuthenticatedTrackeamentoDominiosRouteImport } from './routes/_authenticated/trackeamento.dominios'
 import { Route as AuthenticatedTrackeamentoCanalRouteImport } from './routes/_authenticated/trackeamento.canal'
@@ -121,6 +123,12 @@ const AuthenticatedRoomsIndexRoute = AuthenticatedRoomsIndexRouteImport.update({
   path: '/rooms/',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedTrackeamentoPostbacksRoute =
+  AuthenticatedTrackeamentoPostbacksRouteImport.update({
+    id: '/trackeamento/postbacks',
+    path: '/trackeamento/postbacks',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedTrackeamentoPixelsRoute =
   AuthenticatedTrackeamentoPixelsRouteImport.update({
     id: '/trackeamento/pixels',
@@ -131,6 +139,12 @@ const AuthenticatedTrackeamentoMetricasRoute =
   AuthenticatedTrackeamentoMetricasRouteImport.update({
     id: '/trackeamento/metricas',
     path: '/trackeamento/metricas',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedTrackeamentoIntegracoesRoute =
+  AuthenticatedTrackeamentoIntegracoesRouteImport.update({
+    id: '/trackeamento/integracoes',
+    path: '/trackeamento/integracoes',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
 const AuthenticatedTrackeamentoFunisRoute =
@@ -253,8 +267,10 @@ export interface FileRoutesByFullPath {
   '/trackeamento/canal': typeof AuthenticatedTrackeamentoCanalRoute
   '/trackeamento/dominios': typeof AuthenticatedTrackeamentoDominiosRoute
   '/trackeamento/funis': typeof AuthenticatedTrackeamentoFunisRoute
+  '/trackeamento/integracoes': typeof AuthenticatedTrackeamentoIntegracoesRoute
   '/trackeamento/metricas': typeof AuthenticatedTrackeamentoMetricasRoute
   '/trackeamento/pixels': typeof AuthenticatedTrackeamentoPixelsRoute
+  '/trackeamento/postbacks': typeof AuthenticatedTrackeamentoPostbacksRoute
   '/rooms/': typeof AuthenticatedRoomsIndexRoute
   '/trackeamento/': typeof AuthenticatedTrackeamentoIndexRoute
   '/rooms/$roomId/edit': typeof AuthenticatedRoomsRoomIdEditRoute
@@ -288,8 +304,10 @@ export interface FileRoutesByTo {
   '/trackeamento/canal': typeof AuthenticatedTrackeamentoCanalRoute
   '/trackeamento/dominios': typeof AuthenticatedTrackeamentoDominiosRoute
   '/trackeamento/funis': typeof AuthenticatedTrackeamentoFunisRoute
+  '/trackeamento/integracoes': typeof AuthenticatedTrackeamentoIntegracoesRoute
   '/trackeamento/metricas': typeof AuthenticatedTrackeamentoMetricasRoute
   '/trackeamento/pixels': typeof AuthenticatedTrackeamentoPixelsRoute
+  '/trackeamento/postbacks': typeof AuthenticatedTrackeamentoPostbacksRoute
   '/rooms': typeof AuthenticatedRoomsIndexRoute
   '/trackeamento': typeof AuthenticatedTrackeamentoIndexRoute
   '/rooms/$roomId/edit': typeof AuthenticatedRoomsRoomIdEditRoute
@@ -325,8 +343,10 @@ export interface FileRoutesById {
   '/_authenticated/trackeamento/canal': typeof AuthenticatedTrackeamentoCanalRoute
   '/_authenticated/trackeamento/dominios': typeof AuthenticatedTrackeamentoDominiosRoute
   '/_authenticated/trackeamento/funis': typeof AuthenticatedTrackeamentoFunisRoute
+  '/_authenticated/trackeamento/integracoes': typeof AuthenticatedTrackeamentoIntegracoesRoute
   '/_authenticated/trackeamento/metricas': typeof AuthenticatedTrackeamentoMetricasRoute
   '/_authenticated/trackeamento/pixels': typeof AuthenticatedTrackeamentoPixelsRoute
+  '/_authenticated/trackeamento/postbacks': typeof AuthenticatedTrackeamentoPostbacksRoute
   '/_authenticated/rooms/': typeof AuthenticatedRoomsIndexRoute
   '/_authenticated/trackeamento/': typeof AuthenticatedTrackeamentoIndexRoute
   '/_authenticated/rooms/$roomId/edit': typeof AuthenticatedRoomsRoomIdEditRoute
@@ -362,8 +382,10 @@ export interface FileRouteTypes {
     | '/trackeamento/canal'
     | '/trackeamento/dominios'
     | '/trackeamento/funis'
+    | '/trackeamento/integracoes'
     | '/trackeamento/metricas'
     | '/trackeamento/pixels'
+    | '/trackeamento/postbacks'
     | '/rooms/'
     | '/trackeamento/'
     | '/rooms/$roomId/edit'
@@ -397,8 +419,10 @@ export interface FileRouteTypes {
     | '/trackeamento/canal'
     | '/trackeamento/dominios'
     | '/trackeamento/funis'
+    | '/trackeamento/integracoes'
     | '/trackeamento/metricas'
     | '/trackeamento/pixels'
+    | '/trackeamento/postbacks'
     | '/rooms'
     | '/trackeamento'
     | '/rooms/$roomId/edit'
@@ -433,8 +457,10 @@ export interface FileRouteTypes {
     | '/_authenticated/trackeamento/canal'
     | '/_authenticated/trackeamento/dominios'
     | '/_authenticated/trackeamento/funis'
+    | '/_authenticated/trackeamento/integracoes'
     | '/_authenticated/trackeamento/metricas'
     | '/_authenticated/trackeamento/pixels'
+    | '/_authenticated/trackeamento/postbacks'
     | '/_authenticated/rooms/'
     | '/_authenticated/trackeamento/'
     | '/_authenticated/rooms/$roomId/edit'
@@ -571,6 +597,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedRoomsIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/trackeamento/postbacks': {
+      id: '/_authenticated/trackeamento/postbacks'
+      path: '/trackeamento/postbacks'
+      fullPath: '/trackeamento/postbacks'
+      preLoaderRoute: typeof AuthenticatedTrackeamentoPostbacksRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/trackeamento/pixels': {
       id: '/_authenticated/trackeamento/pixels'
       path: '/trackeamento/pixels'
@@ -583,6 +616,13 @@ declare module '@tanstack/react-router' {
       path: '/trackeamento/metricas'
       fullPath: '/trackeamento/metricas'
       preLoaderRoute: typeof AuthenticatedTrackeamentoMetricasRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/trackeamento/integracoes': {
+      id: '/_authenticated/trackeamento/integracoes'
+      path: '/trackeamento/integracoes'
+      fullPath: '/trackeamento/integracoes'
+      preLoaderRoute: typeof AuthenticatedTrackeamentoIntegracoesRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/trackeamento/funis': {
@@ -725,8 +765,10 @@ interface AuthenticatedRouteChildren {
   AuthenticatedTrackeamentoCanalRoute: typeof AuthenticatedTrackeamentoCanalRoute
   AuthenticatedTrackeamentoDominiosRoute: typeof AuthenticatedTrackeamentoDominiosRoute
   AuthenticatedTrackeamentoFunisRoute: typeof AuthenticatedTrackeamentoFunisRoute
+  AuthenticatedTrackeamentoIntegracoesRoute: typeof AuthenticatedTrackeamentoIntegracoesRoute
   AuthenticatedTrackeamentoMetricasRoute: typeof AuthenticatedTrackeamentoMetricasRoute
   AuthenticatedTrackeamentoPixelsRoute: typeof AuthenticatedTrackeamentoPixelsRoute
+  AuthenticatedTrackeamentoPostbacksRoute: typeof AuthenticatedTrackeamentoPostbacksRoute
   AuthenticatedRoomsIndexRoute: typeof AuthenticatedRoomsIndexRoute
   AuthenticatedTrackeamentoIndexRoute: typeof AuthenticatedTrackeamentoIndexRoute
   AuthenticatedRoomsRoomIdEditRoute: typeof AuthenticatedRoomsRoomIdEditRoute
@@ -751,9 +793,13 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedTrackeamentoDominiosRoute:
     AuthenticatedTrackeamentoDominiosRoute,
   AuthenticatedTrackeamentoFunisRoute: AuthenticatedTrackeamentoFunisRoute,
+  AuthenticatedTrackeamentoIntegracoesRoute:
+    AuthenticatedTrackeamentoIntegracoesRoute,
   AuthenticatedTrackeamentoMetricasRoute:
     AuthenticatedTrackeamentoMetricasRoute,
   AuthenticatedTrackeamentoPixelsRoute: AuthenticatedTrackeamentoPixelsRoute,
+  AuthenticatedTrackeamentoPostbacksRoute:
+    AuthenticatedTrackeamentoPostbacksRoute,
   AuthenticatedRoomsIndexRoute: AuthenticatedRoomsIndexRoute,
   AuthenticatedTrackeamentoIndexRoute: AuthenticatedTrackeamentoIndexRoute,
   AuthenticatedRoomsRoomIdEditRoute: AuthenticatedRoomsRoomIdEditRoute,
@@ -781,3 +827,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
