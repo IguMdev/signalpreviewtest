@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
   listOffers, createOffer, deleteOffer,
-  getMyRedirectBase, EVENT_OPTIONS,
+  getMyRedirectBase, EVENT_OPTIONS, listDomains,
 } from "@/lib/tracking.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,7 +14,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Funnel, Plus, Trash2, Copy } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Funnel, Plus, Trash2, Copy, AlertTriangle, HelpCircle, X } from "lucide-react";
 import { PixelFilterBar, usePixelFilter } from "@/components/tracking/PixelFilter";
 
 export const Route = createFileRoute("/_authenticated/trackeamento/funis")({
@@ -45,29 +47,13 @@ function OffersList({ pixelId }: { pixelId: string }) {
   const createFn = useServerFn(createOffer);
   const delFn = useServerFn(deleteOffer);
   const baseFn = useServerFn(getMyRedirectBase);
+  const domainsFn = useServerFn(listDomains);
 
   const offers = useQuery({ queryKey: ["offers", pixelId], queryFn: () => listFn({ data: { pixel_id: pixelId } }) });
   const base = useQuery({ queryKey: ["redirect-base"], queryFn: () => baseFn() });
+  const domains = useQuery({ queryKey: ["tracking-domains"], queryFn: () => domainsFn() });
 
   const [open, setOpen] = useState(false);
-  const [slug, setSlug] = useState("");
-  const [name, setName] = useState("");
-  const [dest, setDest] = useState("");
-  const [subParam, setSubParam] = useState("sub1");
-  const [defaultEvent, setDefaultEvent] = useState<(typeof EVENT_OPTIONS)[number]>("InitiateCheckout");
-
-  const create = useMutation({
-    mutationFn: () => createFn({ data: {
-      pixel_id: pixelId, slug, name, destination_url: dest,
-      subid_param: subParam, default_event: defaultEvent, default_currency: "BRL",
-    } }),
-    onSuccess: () => {
-      toast.success("Oferta criada");
-      setOpen(false); setSlug(""); setName(""); setDest("");
-      qc.invalidateQueries({ queryKey: ["offers", pixelId] });
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
 
   const remove = useMutation({
     mutationFn: (id: string) => delFn({ data: { id } }),
@@ -82,34 +68,16 @@ function OffersList({ pixelId }: { pixelId: string }) {
     <div className="space-y-4">
       <div className="flex justify-end">
         <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild><Button><Plus className="size-4" /> Nova oferta</Button></DialogTrigger>
-          <DialogContent>
-            <DialogHeader><DialogTitle>Nova oferta</DialogTitle></DialogHeader>
-            <div className="space-y-3">
-              <div className="space-y-2"><Label>Nome</Label><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Aviator Brazino" /></div>
-              <div className="space-y-2">
-                <Label>Slug (URL)</Label>
-                <Input value={slug} onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, ""))} placeholder="aviator" />
-                <p className="text-xs text-muted-foreground">Apenas letras minúsculas, números, _ e -</p>
-              </div>
-              <div className="space-y-2"><Label>URL de destino</Label><Input value={dest} onChange={(e) => setDest(e.target.value)} placeholder="https://corretora.com/?ref=123" /></div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2">
-                  <Label>Parâmetro subid</Label>
-                  <Input value={subParam} onChange={(e) => setSubParam(e.target.value)} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Evento Meta</Label>
-                  <Select value={defaultEvent} onValueChange={(v) => setDefaultEvent(v as never)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>{EVENT_OPTIONS.map(o => <SelectItem key={o} value={o}>{o === "off" ? "Desativado" : o}</SelectItem>)}</SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button onClick={() => create.mutate()} disabled={!slug || !name || !dest || create.isPending}>Criar</Button>
-            </DialogFooter>
+          <DialogTrigger asChild><Button><Plus className="size-4" /> Novo funil</Button></DialogTrigger>
+          <DialogContent className="max-w-2xl">
+            <NewFunnelDialog
+              pixelId={pixelId}
+              domains={(domains.data ?? []).filter((d: any) => d.verified_at)}
+              onDone={() => {
+                setOpen(false);
+                qc.invalidateQueries({ queryKey: ["offers", pixelId] });
+              }}
+            />
           </DialogContent>
         </Dialog>
       </div>
@@ -158,5 +126,137 @@ function OffersList({ pixelId }: { pixelId: string }) {
         </Card>
       )}
     </div>
+  );
+}
+
+function NewFunnelDialog({
+  pixelId, domains, onDone,
+}: { pixelId: string; domains: any[]; onDone: () => void }) {
+  const { pixels } = usePixelFilter();
+  const createFn = useServerFn(createOffer);
+
+  const [name, setName] = useState("");
+  const [selectedPixel, setSelectedPixel] = useState<string>(pixelId);
+  const [domain, setDomain] = useState<string>("");
+  const [requireEntry, setRequireEntry] = useState(false);
+  const [urls, setUrls] = useState<string[]>([]);
+  const [draftUrl, setDraftUrl] = useState("");
+
+  function slugify(s: string) {
+    return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9_-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60) || "funil";
+  }
+
+  function addUrl() {
+    if (!draftUrl.trim() || urls.length >= 5) return;
+    try { new URL(draftUrl); } catch { toast.error("URL inválida"); return; }
+    setUrls([...urls, draftUrl.trim()]);
+    setDraftUrl("");
+  }
+
+  const create = useMutation({
+    mutationFn: () => createFn({ data: {
+      pixel_id: selectedPixel,
+      slug: slugify(name),
+      name,
+      destination_url: urls[0],
+      subid_param: "sub1",
+      default_event: "InitiateCheckout",
+      default_currency: "BRL",
+    } }),
+    onSuccess: () => { toast.success("Funil criado"); onDone(); },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const canSave = name.trim() && selectedPixel && domain && urls.length > 0;
+
+  return (
+    <TooltipProvider delayDuration={150}>
+      <DialogHeader><DialogTitle>Novo Funil</DialogTitle></DialogHeader>
+
+      <div className="space-y-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label>Nome</Label>
+            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Digite o Nome do Funil" />
+          </div>
+          <div className="space-y-2">
+            <Label>Pixel</Label>
+            <Select value={selectedPixel} onValueChange={setSelectedPixel}>
+              <SelectTrigger><SelectValue placeholder="Selecione um Pixel" /></SelectTrigger>
+              <SelectContent>
+                {pixels.map((p: any) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
+          <div className="space-y-2">
+            <Label>Domínio</Label>
+            <Select value={domain} onValueChange={setDomain} disabled={domains.length === 0}>
+              <SelectTrigger>
+                <SelectValue placeholder={domains.length === 0 ? "Nenhum domínio verificado" : "Selecione o Domínio"} />
+              </SelectTrigger>
+              <SelectContent>
+                {domains.map((d: any) => <SelectItem key={d.id} value={d.domain}>{d.domain}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="flex items-center gap-3 h-10">
+                <Switch checked={requireEntry} onCheckedChange={setRequireEntry} disabled />
+                <span className="text-sm">Ativar Solicitação de Entrada</span>
+                <HelpCircle className="size-3.5 text-muted-foreground" />
+              </div>
+            </TooltipTrigger>
+            <TooltipContent className="max-w-xs">
+              A solicitação de entrada está disponível apenas para canais privados.
+            </TooltipContent>
+          </Tooltip>
+        </div>
+
+        <div className="space-y-2">
+          <Label>Adicionar URLs (máximo 5)</Label>
+          <div className="flex gap-2">
+            <Input
+              value={draftUrl}
+              onChange={(e) => setDraftUrl(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addUrl(); } }}
+              placeholder={domain ? "https://corretora.com/?ref=123" : "Selecione um domínio primeiro"}
+              disabled={!domain || urls.length >= 5}
+            />
+            <Button type="button" variant="secondary" onClick={addUrl} disabled={!domain || !draftUrl || urls.length >= 5}>
+              Adicionar
+            </Button>
+          </div>
+          {urls.length > 0 && (
+            <ul className="space-y-1.5 pt-1">
+              {urls.map((u, i) => (
+                <li key={i} className="flex items-center gap-2 rounded-md border bg-muted/30 px-2.5 py-1.5 text-xs">
+                  <span className="flex-1 truncate font-mono">{u}</span>
+                  <button type="button" onClick={() => setUrls(urls.filter((_, idx) => idx !== i))} className="text-muted-foreground hover:text-destructive">
+                    <X className="size-3.5" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+
+      <DialogFooter className="gap-2 items-center justify-between sm:justify-between">
+        <div className="flex items-center gap-2 rounded-md border border-destructive/40 bg-destructive/10 px-2.5 py-1.5 text-xs text-destructive">
+          <AlertTriangle className="size-3.5" /> Este bloco não poderá ser alterado.
+        </div>
+        <div className="flex gap-2">
+          <Button variant="ghost" onClick={onDone} disabled={create.isPending}>Cancelar</Button>
+          <Button onClick={() => create.mutate()} disabled={!canSave || create.isPending}>
+            {create.isPending ? "Salvando..." : "Salvar"}
+          </Button>
+        </div>
+      </DialogFooter>
+    </TooltipProvider>
   );
 }
