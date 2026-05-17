@@ -1740,7 +1740,10 @@ export type Database = {
           event_on_register: string
           id: string
           is_active: boolean
+          meta_access_token: string | null
           meta_integration_id: string | null
+          meta_pixel_id: string | null
+          meta_test_event_code: string | null
           name: string
           postback_secret: string
           room_id: string | null
@@ -1758,7 +1761,10 @@ export type Database = {
           event_on_register?: string
           id?: string
           is_active?: boolean
+          meta_access_token?: string | null
           meta_integration_id?: string | null
+          meta_pixel_id?: string | null
+          meta_test_event_code?: string | null
           name: string
           postback_secret?: string
           room_id?: string | null
@@ -1776,7 +1782,10 @@ export type Database = {
           event_on_register?: string
           id?: string
           is_active?: boolean
+          meta_access_token?: string | null
           meta_integration_id?: string | null
+          meta_pixel_id?: string | null
+          meta_test_event_code?: string | null
           name?: string
           postback_secret?: string
           room_id?: string | null
