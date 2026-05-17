@@ -206,14 +206,14 @@ function MetricsView({ pixelId }: { pixelId: string | null }) {
             <table className="w-full text-xs">
               <thead className="text-muted-foreground bg-muted/30">
                 <tr>
-                  {["Data","Horario","Trackeado","ID Telegram","Nome","Status","Funil","URL","utm_source","utm_medium","utm_campaign","utm_content","Dispositivo","Pais","Estado"].map((h) => (
+                  {["Data","Horario","Trackeado","ID Telegram","Nome","Status","Funil","URL","utm_source","utm_medium","utm_campaign","utm_content","Dispositivo","Pais","Estado","Cidade","Data Saída","Hora Saída","Permanência"].map((h) => (
                     <th key={h} className="text-left p-3 font-medium uppercase tracking-wider whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {filtered.length === 0 && (
-                  <tr><td colSpan={15} className="p-6 text-center text-muted-foreground">Sem leads no período.</td></tr>
+                  <tr><td colSpan={19} className="p-6 text-center text-muted-foreground">Sem leads no período.</td></tr>
                 )}
                 {filtered.map((c) => {
                   const d = new Date(c.created_at);
@@ -235,6 +235,10 @@ function MetricsView({ pixelId }: { pixelId: string | null }) {
                       <td className="p-3 whitespace-nowrap">{c.utm_content ?? "-"}</td>
                       <td className="p-3 max-w-[160px] truncate">{detectDevice(c.user_agent)}</td>
                       <td className="p-3">BR</td>
+                      <td className="p-3">-</td>
+                      <td className="p-3">-</td>
+                      <td className="p-3">-</td>
+                      <td className="p-3">-</td>
                       <td className="p-3">-</td>
                     </tr>
                   );
