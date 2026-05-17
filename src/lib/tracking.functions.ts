@@ -395,3 +395,81 @@ export const getMyRedirectBase = createServerFn({ method: "GET" })
     const d = data as any;
     return { domain: d?.domain ?? null };
   });
+
+// ============ POSTBACKS ============
+export const POSTBACK_EVENTS = ["viewpage", "click_button", "channel_enter", "channel_leave"] as const;
+
+const postbackSchema = z.object({
+  pixel_id: z.string().uuid(),
+  name: z.string().min(1).max(120),
+  url: z.string().url().max(2000),
+  event: z.enum(POSTBACK_EVENTS),
+  is_active: z.boolean().default(true),
+});
+
+export const listPostbacks = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ pixel_id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    const { data: rows, error } = await supabase
+      .from("tracking_postbacks" as never)
+      .select("*")
+      .eq("pixel_id", data.pixel_id)
+      .order("created_at", { ascending: false });
+    if (error) throw new Error(error.message);
+    return (rows ?? []) as any[];
+  });
+
+export const createPostback = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => postbackSchema.parse(d))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { data: inserted, error } = await supabase
+      .from("tracking_postbacks" as never)
+      .insert({ ...data, user_id: userId } as never)
+      .select()
+      .single();
+    if (error) throw new Error(error.message);
+    return inserted as any;
+  });
+
+export const updatePostback = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => postbackSchema.partial().extend({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    const { id, ...rest } = data;
+    const { error } = await supabase
+      .from("tracking_postbacks" as never)
+      .update(rest as never)
+      .eq("id", id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const deletePostback = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    const { error } = await supabase
+      .from("tracking_postbacks" as never)
+      .delete()
+      .eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const testPostback = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ url: z.string().url() }).parse(d))
+  .handler(async ({ data }) => {
+    try {
+      const res = await fetch(data.url, { method: "GET" });
+      return { ok: res.ok, status: res.status };
+    } catch (e: any) {
+      return { ok: false, status: 0, error: e?.message ?? "Falha de rede" };
+    }
+  });
