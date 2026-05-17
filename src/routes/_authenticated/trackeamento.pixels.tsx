@@ -336,12 +336,18 @@ function EditPixelForm({ pixel, onClose }: { pixel: any; onClose: () => void }) 
   const [evOffer, setEvOffer] = useState<string>(pixel.event_on_offer_click);
   const [evReg, setEvReg] = useState<string>(pixel.event_on_register);
   const [evDep, setEvDep] = useState<string>(pixel.event_on_deposit);
+  const [metaPixelId, setMetaPixelId] = useState<string>(pixel.meta_pixel_id ?? "");
+  const [accessToken, setAccessToken] = useState<string>(pixel.meta_access_token ?? "");
+  const [testEventCode, setTestEventCode] = useState<string>(pixel.meta_test_event_code ?? "");
 
   const save = useMutation({
     mutationFn: () => updFn({ data: {
       id: pixel.id, name, vertical: vertical as never, is_active: isActive,
       event_on_join: evJoin as never, event_on_offer_click: evOffer as never,
       event_on_register: evReg as never, event_on_deposit: evDep as never,
+      meta_pixel_id: metaPixelId || null,
+      meta_access_token: accessToken || null,
+      meta_test_event_code: testEventCode || null,
     } }),
     onSuccess: () => {
       toast.success("Salvo");
@@ -371,6 +377,23 @@ function EditPixelForm({ pixel, onClose }: { pixel: any; onClose: () => void }) 
           <EventRow label="Clique na oferta" value={evOffer} onChange={setEvOffer} />
           <EventRow label="Cadastro" value={evReg} onChange={setEvReg} />
           <EventRow label="Depósito" value={evDep} onChange={setEvDep} />
+        </div>
+        <div className="space-y-3 pt-2 border-t">
+          <p className="text-sm font-semibold">Credenciais Meta (CAPI)</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label className="text-xs">ID do Pixel</Label>
+              <Input value={metaPixelId} onChange={(e) => setMetaPixelId(e.target.value)} placeholder="123456789012345" />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs">Test Event Code</Label>
+              <Input value={testEventCode} onChange={(e) => setTestEventCode(e.target.value)} placeholder="TEST12345" />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label className="text-xs">Token de Integração</Label>
+            <Textarea value={accessToken} onChange={(e) => setAccessToken(e.target.value)} rows={2} className="font-mono text-xs" placeholder="EAAB..." />
+          </div>
         </div>
       </div>
       <DialogFooter className="mt-4">
