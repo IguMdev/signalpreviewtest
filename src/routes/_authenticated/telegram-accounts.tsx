@@ -260,17 +260,9 @@ function TelegramAccountsPage() {
   const [testChat, setTestChat] = useState("");
   const [testText, setTestText] = useState("Mensagem de teste do TelesinAIs - Automação Telegram 🚀");
 
-  // Verificação automática de Premium (configurável). Persistido em localStorage.
-  const [autoCheckMin, setAutoCheckMin] = useState<number>(() => {
-    if (typeof window === "undefined") return 5;
-    const stored = Number(window.localStorage.getItem(AUTO_CHECK_KEY));
-    return Number.isFinite(stored) && stored >= 1 ? stored : 5;
-  });
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      window.localStorage.setItem(AUTO_CHECK_KEY, String(autoCheckMin));
-    }
-  }, [autoCheckMin]);
+  // Verificação automática de Premium — roda silenciosamente em background.
+  // Intervalo fixo; cron server-side também executa a checagem periódica.
+  const autoCheckMin = 5;
 
   const premiumAccountIds = useMemo(
     () =>
@@ -365,29 +357,6 @@ function TelegramAccountsPage() {
             Gerencie seus bots e contas pessoais premium do Telegram.
           </p>
         </div>
-        {premiumAccountIds.length > 0 && (
-          <div className="flex items-center gap-2 text-xs">
-            <Label htmlFor="auto-check" className="text-muted-foreground">
-              Auto-checar Premium:
-            </Label>
-            <Select
-              value={String(autoCheckMin)}
-              onValueChange={(v) => setAutoCheckMin(Number(v))}
-            >
-              <SelectTrigger id="auto-check" className="h-8 w-[120px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="0">Desligado</SelectItem>
-                <SelectItem value="1">A cada 1 min</SelectItem>
-                <SelectItem value="5">A cada 5 min</SelectItem>
-                <SelectItem value="15">A cada 15 min</SelectItem>
-                <SelectItem value="30">A cada 30 min</SelectItem>
-                <SelectItem value="60">A cada 60 min</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        )}
         <Dialog open={openNew} onOpenChange={setOpenNew}>
           <DialogTrigger asChild>
             <Button className="gap-2" data-tour="add-account">
