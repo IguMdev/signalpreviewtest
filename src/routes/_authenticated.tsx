@@ -19,7 +19,6 @@ import {
   UserPlus,
   GraduationCap,
   Megaphone,
-  Plug,
   ChevronDown,
   ChevronUp,
   Bot,
@@ -53,10 +52,6 @@ const navItems = [
   { to: "/mensagens", label: "Agendamentos", icon: CalendarClock, tour: "nav-mensagens" },
   { to: "/videos", label: "Vídeos", icon: Video, tour: "nav-videos" },
   { to: "/recarga", label: "Recarga", icon: Wallet, tour: "nav-recarga" },
-] as const;
-
-const connectionItems = [
-  { to: "/integracoes/meta", label: "Meta Pixel", icon: Megaphone, tour: "nav-meta" },
 ] as const;
 
 const trackingItems = [
