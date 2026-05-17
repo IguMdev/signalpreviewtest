@@ -229,26 +229,65 @@ function NewPixelWizard({
           </div>
         </TooltipProvider>
       ) : (
-        <div className="space-y-4">
-          <p className="text-sm text-muted-foreground">
-            Opcional: informe um <strong>Test Event Code</strong> do Meta Events Manager para validar os disparos sem enviar para produção.
-          </p>
-          <div className="space-y-2">
-            <Label>Test Event Code</Label>
-            <Input value={testEventCode} onChange={(e) => setTestEventCode(e.target.value)} placeholder="TEST12345" />
+        <TooltipProvider delayDuration={150}>
+          <div className="space-y-5">
+            <div className="rounded-xl border bg-muted/30 p-4 space-y-3">
+              <InstructionRow
+                index={1}
+                title="Acesse o Gerenciador de Eventos"
+                description="Localize o pixel que você deseja configurar."
+                tip="business.facebook.com/events_manager → seu Pixel → aba Testar Eventos."
+              />
+              <InstructionRow
+                index={2}
+                title="Preencha o Código de Teste e envie"
+                description='Copie o código da seção "Confirme os eventos do seu Servidor".'
+                tip="O código começa com TEST e identifica esta sessão de teste."
+              />
+              <InstructionRow
+                index={3}
+                title="Aguarde e aceite os Eventos"
+                description="Aceite os eventos para otimização de campanhas. Os eventos enviados serão:"
+                tip="Após aceitar, o Meta passa a contar esses eventos para otimização de campanhas."
+              />
+              <ul className="pl-9 space-y-1 text-xs text-muted-foreground">
+                <li className="flex items-center gap-2">
+                  <code className="rounded bg-background border px-1.5 py-0.5 text-[11px]">enter_channel</code>
+                  <span>: Disparado quando um usuário entra no canal.</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <code className="rounded bg-background border px-1.5 py-0.5 text-[11px]">left_channel</code>
+                  <span>: Disparado quando um usuário sai do canal.</span>
+                </li>
+              </ul>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>ID do Pixel</Label>
+                <Input value={metaPixelId} readOnly className="bg-muted/40" />
+              </div>
+              <div className="space-y-2">
+                <Label>Código de Teste</Label>
+                <Input value={testEventCode} onChange={(e) => setTestEventCode(e.target.value)} placeholder="Digite o Código de Teste" />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Token de Integração</Label>
+              <Textarea value={accessToken} readOnly rows={3} className="font-mono text-xs bg-muted/40 break-all" />
+            </div>
+
+            <a
+              href="https://business.facebook.com/events_manager"
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+            >
+              Abrir Events Manager <ExternalLink className="size-3" />
+            </a>
           </div>
-          <a
-            href="https://business.facebook.com/events_manager"
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex items-center gap-1 text-sm text-primary underline"
-          >
-            Abrir Events Manager <ExternalLink className="size-3" />
-          </a>
-          <div className="rounded-lg border bg-muted/30 p-3 text-xs text-muted-foreground">
-            Você pode pular este passo e configurar depois em <strong>Editar pixel</strong>.
-          </div>
-        </div>
+        </TooltipProvider>
       )}
 
       <DialogFooter className="gap-2">
@@ -260,7 +299,7 @@ function NewPixelWizard({
           <Button onClick={() => setStep(2)} disabled={!canNext}>Próximo</Button>
         ) : (
           <Button onClick={() => create.mutate()} disabled={create.isPending}>
-            {create.isPending ? "Criando..." : "Criar pixel"}
+            {create.isPending ? "Enviando..." : "Enviar Evento Teste"}
           </Button>
         )}
       </DialogFooter>
