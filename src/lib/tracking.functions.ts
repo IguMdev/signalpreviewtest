@@ -20,6 +20,9 @@ const pixelSchema = z.object({
   event_on_offer_click: z.enum(EVENT_OPTIONS).default("InitiateCheckout"),
   event_on_register: z.enum(EVENT_OPTIONS).default("CompleteRegistration"),
   event_on_deposit: z.enum(EVENT_OPTIONS).default("Purchase"),
+  meta_pixel_id: z.string().trim().max(64).nullable().optional(),
+  meta_access_token: z.string().trim().max(1024).nullable().optional(),
+  meta_test_event_code: z.string().trim().max(64).nullable().optional(),
 });
 
 export const listPixels = createServerFn({ method: "GET" })
