@@ -25,6 +25,7 @@ import { Route as AuthenticatedDashboardRouteImport } from './routes/_authentica
 import { Route as AuthenticatedTrackeamentoIndexRouteImport } from './routes/_authenticated/trackeamento.index'
 import { Route as AuthenticatedRoomsIndexRouteImport } from './routes/_authenticated/rooms.index'
 import { Route as AuthenticatedTrackeamentoPixelsRouteImport } from './routes/_authenticated/trackeamento.pixels'
+import { Route as AuthenticatedTrackeamentoMetricasRouteImport } from './routes/_authenticated/trackeamento.metricas'
 import { Route as AuthenticatedTrackeamentoFunisRouteImport } from './routes/_authenticated/trackeamento.funis'
 import { Route as AuthenticatedTrackeamentoDominiosRouteImport } from './routes/_authenticated/trackeamento.dominios'
 import { Route as AuthenticatedTrackeamentoCanalRouteImport } from './routes/_authenticated/trackeamento.canal'
@@ -124,6 +125,12 @@ const AuthenticatedTrackeamentoPixelsRoute =
   AuthenticatedTrackeamentoPixelsRouteImport.update({
     id: '/trackeamento/pixels',
     path: '/trackeamento/pixels',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedTrackeamentoMetricasRoute =
+  AuthenticatedTrackeamentoMetricasRouteImport.update({
+    id: '/trackeamento/metricas',
+    path: '/trackeamento/metricas',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
 const AuthenticatedTrackeamentoFunisRoute =
@@ -246,6 +253,7 @@ export interface FileRoutesByFullPath {
   '/trackeamento/canal': typeof AuthenticatedTrackeamentoCanalRoute
   '/trackeamento/dominios': typeof AuthenticatedTrackeamentoDominiosRoute
   '/trackeamento/funis': typeof AuthenticatedTrackeamentoFunisRoute
+  '/trackeamento/metricas': typeof AuthenticatedTrackeamentoMetricasRoute
   '/trackeamento/pixels': typeof AuthenticatedTrackeamentoPixelsRoute
   '/rooms/': typeof AuthenticatedRoomsIndexRoute
   '/trackeamento/': typeof AuthenticatedTrackeamentoIndexRoute
@@ -280,6 +288,7 @@ export interface FileRoutesByTo {
   '/trackeamento/canal': typeof AuthenticatedTrackeamentoCanalRoute
   '/trackeamento/dominios': typeof AuthenticatedTrackeamentoDominiosRoute
   '/trackeamento/funis': typeof AuthenticatedTrackeamentoFunisRoute
+  '/trackeamento/metricas': typeof AuthenticatedTrackeamentoMetricasRoute
   '/trackeamento/pixels': typeof AuthenticatedTrackeamentoPixelsRoute
   '/rooms': typeof AuthenticatedRoomsIndexRoute
   '/trackeamento': typeof AuthenticatedTrackeamentoIndexRoute
@@ -316,6 +325,7 @@ export interface FileRoutesById {
   '/_authenticated/trackeamento/canal': typeof AuthenticatedTrackeamentoCanalRoute
   '/_authenticated/trackeamento/dominios': typeof AuthenticatedTrackeamentoDominiosRoute
   '/_authenticated/trackeamento/funis': typeof AuthenticatedTrackeamentoFunisRoute
+  '/_authenticated/trackeamento/metricas': typeof AuthenticatedTrackeamentoMetricasRoute
   '/_authenticated/trackeamento/pixels': typeof AuthenticatedTrackeamentoPixelsRoute
   '/_authenticated/rooms/': typeof AuthenticatedRoomsIndexRoute
   '/_authenticated/trackeamento/': typeof AuthenticatedTrackeamentoIndexRoute
@@ -352,6 +362,7 @@ export interface FileRouteTypes {
     | '/trackeamento/canal'
     | '/trackeamento/dominios'
     | '/trackeamento/funis'
+    | '/trackeamento/metricas'
     | '/trackeamento/pixels'
     | '/rooms/'
     | '/trackeamento/'
@@ -386,6 +397,7 @@ export interface FileRouteTypes {
     | '/trackeamento/canal'
     | '/trackeamento/dominios'
     | '/trackeamento/funis'
+    | '/trackeamento/metricas'
     | '/trackeamento/pixels'
     | '/rooms'
     | '/trackeamento'
@@ -421,6 +433,7 @@ export interface FileRouteTypes {
     | '/_authenticated/trackeamento/canal'
     | '/_authenticated/trackeamento/dominios'
     | '/_authenticated/trackeamento/funis'
+    | '/_authenticated/trackeamento/metricas'
     | '/_authenticated/trackeamento/pixels'
     | '/_authenticated/rooms/'
     | '/_authenticated/trackeamento/'
@@ -565,6 +578,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedTrackeamentoPixelsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/trackeamento/metricas': {
+      id: '/_authenticated/trackeamento/metricas'
+      path: '/trackeamento/metricas'
+      fullPath: '/trackeamento/metricas'
+      preLoaderRoute: typeof AuthenticatedTrackeamentoMetricasRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/trackeamento/funis': {
       id: '/_authenticated/trackeamento/funis'
       path: '/trackeamento/funis'
@@ -705,6 +725,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedTrackeamentoCanalRoute: typeof AuthenticatedTrackeamentoCanalRoute
   AuthenticatedTrackeamentoDominiosRoute: typeof AuthenticatedTrackeamentoDominiosRoute
   AuthenticatedTrackeamentoFunisRoute: typeof AuthenticatedTrackeamentoFunisRoute
+  AuthenticatedTrackeamentoMetricasRoute: typeof AuthenticatedTrackeamentoMetricasRoute
   AuthenticatedTrackeamentoPixelsRoute: typeof AuthenticatedTrackeamentoPixelsRoute
   AuthenticatedRoomsIndexRoute: typeof AuthenticatedRoomsIndexRoute
   AuthenticatedTrackeamentoIndexRoute: typeof AuthenticatedTrackeamentoIndexRoute
@@ -730,6 +751,8 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedTrackeamentoDominiosRoute:
     AuthenticatedTrackeamentoDominiosRoute,
   AuthenticatedTrackeamentoFunisRoute: AuthenticatedTrackeamentoFunisRoute,
+  AuthenticatedTrackeamentoMetricasRoute:
+    AuthenticatedTrackeamentoMetricasRoute,
   AuthenticatedTrackeamentoPixelsRoute: AuthenticatedTrackeamentoPixelsRoute,
   AuthenticatedRoomsIndexRoute: AuthenticatedRoomsIndexRoute,
   AuthenticatedTrackeamentoIndexRoute: AuthenticatedTrackeamentoIndexRoute,
