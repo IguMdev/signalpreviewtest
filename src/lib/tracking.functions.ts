@@ -295,3 +295,100 @@ export const getAttribution = createServerFn({ method: "GET" })
     }
     return Array.from(agg.values()).sort((a, b) => b.clicks - a.clicks).slice(0, 200);
   });
+
+// ============ DOMAINS ============
+const domainRegex = /^(?!-)[a-z0-9-]+(\.[a-z0-9-]+)+$/i;
+
+export const listDomains = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabase } = context;
+    const { data, error } = await supabase
+      .from("tracking_domains" as never)
+      .select("*")
+      .order("created_at", { ascending: false });
+    if (error) throw new Error(error.message);
+    return (data ?? []) as any[];
+  });
+
+export const createDomain = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({
+    domain: z.string().min(3).max(253).regex(domainRegex, "Domínio inválido"),
+  }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const domain = data.domain.toLowerCase().trim();
+    const { data: inserted, error } = await supabase
+      .from("tracking_domains" as never)
+      .insert({ user_id: userId, domain } as never)
+      .select()
+      .single();
+    if (error) throw new Error(error.message);
+    return inserted as any;
+  });
+
+export const deleteDomain = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    const { error } = await supabase
+      .from("tracking_domains" as never)
+      .delete()
+      .eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const verifyDomain = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    const { data: dom } = await supabase
+      .from("tracking_domains" as never)
+      .select("*")
+      .eq("id", data.id)
+      .maybeSingle();
+    if (!dom) throw new Error("Domínio não encontrado");
+    const d = dom as any;
+
+    // Resolve TXT _lovable.<domain> and check the verification_token is present.
+    const dns = await import("dns/promises");
+    const recordName = `_lovable.${d.domain}`;
+    let txtRecords: string[][] = [];
+    try {
+      txtRecords = await dns.resolveTxt(recordName);
+    } catch (e) {
+      throw new Error(`Falha ao consultar DNS (${recordName}). O registro TXT ainda pode não ter propagado.`);
+    }
+    const flat = txtRecords.flat().map((s) => s.trim());
+    const expected = `lovable_verify=${d.verification_token}`;
+    if (!flat.includes(expected)) {
+      throw new Error(`Registro TXT não encontrado. Esperado: ${expected}`);
+    }
+
+    await supabase
+      .from("tracking_domains" as never)
+      .update({ verified_at: new Date().toISOString() } as never)
+      .eq("id", data.id);
+    return { ok: true };
+  });
+
+/** Retorna a base de URL preferida do usuário para os links de tracking. */
+export const getMyRedirectBase = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabase } = context;
+    const { data } = await supabase
+      .from("tracking_domains" as never)
+      .select("domain, verified_at, is_active")
+      .not("verified_at", "is", null)
+      .eq("is_active", true)
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+    const d = data as any;
+    return { domain: d?.domain ?? null };
+  });
