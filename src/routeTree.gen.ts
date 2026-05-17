@@ -42,6 +42,7 @@ import { Route as ApiPublicCronDispatchSessionsRouteImport } from './routes/api/
 import { Route as ApiPublicCronDispatchRecurringRouteImport } from './routes/api/public/cron/dispatch-recurring'
 import { Route as ApiPublicCronDispatchMarketTipsRouteImport } from './routes/api/public/cron/dispatch-market-tips'
 import { Route as ApiPublicCronCheckTelegramWebhooksRouteImport } from './routes/api/public/cron/check-telegram-webhooks'
+import { Route as ApiPublicCronCheckPremiumAccountsRouteImport } from './routes/api/public/cron/check-premium-accounts'
 import { Route as AuthenticatedRoomsRoomIdEditRouteImport } from './routes/_authenticated/rooms.$roomId.edit'
 import { Route as ApiPublicTrackPostbackPixelIdRouteImport } from './routes/api/public/track/postback.$pixelId'
 import { Route as ApiPublicTelegramWebhookAccountIdRouteImport } from './routes/api/public/telegram/webhook.$accountId'
@@ -229,6 +230,12 @@ const ApiPublicCronCheckTelegramWebhooksRoute =
     path: '/api/public/cron/check-telegram-webhooks',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicCronCheckPremiumAccountsRoute =
+  ApiPublicCronCheckPremiumAccountsRouteImport.update({
+    id: '/api/public/cron/check-premium-accounts',
+    path: '/api/public/cron/check-premium-accounts',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const AuthenticatedRoomsRoomIdEditRoute =
   AuthenticatedRoomsRoomIdEditRouteImport.update({
     id: '/rooms/$roomId/edit',
@@ -281,6 +288,7 @@ export interface FileRoutesByFullPath {
   '/rooms/': typeof AuthenticatedRoomsIndexRoute
   '/trackeamento/': typeof AuthenticatedTrackeamentoIndexRoute
   '/rooms/$roomId/edit': typeof AuthenticatedRoomsRoomIdEditRoute
+  '/api/public/cron/check-premium-accounts': typeof ApiPublicCronCheckPremiumAccountsRoute
   '/api/public/cron/check-telegram-webhooks': typeof ApiPublicCronCheckTelegramWebhooksRoute
   '/api/public/cron/dispatch-market-tips': typeof ApiPublicCronDispatchMarketTipsRoute
   '/api/public/cron/dispatch-recurring': typeof ApiPublicCronDispatchRecurringRoute
@@ -319,6 +327,7 @@ export interface FileRoutesByTo {
   '/rooms': typeof AuthenticatedRoomsIndexRoute
   '/trackeamento': typeof AuthenticatedTrackeamentoIndexRoute
   '/rooms/$roomId/edit': typeof AuthenticatedRoomsRoomIdEditRoute
+  '/api/public/cron/check-premium-accounts': typeof ApiPublicCronCheckPremiumAccountsRoute
   '/api/public/cron/check-telegram-webhooks': typeof ApiPublicCronCheckTelegramWebhooksRoute
   '/api/public/cron/dispatch-market-tips': typeof ApiPublicCronDispatchMarketTipsRoute
   '/api/public/cron/dispatch-recurring': typeof ApiPublicCronDispatchRecurringRoute
@@ -359,6 +368,7 @@ export interface FileRoutesById {
   '/_authenticated/rooms/': typeof AuthenticatedRoomsIndexRoute
   '/_authenticated/trackeamento/': typeof AuthenticatedTrackeamentoIndexRoute
   '/_authenticated/rooms/$roomId/edit': typeof AuthenticatedRoomsRoomIdEditRoute
+  '/api/public/cron/check-premium-accounts': typeof ApiPublicCronCheckPremiumAccountsRoute
   '/api/public/cron/check-telegram-webhooks': typeof ApiPublicCronCheckTelegramWebhooksRoute
   '/api/public/cron/dispatch-market-tips': typeof ApiPublicCronDispatchMarketTipsRoute
   '/api/public/cron/dispatch-recurring': typeof ApiPublicCronDispatchRecurringRoute
@@ -399,6 +409,7 @@ export interface FileRouteTypes {
     | '/rooms/'
     | '/trackeamento/'
     | '/rooms/$roomId/edit'
+    | '/api/public/cron/check-premium-accounts'
     | '/api/public/cron/check-telegram-webhooks'
     | '/api/public/cron/dispatch-market-tips'
     | '/api/public/cron/dispatch-recurring'
@@ -437,6 +448,7 @@ export interface FileRouteTypes {
     | '/rooms'
     | '/trackeamento'
     | '/rooms/$roomId/edit'
+    | '/api/public/cron/check-premium-accounts'
     | '/api/public/cron/check-telegram-webhooks'
     | '/api/public/cron/dispatch-market-tips'
     | '/api/public/cron/dispatch-recurring'
@@ -476,6 +488,7 @@ export interface FileRouteTypes {
     | '/_authenticated/rooms/'
     | '/_authenticated/trackeamento/'
     | '/_authenticated/rooms/$roomId/edit'
+    | '/api/public/cron/check-premium-accounts'
     | '/api/public/cron/check-telegram-webhooks'
     | '/api/public/cron/dispatch-market-tips'
     | '/api/public/cron/dispatch-recurring'
@@ -492,6 +505,7 @@ export interface RootRouteChildren {
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   LoginRoute: typeof LoginRoute
   SignupRoute: typeof SignupRoute
+  ApiPublicCronCheckPremiumAccountsRoute: typeof ApiPublicCronCheckPremiumAccountsRoute
   ApiPublicCronCheckTelegramWebhooksRoute: typeof ApiPublicCronCheckTelegramWebhooksRoute
   ApiPublicCronDispatchMarketTipsRoute: typeof ApiPublicCronDispatchMarketTipsRoute
   ApiPublicCronDispatchRecurringRoute: typeof ApiPublicCronDispatchRecurringRoute
@@ -737,6 +751,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicCronCheckTelegramWebhooksRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/cron/check-premium-accounts': {
+      id: '/api/public/cron/check-premium-accounts'
+      path: '/api/public/cron/check-premium-accounts'
+      fullPath: '/api/public/cron/check-premium-accounts'
+      preLoaderRoute: typeof ApiPublicCronCheckPremiumAccountsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/rooms/$roomId/edit': {
       id: '/_authenticated/rooms/$roomId/edit'
       path: '/rooms/$roomId/edit'
@@ -834,6 +855,8 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
   LoginRoute: LoginRoute,
   SignupRoute: SignupRoute,
+  ApiPublicCronCheckPremiumAccountsRoute:
+    ApiPublicCronCheckPremiumAccountsRoute,
   ApiPublicCronCheckTelegramWebhooksRoute:
     ApiPublicCronCheckTelegramWebhooksRoute,
   ApiPublicCronDispatchMarketTipsRoute: ApiPublicCronDispatchMarketTipsRoute,
