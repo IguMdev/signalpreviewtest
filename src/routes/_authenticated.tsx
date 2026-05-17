@@ -250,7 +250,7 @@ function AuthenticatedLayout() {
                 <div
                   key={label}
                   className="relative flex items-center justify-between gap-3 rounded-xl px-3 py-2 text-sm font-medium text-foreground/40 cursor-not-allowed"
-                  title="Em breve"
+                  title="Faça a Assinatura em Recarga"
                 >
                   <span className="flex items-center gap-3">
                     <Icon className="size-4" />
