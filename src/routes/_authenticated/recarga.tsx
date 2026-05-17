@@ -86,7 +86,7 @@ const trackingPlanos: TrackingPlano[] = [
       "4 pixels",
       "4 domínios",
       "12 funis",
-      "1 Canal Telegram",
+      "3 Canais Telegram",
       "Implementação Plug & Play",
       "Suporte Especializado",
     ],
