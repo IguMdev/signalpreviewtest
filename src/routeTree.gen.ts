@@ -25,6 +25,7 @@ import { Route as AuthenticatedDashboardRouteImport } from './routes/_authentica
 import { Route as AuthenticatedTrackeamentoIndexRouteImport } from './routes/_authenticated/trackeamento.index'
 import { Route as AuthenticatedRoomsIndexRouteImport } from './routes/_authenticated/rooms.index'
 import { Route as AuthenticatedTrackeamentoPixelsRouteImport } from './routes/_authenticated/trackeamento.pixels'
+import { Route as AuthenticatedTrackeamentoFunisRouteImport } from './routes/_authenticated/trackeamento.funis'
 import { Route as AuthenticatedTrackeamentoDominiosRouteImport } from './routes/_authenticated/trackeamento.dominios'
 import { Route as AuthenticatedTrackeamentoCanalRouteImport } from './routes/_authenticated/trackeamento.canal'
 import { Route as AuthenticatedIntegracoesMetaRouteImport } from './routes/_authenticated/integracoes.meta'
@@ -123,6 +124,12 @@ const AuthenticatedTrackeamentoPixelsRoute =
   AuthenticatedTrackeamentoPixelsRouteImport.update({
     id: '/trackeamento/pixels',
     path: '/trackeamento/pixels',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedTrackeamentoFunisRoute =
+  AuthenticatedTrackeamentoFunisRouteImport.update({
+    id: '/trackeamento/funis',
+    path: '/trackeamento/funis',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
 const AuthenticatedTrackeamentoDominiosRoute =
@@ -238,6 +245,7 @@ export interface FileRoutesByFullPath {
   '/integracoes/meta': typeof AuthenticatedIntegracoesMetaRoute
   '/trackeamento/canal': typeof AuthenticatedTrackeamentoCanalRoute
   '/trackeamento/dominios': typeof AuthenticatedTrackeamentoDominiosRoute
+  '/trackeamento/funis': typeof AuthenticatedTrackeamentoFunisRoute
   '/trackeamento/pixels': typeof AuthenticatedTrackeamentoPixelsRoute
   '/rooms/': typeof AuthenticatedRoomsIndexRoute
   '/trackeamento/': typeof AuthenticatedTrackeamentoIndexRoute
@@ -271,6 +279,7 @@ export interface FileRoutesByTo {
   '/integracoes/meta': typeof AuthenticatedIntegracoesMetaRoute
   '/trackeamento/canal': typeof AuthenticatedTrackeamentoCanalRoute
   '/trackeamento/dominios': typeof AuthenticatedTrackeamentoDominiosRoute
+  '/trackeamento/funis': typeof AuthenticatedTrackeamentoFunisRoute
   '/trackeamento/pixels': typeof AuthenticatedTrackeamentoPixelsRoute
   '/rooms': typeof AuthenticatedRoomsIndexRoute
   '/trackeamento': typeof AuthenticatedTrackeamentoIndexRoute
@@ -306,6 +315,7 @@ export interface FileRoutesById {
   '/_authenticated/integracoes/meta': typeof AuthenticatedIntegracoesMetaRoute
   '/_authenticated/trackeamento/canal': typeof AuthenticatedTrackeamentoCanalRoute
   '/_authenticated/trackeamento/dominios': typeof AuthenticatedTrackeamentoDominiosRoute
+  '/_authenticated/trackeamento/funis': typeof AuthenticatedTrackeamentoFunisRoute
   '/_authenticated/trackeamento/pixels': typeof AuthenticatedTrackeamentoPixelsRoute
   '/_authenticated/rooms/': typeof AuthenticatedRoomsIndexRoute
   '/_authenticated/trackeamento/': typeof AuthenticatedTrackeamentoIndexRoute
@@ -341,6 +351,7 @@ export interface FileRouteTypes {
     | '/integracoes/meta'
     | '/trackeamento/canal'
     | '/trackeamento/dominios'
+    | '/trackeamento/funis'
     | '/trackeamento/pixels'
     | '/rooms/'
     | '/trackeamento/'
@@ -374,6 +385,7 @@ export interface FileRouteTypes {
     | '/integracoes/meta'
     | '/trackeamento/canal'
     | '/trackeamento/dominios'
+    | '/trackeamento/funis'
     | '/trackeamento/pixels'
     | '/rooms'
     | '/trackeamento'
@@ -408,6 +420,7 @@ export interface FileRouteTypes {
     | '/_authenticated/integracoes/meta'
     | '/_authenticated/trackeamento/canal'
     | '/_authenticated/trackeamento/dominios'
+    | '/_authenticated/trackeamento/funis'
     | '/_authenticated/trackeamento/pixels'
     | '/_authenticated/rooms/'
     | '/_authenticated/trackeamento/'
@@ -552,6 +565,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedTrackeamentoPixelsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/trackeamento/funis': {
+      id: '/_authenticated/trackeamento/funis'
+      path: '/trackeamento/funis'
+      fullPath: '/trackeamento/funis'
+      preLoaderRoute: typeof AuthenticatedTrackeamentoFunisRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/trackeamento/dominios': {
       id: '/_authenticated/trackeamento/dominios'
       path: '/trackeamento/dominios'
@@ -684,6 +704,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedIntegracoesMetaRoute: typeof AuthenticatedIntegracoesMetaRoute
   AuthenticatedTrackeamentoCanalRoute: typeof AuthenticatedTrackeamentoCanalRoute
   AuthenticatedTrackeamentoDominiosRoute: typeof AuthenticatedTrackeamentoDominiosRoute
+  AuthenticatedTrackeamentoFunisRoute: typeof AuthenticatedTrackeamentoFunisRoute
   AuthenticatedTrackeamentoPixelsRoute: typeof AuthenticatedTrackeamentoPixelsRoute
   AuthenticatedRoomsIndexRoute: typeof AuthenticatedRoomsIndexRoute
   AuthenticatedTrackeamentoIndexRoute: typeof AuthenticatedTrackeamentoIndexRoute
@@ -708,6 +729,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedTrackeamentoCanalRoute: AuthenticatedTrackeamentoCanalRoute,
   AuthenticatedTrackeamentoDominiosRoute:
     AuthenticatedTrackeamentoDominiosRoute,
+  AuthenticatedTrackeamentoFunisRoute: AuthenticatedTrackeamentoFunisRoute,
   AuthenticatedTrackeamentoPixelsRoute: AuthenticatedTrackeamentoPixelsRoute,
   AuthenticatedRoomsIndexRoute: AuthenticatedRoomsIndexRoute,
   AuthenticatedTrackeamentoIndexRoute: AuthenticatedTrackeamentoIndexRoute,
@@ -736,13 +758,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
