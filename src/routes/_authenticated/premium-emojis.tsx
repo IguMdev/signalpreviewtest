@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -40,8 +40,37 @@ import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 export const Route = createFileRoute("/_authenticated/premium-emojis")({
-  component: PremiumEmojisPage,
+  component: PremiumEmojisGuard,
 });
+
+function PremiumEmojisGuard() {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const { data, isLoading } = useQuery({
+    queryKey: ["has-premium-account-guard", user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { count } = await supabase
+        .from("telegram_accounts")
+        .select("id", { count: "exact", head: true })
+        .eq("account_type", "premium")
+        .eq("is_active", true)
+        .not("tg_session", "is", null);
+      return (count ?? 0) > 0;
+    },
+  });
+  useEffect(() => {
+    if (data === false) navigate({ to: "/telegram-accounts" });
+  }, [data, navigate]);
+  if (isLoading || data !== true) {
+    return (
+      <div className="min-h-[40vh] grid place-items-center text-sm text-muted-foreground">
+        {isLoading ? "Carregando..." : "Cadastre uma conta premium em Contas Telegram para acessar."}
+      </div>
+    );
+  }
+  return <PremiumEmojisPage />;
+}
 
 type Captured = {
   custom_emoji_id: string;
