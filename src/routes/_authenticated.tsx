@@ -137,6 +137,21 @@ function AuthenticatedLayout() {
   const activeBots = new Set(botSubsQuery.data ?? []);
   const visibleBotItems = botItems.filter((b) => activeBots.has(b.type));
 
+  const premiumAccountsQuery = useQuery({
+    queryKey: ["has-premium-account", user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { count } = await supabase
+        .from("telegram_accounts")
+        .select("id", { count: "exact", head: true })
+        .eq("account_type", "premium")
+        .eq("is_active", true)
+        .not("tg_session", "is", null);
+      return (count ?? 0) > 0;
+    },
+  });
+  const hasPremiumAccount = premiumAccountsQuery.data === true;
+
   if (loading || !user) {
     return (
       <div className="min-h-screen grid place-items-center text-muted-foreground text-sm">
@@ -188,6 +203,22 @@ function AuthenticatedLayout() {
       >
         <nav className="p-3 space-y-1 flex-1 overflow-y-auto">
           {navItems.map(({ to, label, icon: Icon, tour }) => {
+            if (to === "/premium-emojis" && !hasPremiumAccount) {
+              return (
+                <div
+                  key={to}
+                  data-tour={tour}
+                  className="relative flex items-center justify-between gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-foreground/40 cursor-not-allowed"
+                  title="Cadastre uma conta premium em Contas Telegram para liberar"
+                >
+                  <span className="flex items-center gap-3">
+                    <Icon className="size-4" />
+                    {label}
+                  </span>
+                  <Lock className="size-3" />
+                </div>
+              );
+            }
             const active = location.pathname === to || location.pathname.startsWith(to + "/");
             return (
               <Link
