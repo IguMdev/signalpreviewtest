@@ -193,7 +193,7 @@ function CopyRow({ value, mono }: { value: string; mono?: boolean }) {
 
 function NewFunnelDialog({
   pixelId, domains, onDone,
-}: { pixelId: string; domains: any[]; onDone: () => void }) {
+}: { pixelId: string; domains: any[]; onDone: (created?: { offer: any; domain: string }) => void }) {
   const { pixels } = usePixelFilter();
   const createFn = useServerFn(createOffer);
 
@@ -226,7 +226,7 @@ function NewFunnelDialog({
       default_event: "InitiateCheckout",
       default_currency: "BRL",
     } }),
-    onSuccess: () => { toast.success("Funil criado"); onDone(); },
+    onSuccess: (offer: any) => { toast.success("Funil criado"); onDone({ offer, domain }); },
     onError: (e: Error) => toast.error(e.message),
   });
 
@@ -313,7 +313,7 @@ function NewFunnelDialog({
           <AlertTriangle className="size-3.5" /> Este bloco não poderá ser alterado.
         </div>
         <div className="flex gap-2">
-          <Button variant="ghost" onClick={onDone} disabled={create.isPending}>Cancelar</Button>
+          <Button variant="ghost" onClick={() => onDone()} disabled={create.isPending}>Cancelar</Button>
           <Button onClick={() => create.mutate()} disabled={!canSave || create.isPending}>
             {create.isPending ? "Salvando..." : "Salvar"}
           </Button>
