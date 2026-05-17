@@ -216,66 +216,6 @@ function AuthenticatedLayout() {
           {/* Separador sutil */}
           <div className="my-2 border-t border-border/40" />
 
-          {/* Minha conta */}
-          {accountItems.map(({ to, label, icon: Icon, tour }) => {
-            const active = location.pathname === to || location.pathname.startsWith(to + "/");
-            return (
-              <Link
-                key={to}
-                to={to}
-                data-tour={tour}
-                onClick={() => setSidebarOpen(false)}
-                className={cn(
-                  "relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition",
-                  active
-                    ? "cyber-gradient-soft text-foreground cyber-border"
-                    : "text-foreground/70 hover:bg-white/5 hover:text-foreground",
-                )}
-              >
-                <Icon className={cn("size-4", active && "text-primary")} />
-                {label}
-              </Link>
-            );
-          })}
-
-          {/* Conexões dropdown */}
-          <Collapsible defaultOpen={connectionItems.some((i) => location.pathname === i.to || location.pathname.startsWith(i.to + "/"))}>
-            <CollapsibleTrigger asChild>
-              <button
-                type="button"
-                className="w-full relative flex items-center justify-between rounded-xl px-3 py-2.5 text-sm font-medium transition text-foreground/70 hover:bg-white/5 hover:text-foreground"
-              >
-                <span className="flex items-center gap-3">
-                  <Plug className="size-4" />
-                  Conexões
-                </span>
-                <ChevronDown className="size-4 transition-transform data-[state=open]:rotate-180" />
-              </button>
-            </CollapsibleTrigger>
-            <CollapsibleContent className="space-y-1 pl-2">
-              {connectionItems.map(({ to, label, icon: Icon, tour }) => {
-                const active = location.pathname === to || location.pathname.startsWith(to + "/");
-                return (
-                  <Link
-                    key={to}
-                    to={to}
-                    data-tour={tour}
-                    onClick={() => setSidebarOpen(false)}
-                    className={cn(
-                      "relative flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition",
-                      active
-                        ? "cyber-gradient-soft text-foreground cyber-border"
-                        : "text-foreground/70 hover:bg-white/5 hover:text-foreground",
-                    )}
-                  >
-                    <Icon className={cn("size-4", active && "text-primary")} />
-                    {label}
-                  </Link>
-                );
-              })}
-            </CollapsibleContent>
-          </Collapsible>
-
           {/* Trackeamento dropdown */}
           <Collapsible defaultOpen={location.pathname.startsWith("/trackeamento")}>
             <CollapsibleTrigger asChild>
@@ -390,6 +330,26 @@ function AuthenticatedLayout() {
             Ajuda
           </p>
           {footerNavItems.map(({ to, label, icon: Icon, tour }) => {
+            const active = location.pathname === to || location.pathname.startsWith(to + "/");
+            return (
+              <Link
+                key={to}
+                to={to}
+                data-tour={tour}
+                onClick={() => setSidebarOpen(false)}
+                className={cn(
+                  "relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition",
+                  active
+                    ? "cyber-gradient-soft text-foreground cyber-border"
+                    : "text-foreground/70 hover:bg-white/5 hover:text-foreground",
+                )}
+              >
+                <Icon className={cn("size-4", active && "text-primary")} />
+                {label}
+              </Link>
+            );
+          })}
+          {accountItems.map(({ to, label, icon: Icon, tour }) => {
             const active = location.pathname === to || location.pathname.startsWith(to + "/");
             return (
               <Link
