@@ -14,7 +14,7 @@ import {
   DoorOpen, Sparkles, ExternalLink, Crown,
   Users, Heart, MessageCircle, Forward,
   History, CheckCircle2, Clock, XCircle, AlertCircle,
-  Send,
+  Send, Target, Check,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -49,6 +49,62 @@ const salasPlanos: SalaPlano[] = [
     preco: 300,
     descricao: "🟣Plano Premium\n✅ Acesso a todas a ferramentas básicas\n✅ Inclui 3 crédito de sala.\n✅ Opera 3 Bots Telegram.\n✅ Suporte 24/7 Prioritário.",
     destaque: true,
+  },
+];
+
+type TrackingPlano = {
+  id: string;
+  nome: string;
+  preco?: number;
+  precoLabel?: string;
+  features: string[];
+  destaque?: boolean;
+  ctaLabel: string;
+  checkoutUrl?: string;
+};
+
+const trackingPlanos: TrackingPlano[] = [
+  {
+    id: "track-starter",
+    nome: "Plano Starter",
+    preco: 297,
+    features: [
+      "2 pixels",
+      "2 domínios",
+      "6 funis",
+      "1 Canal Telegram",
+      "Implementação Plug & Play",
+      "Suporte Especializado",
+    ],
+    ctaLabel: "Assinar agora",
+  },
+  {
+    id: "track-pro",
+    nome: "Plano Pro",
+    preco: 397,
+    features: [
+      "4 pixels",
+      "4 domínios",
+      "12 funis",
+      "1 Canal Telegram",
+      "Implementação Plug & Play",
+      "Suporte Especializado",
+    ],
+    destaque: true,
+    ctaLabel: "Assinar agora",
+  },
+  {
+    id: "track-custom",
+    nome: "Plano Customizado",
+    precoLabel: "Contatar time de vendas",
+    features: [
+      "Suporte Prioritário",
+      "Onboarding Imediato",
+      "Garantia 7 dias",
+      "Implementação completa",
+      "Atendimento Especializado",
+    ],
+    ctaLabel: "Time de vendas",
   },
 ];
 
@@ -169,6 +225,78 @@ function RecargaPage() {
                     onClick={() => toast.info("Pagamento em breve disponível.")}
                   >
                     Adquirir agora
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </section>
+
+      {/* Trackeamento — Track4You */}
+      <section className="space-y-3">
+        <div className="flex items-center gap-2">
+          <div className="size-9 rounded-md bg-primary/10 flex items-center justify-center">
+            <Target className="size-5 text-primary" />
+          </div>
+          <div>
+            <h2 className="font-semibold">Trackeamento</h2>
+            <p className="text-xs text-muted-foreground">
+              Planos Track4You — pixels, domínios e funis para escalar suas campanhas.
+            </p>
+          </div>
+        </div>
+
+        <div className="grid gap-3 md:grid-cols-3">
+          {trackingPlanos.map((p) => (
+            <Card key={p.id} className={p.destaque ? "border-primary" : ""}>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base flex items-center justify-between">
+                  <span>{p.nome}</span>
+                  {p.destaque && (
+                    <Badge className="text-[10px] gap-1">
+                      <Crown className="size-3" /> Vantagem
+                    </Badge>
+                  )}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="text-2xl font-bold">
+                  {p.preco != null ? (
+                    <>
+                      R$ {p.preco.toFixed(2).replace(".", ",")}
+                      <span className="text-xs font-normal text-muted-foreground"> / por mês</span>
+                    </>
+                  ) : (
+                    <span className="text-lg">{p.precoLabel}</span>
+                  )}
+                </div>
+                <div className="space-y-1.5 pt-1">
+                  <div className="text-xs font-semibold text-primary">Channel Tracking</div>
+                  <ul className="space-y-1">
+                    {p.features.map((f) => (
+                      <li key={f} className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <Check className="size-3 text-primary shrink-0" />
+                        <span>{f}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                {p.checkoutUrl ? (
+                  <Button asChild size="sm" className="w-full">
+                    <a href={p.checkoutUrl} target="_blank" rel="noreferrer">
+                      {p.ctaLabel}
+                      <ExternalLink className="size-3 ml-1" />
+                    </a>
+                  </Button>
+                ) : (
+                  <Button
+                    size="sm"
+                    className="w-full"
+                    variant={p.destaque ? "default" : "outline"}
+                    onClick={() => toast.info("Pagamento em breve disponível.")}
+                  >
+                    {p.ctaLabel}
                   </Button>
                 )}
               </CardContent>
