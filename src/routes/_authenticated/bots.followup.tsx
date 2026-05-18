@@ -20,12 +20,18 @@ import {
   deleteFollowupMessage,
   listFollowupLeads,
   setFollowupLeadStatus,
+  testFollowupMessage,
   type FollowupMessageRow,
 } from "@/lib/followup.functions";
 
 export const Route = createFileRoute("/_authenticated/bots/followup")({
   component: FollowUpPage,
 });
+
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
+function publicUrl(bucket: string, path: string) {
+  return `${SUPABASE_URL.replace(/\/$/, "")}/storage/v1/object/public/${bucket}/${path}`;
+}
 
 function FollowUpPage() {
   const qc = useQueryClient();
@@ -36,11 +42,18 @@ function FollowUpPage() {
   const delMsg = useServerFn(deleteFollowupMessage);
   const listLeads = useServerFn(listFollowupLeads);
   const setLeadStatus = useServerFn(setFollowupLeadStatus);
+  const testMsg = useServerFn(testFollowupMessage);
 
   const roomsQ = useQuery({
     queryKey: ["rooms-pick"],
     queryFn: async () =>
       (await supabase.from("rooms").select("id, name").order("created_at", { ascending: false })).data ?? [],
+  });
+
+  const videosQ = useQuery({
+    queryKey: ["videos-pick-fu"],
+    queryFn: async () =>
+      (await supabase.from("videos").select("id, title, kind, storage_path").order("created_at", { ascending: false })).data ?? [],
   });
 
   const [roomId, setRoomId] = useState<string>("");
@@ -102,6 +115,9 @@ function FollowUpPage() {
           dayNumber: Number(editing.day_number ?? 1),
           sendTime: editing.send_time?.slice(0, 5) || "09:00",
           content: editing.content || null,
+          imagePath: editing.image_path || null,
+          imageMime: editing.image_mime || null,
+          videoId: editing.video_id || null,
           parseMode: "HTML",
           premiumEnabled: false,
           buttonText: editing.button_text || null,
@@ -116,6 +132,20 @@ function FollowUpPage() {
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
+  async function uploadImage(file: File) {
+    const ext = file.name.split(".").pop() ?? "jpg";
+    const path = `followup/${roomId}/${Date.now()}.${ext}`;
+    const { error } = await supabase.storage
+      .from("room-images")
+      .upload(path, file, { upsert: true, contentType: file.type });
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    setEditing((prev) => (prev ? { ...prev, image_path: path, image_mime: file.type } : prev));
+    toast.success("Imagem enviada");
+  }
 
   const removeMsg = useMutation({
     mutationFn: (id: string) => delMsg({ data: { id } }),
@@ -286,6 +316,53 @@ function FollowUpPage() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
+                <Label className="text-xs">Imagem (opcional)</Label>
+                <Input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => e.target.files?.[0] && uploadImage(e.target.files[0])}
+                />
+                {editing.image_path && (
+                  <div className="mt-2 flex items-center gap-2">
+                    <img
+                      src={publicUrl("room-images", editing.image_path)}
+                      alt="prévia"
+                      className="size-16 rounded object-cover"
+                    />
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setEditing({ ...editing, image_path: null, image_mime: null })}
+                    >
+                      Remover
+                    </Button>
+                  </div>
+                )}
+              </div>
+              <div>
+                <Label className="text-xs">Vídeo (opcional)</Label>
+                <Select
+                  value={editing.video_id || "none"}
+                  onValueChange={(v) =>
+                    setEditing({ ...editing, video_id: v === "none" ? null : v })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Nenhum" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Nenhum</SelectItem>
+                    {(videosQ.data ?? []).map((v: { id: string; title: string; kind: string }) => (
+                      <SelectItem key={v.id} value={v.id}>
+                        {v.title} {v.kind === "round" ? "(redondo)" : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
                 <Label className="text-xs">Texto do botão (opcional)</Label>
                 <Input
                   value={editing.button_text ?? ""}
@@ -302,10 +379,32 @@ function FollowUpPage() {
                 />
               </div>
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               <Button onClick={() => saveMsg.mutate()} disabled={saveMsg.isPending}>
                 {saveMsg.isPending ? "Salvando..." : "Salvar"}
               </Button>
+              {editing.id && (
+                <Button
+                  variant="secondary"
+                  onClick={async () => {
+                    const raw = prompt("Chat ID do Telegram para teste (seu user_id ou de um lead):");
+                    if (!raw) return;
+                    const chatId = parseInt(raw, 10);
+                    if (!Number.isFinite(chatId)) {
+                      toast.error("Chat ID inválido");
+                      return;
+                    }
+                    try {
+                      await testMsg({ data: { id: editing.id!, chatId } });
+                      toast.success("Enviado");
+                    } catch (e) {
+                      toast.error(e instanceof Error ? e.message : String(e));
+                    }
+                  }}
+                >
+                  Testar agora
+                </Button>
+              )}
               <Button variant="ghost" onClick={() => setEditing(null)}>
                 Cancelar
               </Button>
