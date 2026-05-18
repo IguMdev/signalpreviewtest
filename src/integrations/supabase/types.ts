@@ -211,6 +211,180 @@ export type Database = {
         }
         Relationships: []
       }
+      followup_dispatch_log: {
+        Row: {
+          day_number: number
+          error: string | null
+          id: number
+          lead_id: string
+          ok: boolean
+          sent_at: string
+          user_id: string
+        }
+        Insert: {
+          day_number: number
+          error?: string | null
+          id?: number
+          lead_id: string
+          ok: boolean
+          sent_at?: string
+          user_id: string
+        }
+        Update: {
+          day_number?: number
+          error?: string | null
+          id?: number
+          lead_id?: string
+          ok?: boolean
+          sent_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      followup_leads: {
+        Row: {
+          account_id: string
+          chat_id: number
+          created_at: string
+          first_name: string | null
+          id: string
+          last_sent_at: string | null
+          last_sent_day: number | null
+          room_id: string
+          started_at: string
+          status: string
+          stopped_at: string | null
+          stopped_reason: string | null
+          tg_user_id: number
+          updated_at: string
+          user_id: string
+          username: string | null
+        }
+        Insert: {
+          account_id: string
+          chat_id: number
+          created_at?: string
+          first_name?: string | null
+          id?: string
+          last_sent_at?: string | null
+          last_sent_day?: number | null
+          room_id: string
+          started_at?: string
+          status?: string
+          stopped_at?: string | null
+          stopped_reason?: string | null
+          tg_user_id: number
+          updated_at?: string
+          user_id: string
+          username?: string | null
+        }
+        Update: {
+          account_id?: string
+          chat_id?: number
+          created_at?: string
+          first_name?: string | null
+          id?: string
+          last_sent_at?: string | null
+          last_sent_day?: number | null
+          room_id?: string
+          started_at?: string
+          status?: string
+          stopped_at?: string | null
+          stopped_reason?: string | null
+          tg_user_id?: number
+          updated_at?: string
+          user_id?: string
+          username?: string | null
+        }
+        Relationships: []
+      }
+      followup_messages: {
+        Row: {
+          button_text: string | null
+          button_url: string | null
+          content: string | null
+          created_at: string
+          day_number: number
+          id: string
+          image_mime: string | null
+          image_path: string | null
+          parse_mode: string
+          premium_account_id: string | null
+          premium_enabled: boolean
+          room_id: string
+          send_time: string
+          sort_order: number
+          updated_at: string
+          user_id: string
+          video_id: string | null
+        }
+        Insert: {
+          button_text?: string | null
+          button_url?: string | null
+          content?: string | null
+          created_at?: string
+          day_number: number
+          id?: string
+          image_mime?: string | null
+          image_path?: string | null
+          parse_mode?: string
+          premium_account_id?: string | null
+          premium_enabled?: boolean
+          room_id: string
+          send_time?: string
+          sort_order?: number
+          updated_at?: string
+          user_id: string
+          video_id?: string | null
+        }
+        Update: {
+          button_text?: string | null
+          button_url?: string | null
+          content?: string | null
+          created_at?: string
+          day_number?: number
+          id?: string
+          image_mime?: string | null
+          image_path?: string | null
+          parse_mode?: string
+          premium_account_id?: string | null
+          premium_enabled?: boolean
+          room_id?: string
+          send_time?: string
+          sort_order?: number
+          updated_at?: string
+          user_id?: string
+          video_id?: string | null
+        }
+        Relationships: []
+      }
+      followup_settings: {
+        Row: {
+          created_at: string
+          enabled: boolean
+          room_id: string
+          timezone: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          enabled?: boolean
+          room_id: string
+          timezone?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          enabled?: boolean
+          room_id?: string
+          timezone?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       forwarder_dedupe: {
         Row: {
           chat_id: number
@@ -739,6 +913,8 @@ export type Database = {
           created_at: string
           delay_seconds_max: number
           delay_seconds_min: number
+          followup_cta_button_text: string
+          followup_cta_enabled: boolean
           forwarder_allowed_types: string[]
           forwarder_enabled: boolean
           forwarder_marked_recurring: string[]
@@ -770,6 +946,8 @@ export type Database = {
           created_at?: string
           delay_seconds_max?: number
           delay_seconds_min?: number
+          followup_cta_button_text?: string
+          followup_cta_enabled?: boolean
           forwarder_allowed_types?: string[]
           forwarder_enabled?: boolean
           forwarder_marked_recurring?: string[]
@@ -801,6 +979,8 @@ export type Database = {
           created_at?: string
           delay_seconds_max?: number
           delay_seconds_min?: number
+          followup_cta_button_text?: string
+          followup_cta_enabled?: boolean
           forwarder_allowed_types?: string[]
           forwarder_enabled?: boolean
           forwarder_marked_recurring?: string[]
