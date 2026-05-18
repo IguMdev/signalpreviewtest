@@ -528,17 +528,23 @@ async function sendDueReports(): Promise<number> {
       .eq("room_id", report.room_id)
       .eq("is_active", true);
     for (const w of windows ?? []) {
-      const key = `${reportDateKey(now, ctx.room.timezone)}:${String(w.end_time).slice(0, 5)}`;
-      // Janela de disparo: a partir de end_time + delay, com tolerância de 6h
-      // (evita disparo lexicográfico errado após meia-noite e cobre eventuais retries).
-      const tzNowHHMM = fmtHHMM(now, ctx.room.timezone);
+      // Dispara APENAS no minuto programado (end_time + delay), na timezone da sala.
+      // Suporta janelas que cruzam meia-noite: target é módulo 1440 e o report_key
+      // referencia o dia da janela (now - delay), não o dia do disparo.
+      const tz = ctx.room.timezone;
+      const tzNowHHMM = fmtHHMM(now, tz);
       const toMin = (s: string) => { const [h, m] = s.split(":").map(Number); return h * 60 + m; };
       const endMin = toMin(String(w.end_time).slice(0, 5));
       const nowMin = toMin(tzNowHHMM);
       const delay = Math.max(0, Number(report.delay_minutes) || 0);
-      const target = endMin + delay;
-      // mesma "data" (cross-midnight tratado pelo report_key idempotente)
-      if (nowMin < target || nowMin > target + 360) continue;
+      const target = (endMin + delay) % 1440;
+      // distância circular nowMin -> target (em minutos). Só dispara no minuto exato
+      // (tolerância de 1 min para o cron que roda * * * * *).
+      const diff = ((nowMin - target) + 1440) % 1440;
+      if (diff > 1) continue;
+      // dia da janela: subtrai delay para o caso de cruzar a meia-noite.
+      const windowDay = reportDateKey(new Date(now.getTime() - delay * 60_000), tz);
+      const key = `${windowDay}:${String(w.end_time).slice(0, 5)}`;
       const { data: claim } = await supabaseAdmin
         .from("room_report_runs")
         .insert({ user_id: report.user_id, room_id: report.room_id, window_id: w.id, report_key: key })
@@ -547,7 +553,6 @@ async function sendDueReports(): Promise<number> {
       if (!claim) continue;
 
       // Agrega apenas operações TERMINAIS do ciclo de hoje (timezone da sala).
-      const tz = ctx.room.timezone;
       const since = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
       const { data: stats } = await supabaseAdmin
         .from("signal_events")
