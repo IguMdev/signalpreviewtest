@@ -117,6 +117,27 @@ export function PremiumEmojiPicker({ value, onChange, targetRef, size = "sm", cl
   const fetchThumbs = useServerFn(getPremiumEmojiThumbs);
   const internalRef = useRef<HTMLTextAreaElement | HTMLInputElement | null>(null);
   const ref = targetRef ?? internalRef;
+  // Captura a posição do cursor ANTES do popover roubar o foco.
+  const savedSelection = useRef<{ el: HTMLTextAreaElement | HTMLInputElement; start: number; end: number } | null>(null);
+
+  const captureSelection = () => {
+    let el = ref.current as HTMLTextAreaElement | HTMLInputElement | null;
+    if (!el) {
+      const active = document.activeElement;
+      if (active instanceof HTMLTextAreaElement || active instanceof HTMLInputElement) {
+        el = active;
+      }
+    }
+    if (!el) {
+      savedSelection.current = null;
+      return;
+    }
+    savedSelection.current = {
+      el,
+      start: el.selectionStart ?? el.value.length,
+      end: el.selectionEnd ?? el.value.length,
+    };
+  };
 
   const list = useQuery({
     queryKey: ["emojis", "picker"],
@@ -160,7 +181,18 @@ export function PremiumEmojiPicker({ value, onChange, targetRef, size = "sm", cl
 
   const insert = (name: string) => {
     const token = `{${name}}`;
-    insertAtCursor(ref.current, value, token, onChange);
+    const saved = savedSelection.current;
+    if (saved) {
+      const next = value.slice(0, saved.start) + token + value.slice(saved.end);
+      onChange(next);
+      const pos = saved.start + token.length;
+      requestAnimationFrame(() => {
+        saved.el.focus();
+        saved.el.setSelectionRange(pos, pos);
+      });
+    } else {
+      insertAtCursor(ref.current, value, token, onChange);
+    }
     setOpen(false);
   };
 
@@ -172,6 +204,8 @@ export function PremiumEmojiPicker({ value, onChange, targetRef, size = "sm", cl
           variant="outline"
           size={size === "sm" ? "sm" : "default"}
           className={className}
+          onPointerDown={captureSelection}
+          onFocus={captureSelection}
           title="Inserir emoji premium"
         >
           <Sparkles className="size-4 text-amber-400" />
