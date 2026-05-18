@@ -362,8 +362,8 @@ function RoomsPage() {
                             <Pencil className="size-4" />
                           </Link>
                         </Button>
-                        <Button size="sm" variant="ghost" title="Logs" disabled>
-                          <FileText className="size-4" />
+                        <Button asChild size="sm" variant="ghost" title="Logs">
+                          <Link to="/bots/logs"><FileText className="size-4" /></Link>
                         </Button>
                         <Button asChild size="sm" variant="ghost" title="Agendados">
                           <Link to="/mensagens"><CalendarClock className="size-4" /></Link>
