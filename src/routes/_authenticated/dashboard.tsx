@@ -157,11 +157,7 @@ function DashboardPage() {
         for (let d = 0; d < 14 && !next; d++) {
           for (const t of times) {
             const candidate = nextFireAt(now, d, t, tz);
-            const dow = Number(
-              new Intl.DateTimeFormat("en-US", { timeZone: tz, weekday: "short" }).format(candidate) === "Sun"
-                ? 0
-                : new Date(candidate.toLocaleString("en-US", { timeZone: tz })).getDay(),
-            );
+            const dow = getTzParts(candidate, tz).weekday;
             if (!weekdays.includes(dow)) continue;
             if (candidate.getTime() <= now.getTime()) continue;
             if (!next || candidate < next) next = candidate;
