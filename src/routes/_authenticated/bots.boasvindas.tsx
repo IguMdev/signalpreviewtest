@@ -354,6 +354,9 @@ type ExtraRow = {
 };
 
 function ExtrasSection({ roomId, videos, premiumAccounts }: { roomId: string; videos: any[]; premiumAccounts: any[] }) {
+  // ╔════════════════════════════════════════════════════════╗
+  // ║  SEQUÊNCIA DE MENSAGENS EXTRAS (welcome_extra_messages)║
+  // ╚════════════════════════════════════════════════════════╝
   const qc = useQueryClient();
   const listQ = useQuery({
     queryKey: ["welcome-extras", roomId],
@@ -436,6 +439,9 @@ function ExtrasSection({ roomId, videos, premiumAccounts }: { roomId: string; vi
 }
 
 function ExtraEditor({
+  // ╔════════════════════════════════════════════════════════╗
+  // ║  EDITOR DE UMA MENSAGEM EXTRA                          ║
+  // ╚════════════════════════════════════════════════════════╝
   row, index, total, videos, premiumAccounts, roomId, onChanged, onRemove, onMoveUp, onMoveDown,
 }: {
   row: ExtraRow;
