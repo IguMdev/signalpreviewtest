@@ -93,6 +93,7 @@ const ScheduleInput = z.object({
   timezone: z.string().default("America/Sao_Paulo"),
   buttonText: z.string().max(64).nullable().optional(),
   buttonUrl: z.string().url().max(2048).nullable().optional(),
+  folderId: z.string().uuid().nullable().optional(),
 });
 
 export const upsertSchedule = createServerFn({ method: "POST" })
@@ -132,6 +133,7 @@ export const upsertSchedule = createServerFn({ method: "POST" })
       timezone: data.timezone,
       button_text: data.buttonText ?? null,
       button_url: data.buttonUrl ?? null,
+      folder_id: data.folderId ?? null,
     };
     if (data.id) {
       const { error } = await supabase

@@ -10,6 +10,11 @@ import {
   testSchedule,
   testMessage,
 } from "@/lib/recurring-schedules.functions";
+import {
+  upsertFolder,
+  deleteFolder,
+  moveScheduleToFolder,
+} from "@/lib/schedule-folders.functions";
 import { syncRoomPhoto } from "@/lib/room-photos.functions";
 import { QuickTemplatesBar } from "@/components/QuickTemplatesBar";
 import { Card } from "@/components/ui/card";
@@ -51,6 +56,9 @@ import {
   Loader2,
   Send,
   Copy,
+  Folder,
+  FolderPlus,
+  FolderOpen,
 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/mensagens")({
@@ -96,6 +104,7 @@ type Schedule = {
   last_sent_at: string | null;
   button_text?: string | null;
   button_url?: string | null;
+  folder_id?: string | null;
 };
 
 type Room = {
@@ -105,6 +114,13 @@ type Room = {
   photo_url: string | null;
 };
 
+type ScheduleFolder = {
+  id: string;
+  name: string;
+  color: string;
+  sort_order: number;
+};
+
 function MensagensPage() {
   const qc = useQueryClient();
   const upsertFn = useServerFn(upsertSchedule);
@@ -112,10 +128,27 @@ function MensagensPage() {
   const delFn = useServerFn(deleteSchedule);
   const testFn = useServerFn(testSchedule);
   const syncPhotoFn = useServerFn(syncRoomPhoto);
+  const upsertFolderFn = useServerFn(upsertFolder);
+  const deleteFolderFn = useServerFn(deleteFolder);
+  const moveFolderFn = useServerFn(moveScheduleToFolder);
 
   const [search, setSearch] = useState("");
   const [editing, setEditing] = useState<Schedule | null>(null);
   const [presetRoomId, setPresetRoomId] = useState<string | null>(null);
+  const [activeFolder, setActiveFolder] = useState<string>("all"); // "all" | "none" | folder id
+  const [manageOpen, setManageOpen] = useState(false);
+
+  const folders = useQuery({
+    queryKey: ["schedule-folders"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("schedule_folders")
+        .select("id, name, color, sort_order")
+        .order("sort_order", { ascending: true })
+        .order("created_at", { ascending: true });
+      return (data ?? []) as ScheduleFolder[];
+    },
+  });
 
   const rooms = useQuery({
     queryKey: ["rooms-min"],
@@ -148,15 +181,21 @@ function MensagensPage() {
 
   const all = list.data ?? [];
 
+  const folderFiltered = useMemo(() => {
+    if (activeFolder === "all") return all;
+    if (activeFolder === "none") return all.filter((s) => !s.folder_id);
+    return all.filter((s) => s.folder_id === activeFolder);
+  }, [all, activeFolder]);
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return all;
-    return all.filter(
+    if (!q) return folderFiltered;
+    return folderFiltered.filter(
       (s) =>
         s.title.toLowerCase().includes(q) ||
         (s.content ?? "").toLowerCase().includes(q),
     );
-  }, [all, search]);
+  }, [folderFiltered, search]);
 
   const grouped = useMemo(() => {
     const map = new Map<string, Schedule[]>();
@@ -191,6 +230,14 @@ function MensagensPage() {
       toast.success("Agendamento removido");
       qc.invalidateQueries({ queryKey: ["recurring-schedules"] });
     },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const moveMut = useMutation({
+    mutationFn: async (vars: { id: string; folderId: string | null }) => {
+      await moveFolderFn({ data: vars });
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["recurring-schedules"] }),
     onError: (e: Error) => toast.error(e.message),
   });
 
@@ -282,6 +329,38 @@ function MensagensPage() {
         <Card className="p-5 flex items-center text-sm text-muted-foreground">
           Execução automática a cada minuto pelo sistema
         </Card>
+      </div>
+
+      <div className="flex items-center gap-2 flex-wrap">
+        <FolderChip
+          active={activeFolder === "all"}
+          onClick={() => setActiveFolder("all")}
+          icon={<FolderOpen className="size-4" />}
+          label="Todas"
+          count={all.length}
+        />
+        <FolderChip
+          active={activeFolder === "none"}
+          onClick={() => setActiveFolder("none")}
+          icon={<Folder className="size-4" />}
+          label="Sem pasta"
+          count={all.filter((s) => !s.folder_id).length}
+        />
+        {(folders.data ?? []).map((f) => (
+          <FolderChip
+            key={f.id}
+            active={activeFolder === f.id}
+            onClick={() => setActiveFolder(f.id)}
+            icon={<Folder className="size-4" style={{ color: f.color }} />}
+            label={f.name}
+            count={all.filter((s) => s.folder_id === f.id).length}
+            color={f.color}
+          />
+        ))}
+        <Button size="sm" variant="outline" onClick={() => setManageOpen(true)}>
+          <FolderPlus className="size-4" />
+          Gerenciar pastas
+        </Button>
       </div>
 
       <div className="relative max-w-md">
@@ -394,6 +473,19 @@ function MensagensPage() {
                               Premium
                             </Badge>
                           )}
+                          {(() => {
+                            const f = (folders.data ?? []).find((x) => x.id === s.folder_id);
+                            return f ? (
+                              <Badge
+                                variant="secondary"
+                                className="border-0 font-normal"
+                                style={{ backgroundColor: `${f.color}26`, color: f.color }}
+                              >
+                                <Folder className="size-3 mr-1" />
+                                {f.name}
+                              </Badge>
+                            ) : null;
+                          })()}
                         </div>
                         {s.last_sent_at && (
                           <p className="text-xs text-muted-foreground mt-1">
@@ -406,6 +498,22 @@ function MensagensPage() {
                           checked={s.is_active}
                           onCheckedChange={(v) => toggleMut.mutate({ id: s.id, isActive: v })}
                         />
+                        <Select
+                          value={s.folder_id ?? "__none__"}
+                          onValueChange={(v) =>
+                            moveMut.mutate({ id: s.id, folderId: v === "__none__" ? null : v })
+                          }
+                        >
+                          <SelectTrigger className="h-8 w-[140px]" title="Mover para pasta">
+                            <SelectValue placeholder="Pasta" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="__none__">Sem pasta</SelectItem>
+                            {(folders.data ?? []).map((f) => (
+                              <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                         <Button
                           size="sm"
                           variant="outline"
@@ -458,6 +566,7 @@ function MensagensPage() {
         rooms={rooms.data ?? []}
         accounts={accounts.data ?? []}
         videos={videos.data ?? []}
+        folders={folders.data ?? []}
         presetRoomId={presetRoomId}
         onClose={() => setEditing(null)}
         onSave={async (payload) => {
@@ -471,6 +580,210 @@ function MensagensPage() {
           }
         }}
       />
+
+      <ManageFoldersDialog
+        open={manageOpen}
+        onClose={() => setManageOpen(false)}
+        folders={folders.data ?? []}
+        onCreate={async (name, color) => {
+          await upsertFolderFn({ data: { name, color, sortOrder: (folders.data?.length ?? 0) } });
+          await qc.invalidateQueries({ queryKey: ["schedule-folders"] });
+        }}
+        onRename={async (id, name, color) => {
+          await upsertFolderFn({ data: { id, name, color, sortOrder: 0 } });
+          await qc.invalidateQueries({ queryKey: ["schedule-folders"] });
+        }}
+        onDelete={async (id) => {
+          await deleteFolderFn({ data: { id } });
+          await qc.invalidateQueries({ queryKey: ["schedule-folders"] });
+          await qc.invalidateQueries({ queryKey: ["recurring-schedules"] });
+          if (activeFolder === id) setActiveFolder("all");
+        }}
+      />
+    </div>
+  );
+}
+
+function FolderChip({
+  active,
+  onClick,
+  icon,
+  label,
+  count,
+  color,
+}: {
+  active: boolean;
+  onClick: () => void;
+  icon: React.ReactNode;
+  label: string;
+  count: number;
+  color?: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm border transition-colors ${
+        active
+          ? "bg-primary text-primary-foreground border-primary"
+          : "bg-card hover:bg-muted border-border"
+      }`}
+      style={active && color ? { backgroundColor: color, borderColor: color, color: "#fff" } : undefined}
+    >
+      {icon}
+      <span>{label}</span>
+      <span className={`text-xs ${active ? "opacity-80" : "text-muted-foreground"}`}>{count}</span>
+    </button>
+  );
+}
+
+function ManageFoldersDialog({
+  open,
+  onClose,
+  folders,
+  onCreate,
+  onRename,
+  onDelete,
+}: {
+  open: boolean;
+  onClose: () => void;
+  folders: ScheduleFolder[];
+  onCreate: (name: string, color: string) => Promise<void>;
+  onRename: (id: string, name: string, color: string) => Promise<void>;
+  onDelete: (id: string) => Promise<void>;
+}) {
+  const [name, setName] = useState("");
+  const [color, setColor] = useState("#6366f1");
+  const [busy, setBusy] = useState(false);
+  return (
+    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Pastas de agendamentos</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="flex items-end gap-2">
+            <div className="flex-1 space-y-1">
+              <Label>Nova pasta</Label>
+              <Input
+                placeholder="Ex: Manhã, Sinais, Promo…"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+              />
+            </div>
+            <input
+              type="color"
+              value={color}
+              onChange={(e) => setColor(e.target.value)}
+              className="h-10 w-12 rounded border border-border bg-transparent"
+            />
+            <Button
+              disabled={!name.trim() || busy}
+              onClick={async () => {
+                setBusy(true);
+                try {
+                  await onCreate(name.trim(), color);
+                  setName("");
+                  toast.success("Pasta criada");
+                } catch (e) {
+                  toast.error((e as Error).message);
+                } finally {
+                  setBusy(false);
+                }
+              }}
+            >
+              <Plus className="size-4" />
+            </Button>
+          </div>
+
+          <div className="space-y-2 max-h-72 overflow-auto">
+            {folders.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Nenhuma pasta criada.</p>
+            ) : (
+              folders.map((f) => (
+                <FolderRow
+                  key={f.id}
+                  folder={f}
+                  onRename={onRename}
+                  onDelete={onDelete}
+                />
+              ))
+            )}
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="secondary" onClick={onClose}>Fechar</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function FolderRow({
+  folder,
+  onRename,
+  onDelete,
+}: {
+  folder: ScheduleFolder;
+  onRename: (id: string, name: string, color: string) => Promise<void>;
+  onDelete: (id: string) => Promise<void>;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [name, setName] = useState(folder.name);
+  const [color, setColor] = useState(folder.color);
+  return (
+    <div className="flex items-center gap-2 rounded-md border border-border p-2">
+      {editing ? (
+        <>
+          <input
+            type="color"
+            value={color}
+            onChange={(e) => setColor(e.target.value)}
+            className="h-8 w-10 rounded border border-border bg-transparent"
+          />
+          <Input value={name} onChange={(e) => setName(e.target.value)} className="h-8" />
+          <Button
+            size="sm"
+            onClick={async () => {
+              try {
+                await onRename(folder.id, name.trim(), color);
+                setEditing(false);
+                toast.success("Pasta atualizada");
+              } catch (e) {
+                toast.error((e as Error).message);
+              }
+            }}
+          >
+            OK
+          </Button>
+          <Button size="sm" variant="ghost" onClick={() => { setEditing(false); setName(folder.name); setColor(folder.color); }}>
+            <X className="size-4" />
+          </Button>
+        </>
+      ) : (
+        <>
+          <span className="size-4 rounded-full" style={{ backgroundColor: folder.color }} />
+          <span className="flex-1 truncate">{folder.name}</span>
+          <Button size="icon" variant="ghost" onClick={() => setEditing(true)}>
+            <Pencil className="size-4" />
+          </Button>
+          <Button
+            size="icon"
+            variant="ghost"
+            onClick={async () => {
+              if (!confirm(`Excluir pasta "${folder.name}"? Os agendamentos não serão excluídos.`)) return;
+              try {
+                await onDelete(folder.id);
+                toast.success("Pasta removida");
+              } catch (e) {
+                toast.error((e as Error).message);
+              }
+            }}
+          >
+            <Trash2 className="size-4" />
+          </Button>
+        </>
+      )}
     </div>
   );
 }
@@ -508,6 +821,7 @@ function ScheduleDialog({
   rooms,
   accounts,
   videos,
+  folders,
   presetRoomId,
   onClose,
   onSave,
@@ -516,6 +830,7 @@ function ScheduleDialog({
   rooms: Room[];
   accounts: { id: string; label: string }[];
   videos: { id: string; title: string; kind?: string | null }[];
+  folders: ScheduleFolder[];
   presetRoomId: string | null;
   onClose: () => void;
   onSave: (data: {
@@ -546,6 +861,7 @@ function ScheduleDialog({
     timezone: string;
     buttonText?: string | null;
     buttonUrl?: string | null;
+    folderId?: string | null;
   }) => void;
 }) {
   const [title, setTitle] = useState("");
@@ -571,6 +887,7 @@ function ScheduleDialog({
   const [newTime, setNewTime] = useState("");
   const [buttonText, setButtonText] = useState("");
   const [buttonUrl, setButtonUrl] = useState("");
+  const [folderId, setFolderId] = useState<string>("");
 
   const open = !!editing;
   const videoKindById = useMemo(() => {
@@ -613,9 +930,11 @@ function ScheduleDialog({
       setNewTime("");
       setButtonText(editing.button_text ?? "");
       setButtonUrl(editing.button_url ?? "");
+      setFolderId(editing.folder_id ?? "");
     } else {
       setButtonText("");
       setButtonUrl("");
+      setFolderId("");
     }
   }, [editing, presetRoomId]);
 
@@ -758,6 +1077,21 @@ function ScheduleDialog({
                     </SelectContent>
                   </Select>
                 </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Pasta</Label>
+                <Select
+                  value={folderId || "__none__"}
+                  onValueChange={(v) => setFolderId(v === "__none__" ? "" : v)}
+                >
+                  <SelectTrigger><SelectValue placeholder="Sem pasta" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">Sem pasta</SelectItem>
+                    {folders.map((f) => (
+                      <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="flex items-center gap-6 pt-1">
                 <label className="flex items-center gap-2 cursor-pointer">
@@ -1359,6 +1693,7 @@ function ScheduleDialog({
                 timezone: "America/Sao_Paulo",
                 buttonText: buttonText.trim() || null,
                 buttonUrl: buttonUrl.trim() || null,
+                folderId: folderId || null,
               })
             }
           >
