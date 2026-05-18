@@ -13,6 +13,15 @@ import {
   renderTemplate,
   resolveBinary,
 } from "@/lib/signals.server";
+
+// ╔══════════════════════════════════════════════════════════╗
+// ║  CRON: DISPATCH-SIGNALS (executado a cada minuto)        ║
+// ║  Cobre 4 rotinas independentes:                          ║
+// ║   1. SINAIS — agenda/envia sinais nas janelas ativas     ║
+// ║   2. GALE & RESULTADO — fecha sinais e envia WIN/LOSS    ║
+// ║   3. RELATÓRIO DE JANELA — resumo ao fim da janela       ║
+// ║   4. STOP-LOSS — envia alerta quando bate o limite       ║
+// ╚══════════════════════════════════════════════════════════╝
 import { aggregateTerminalStats, reportDateKey, withRetry } from "@/lib/signals-aggregation";
 
 type Window = {
