@@ -811,11 +811,11 @@ function StatCard({
         ? "bg-sky-500/15 text-sky-400"
         : "bg-primary/15 text-primary";
   return (
-    <Card className="p-5 flex items-center gap-4">
-      <div className={`size-11 rounded-xl grid place-items-center ${toneCls}`}>{icon}</div>
+    <Card className="p-3 sm:p-5 flex items-center gap-3 sm:gap-4">
+      <div className={`size-9 sm:size-11 rounded-xl grid place-items-center shrink-0 ${toneCls}`}>{icon}</div>
       <div>
-        <p className="text-2xl font-bold leading-none">{value}</p>
-        <p className="text-sm text-muted-foreground mt-1">{label}</p>
+        <p className="text-xl sm:text-2xl font-bold leading-none">{value}</p>
+        <p className="text-xs sm:text-sm text-muted-foreground mt-1">{label}</p>
       </div>
     </Card>
   );
