@@ -2,6 +2,13 @@ import { createHash, randomBytes } from "crypto";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { sendMetaEvent, type MetaUserData, type MetaCustomData } from "./meta-capi.server";
 
+// ╔══════════════════════════════════════════════════════════╗
+// ║  LIB SERVER — TRACKEAMENTO AVANÇADO (Track4You)          ║
+// ║  Gera click_id, persiste em tracking_clicks e dispara    ║
+// ║  o estágio correspondente no Meta CAPI.                  ║
+// ╚══════════════════════════════════════════════════════════╝
+
+
 const ALPHABET = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
 export function generateClickId(length = 12): string {
