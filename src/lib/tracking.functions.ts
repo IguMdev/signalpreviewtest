@@ -199,6 +199,36 @@ export const listRecentClicks = createServerFn({ method: "GET" })
     return (rows ?? []) as any[];
   });
 
+// Lista cliques com filtros opcionais (data inicial/final e tipo de evento).
+// Tipo: any (qualquer), click, join, offer_click, register, deposit
+export const listClicksFiltered = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({
+    pixel_id: z.string().uuid(),
+    from: z.string().datetime().nullable().optional(),
+    to: z.string().datetime().nullable().optional(),
+    event: z.enum(["any", "click", "join", "offer_click", "register", "deposit"]).default("any"),
+    limit: z.number().min(1).max(5000).default(500),
+  }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    let q = supabase
+      .from("tracking_clicks" as never)
+      .select("click_id, created_at, utm_source, utm_medium, utm_campaign, utm_content, utm_term, fbclid, ttclid, gclid, ip, joined_at, clicked_offer_at, registered_at, deposited_at, tg_username, tg_user_id, sale_value, sale_currency, external_user_id")
+      .eq("pixel_id", data.pixel_id)
+      .order("created_at", { ascending: false })
+      .limit(data.limit);
+    if (data.from) q = q.gte("created_at", data.from);
+    if (data.to) q = q.lte("created_at", data.to);
+    if (data.event === "join") q = q.not("joined_at", "is", null);
+    else if (data.event === "offer_click") q = q.not("clicked_offer_at", "is", null);
+    else if (data.event === "register") q = q.not("registered_at", "is", null);
+    else if (data.event === "deposit") q = q.not("deposited_at", "is", null);
+    const { data: rows, error } = await q;
+    if (error) throw new Error(error.message);
+    return (rows ?? []) as any[];
+  });
+
 export const getPixelStats = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({
