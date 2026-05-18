@@ -1,0 +1,1 @@
+ALTER TYPE public.engagement_bot_type ADD VALUE IF NOT EXISTS 'followup';

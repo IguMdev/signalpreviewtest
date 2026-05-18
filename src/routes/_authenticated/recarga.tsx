@@ -12,9 +12,9 @@ import {
 } from "@/components/ui/table";
 import {
   DoorOpen, Sparkles, ExternalLink, Crown,
-  Users, Heart, MessageCircle, Forward,
+  Users, Heart, MessageCircle, Forward, Repeat,
   History, CheckCircle2, Clock, XCircle, AlertCircle,
-  Send, Target, Check,
+  Send, Target, Check, Lock,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -112,17 +112,18 @@ const trackingPlanos: TrackingPlano[] = [
   },
 ];
 
-type BotType = "inscritos" | "interacoes" | "boasvindas" | "encaminhador";
+type BotType = "inscritos" | "interacoes" | "boasvindas" | "encaminhador" | "followup";
 
 const BOT_META: Record<BotType, { title: string; icon: any; tagline: string; quotaLabel: string }> = {
   inscritos:    { title: "BotInscritos",    icon: Users,         tagline: "Novos membros para o seu canal",         quotaLabel: "membros/mês" },
   interacoes:   { title: "BotInterações",   icon: Heart,         tagline: "Reações automáticas em cada sinal",      quotaLabel: "reações/sinal" },
   boasvindas:   { title: "BotBoasVindas",   icon: MessageCircle, tagline: "Mensagem automática para novos membros", quotaLabel: "" },
   encaminhador: { title: "BotEncaminhador", icon: Forward,       tagline: "Encaminha mensagens entre canais",       quotaLabel: "" },
+  followup:     { title: "BotFollowUp",     icon: Repeat,        tagline: "Sequência de mensagens para leads do BoasVindas", quotaLabel: "" },
 };
 
 const BOT_ORDER: BotType[] = ["inscritos", "interacoes"];
-const BOT_PAIR: BotType[] = ["boasvindas", "encaminhador"];
+const BOT_PAIR: BotType[] = ["boasvindas", "encaminhador", "followup"];
 
 function RecargaPage() {
   const { user } = useAuth();
@@ -422,7 +423,7 @@ function RecargaPage() {
         })}
 
         {/* Boas-vindas + Encaminhador lado a lado */}
-        <div className="grid gap-6 md:grid-cols-2">
+        <div className="grid gap-6 md:grid-cols-3">
           {BOT_PAIR.map((bot) => {
             const meta = BOT_META[bot];
             const Icon = meta.icon;
@@ -434,6 +435,12 @@ function RecargaPage() {
               : 0;
 
             if (plans.length === 0) return null;
+
+            // BotFollowUp só pode ser adquirido se o BotBoasVindas estiver ativo
+            const boasvindasSub = subByBot.get("boasvindas");
+            const requiresBoasvindas = bot === "followup";
+            const boasvindasActive = boasvindasSub?.status === "active";
+            const locked = requiresBoasvindas && !boasvindasActive;
 
             return (
               <section key={bot} className="space-y-3">
@@ -485,7 +492,12 @@ function RecargaPage() {
                             <span className="text-xs font-normal text-muted-foreground">/mês</span>
                           </div>
                           <p className="text-xs text-muted-foreground min-h-[32px]">{p.description}</p>
-                          {p.kirvano_checkout_url ? (
+                          {locked ? (
+                            <Button size="sm" className="w-full" disabled variant="secondary">
+                              <Lock className="size-3 mr-1" />
+                              Requer BotBoasVindas ativo
+                            </Button>
+                          ) : p.kirvano_checkout_url ? (
                             isCurrent ? (
                               <Button asChild size="sm" variant="outline" className="w-full">
                                 <a href={KIRVANO_CUSTOMER_PORTAL} target="_blank" rel="noreferrer">
@@ -506,9 +518,15 @@ function RecargaPage() {
                               </Button>
                             )
                           ) : (
-                            <Button size="sm" className="w-full" disabled variant="secondary">
-                              Em breve
-                            </Button>
+                            isCurrent ? (
+                              <Button size="sm" className="w-full" variant="outline" disabled>
+                                <Check className="size-3 mr-1" /> Ativo
+                              </Button>
+                            ) : (
+                              <Button size="sm" className="w-full" disabled variant="secondary">
+                                Em breve
+                              </Button>
+                            )
                           )}
                         </CardContent>
                       </Card>
