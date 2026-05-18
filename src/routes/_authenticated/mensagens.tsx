@@ -1664,8 +1664,9 @@ function ScheduleDialog({
             )}
           </div>
         </div>
-        <DialogFooter className="gap-2 sm:gap-2">
+        <DialogFooter className="gap-2 flex-col-reverse sm:flex-row">
           <Button
+            className="w-full sm:w-auto"
             disabled={!canSave}
             onClick={() =>
               onSave({
@@ -1706,7 +1707,7 @@ function ScheduleDialog({
           >
             {editing?.id ? "Salvar alterações" : "Criar mensagem"}
           </Button>
-          <Button variant="secondary" onClick={onClose}>Cancelar</Button>
+          <Button variant="secondary" onClick={onClose} className="w-full sm:w-auto">Cancelar</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
