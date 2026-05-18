@@ -119,12 +119,19 @@ function isPickerTextControl(el: HTMLTextAreaElement | HTMLInputElement) {
 }
 
 function setTextControlCursor(el: HTMLTextAreaElement | HTMLInputElement, pos: number) {
+  // Preserva o scroll do textarea/input — focus + setSelectionRange faz o
+  // browser rolar para deixar o caret visível, o que descia a caixa até o
+  // final mesmo quando o cursor já estava visível.
+  const prevScrollTop = el.scrollTop;
+  const prevScrollLeft = el.scrollLeft;
   try {
-    el.focus();
+    el.focus({ preventScroll: true });
     el.setSelectionRange(pos, pos);
   } catch {
-    el.focus();
+    try { el.focus({ preventScroll: true }); } catch { el.focus(); }
   }
+  el.scrollTop = prevScrollTop;
+  el.scrollLeft = prevScrollLeft;
 }
 
 export function PremiumEmojiPicker({ value, onChange, targetRef, size = "sm", className }: Props) {
