@@ -91,9 +91,11 @@ async function sendWelcomeBlock(opts: {
   videoId: string | null | undefined;
   premiumEnabled?: boolean | null;
   premiumAccountId?: string | null;
+  replyMarkup?: Record<string, unknown> | null;
 }): Promise<{ ok: boolean; description?: string; mediaKind: "video_note" | "video" | "photo" | "text" }> {
   const parse_mode = opts.parseMode || "HTML";
   const usePremium = !!opts.premiumEnabled && !!opts.premiumAccountId;
+  const reply_markup = opts.replyMarkup ?? undefined;
 
   if (opts.videoId) {
     const { data: vid } = await supabaseAdmin
@@ -103,16 +105,19 @@ async function sendWelcomeBlock(opts: {
       const method = vid.kind === "round" ? "sendVideoNote" : "sendVideo";
       const body: Record<string, unknown> = { chat_id: opts.chatId };
       if (method === "sendVideoNote") body.video_note = url;
-      else { body.video = url; body.caption = opts.text; body.parse_mode = parse_mode; }
+      else { body.video = url; body.caption = opts.text; body.parse_mode = parse_mode; if (reply_markup) body.reply_markup = reply_markup; }
       const resp = await callTelegram(opts.botToken, method, body);
       if (method === "sendVideoNote") {
         if (usePremium) {
           await sendTextWithPremiumEmojis({
             userId: opts.userId, accountId: opts.premiumAccountId!, chatId: opts.chatId,
             text: opts.text, allowPlain: true,
-          }).catch(() => callTelegram(opts.botToken, "sendMessage", { chat_id: opts.chatId, text: opts.text, parse_mode }));
+          }).catch(() => callTelegram(opts.botToken, "sendMessage", { chat_id: opts.chatId, text: opts.text, parse_mode, reply_markup }));
+          if (reply_markup) {
+            await callTelegram(opts.botToken, "sendMessage", { chat_id: opts.chatId, text: "\u2063", reply_markup });
+          }
         } else {
-          await callTelegram(opts.botToken, "sendMessage", { chat_id: opts.chatId, text: opts.text, parse_mode });
+          await callTelegram(opts.botToken, "sendMessage", { chat_id: opts.chatId, text: opts.text, parse_mode, reply_markup });
         }
       }
       return { ok: !!resp?.ok, description: resp?.description, mediaKind: method === "sendVideoNote" ? "video_note" : "video" };
@@ -126,11 +131,16 @@ async function sendWelcomeBlock(opts: {
         userId: opts.userId, accountId: opts.premiumAccountId!, chatId: opts.chatId,
         photoUrl: url, caption: opts.text, strict: false,
       }).catch((e) => ({ applied: true, ok: false, error: e instanceof Error ? e.message : String(e) } as const));
-      if (r.applied && r.ok) return { ok: true, mediaKind: "photo" };
+      if (r.applied && r.ok) {
+        if (reply_markup) {
+          await callTelegram(opts.botToken, "sendMessage", { chat_id: opts.chatId, text: "\u2063", reply_markup });
+        }
+        return { ok: true, mediaKind: "photo" };
+      }
       // fall back to bot api
     }
     const resp = await callTelegram(opts.botToken, "sendPhoto", {
-      chat_id: opts.chatId, photo: url, caption: opts.text, parse_mode,
+      chat_id: opts.chatId, photo: url, caption: opts.text, parse_mode, reply_markup,
     });
     return { ok: !!resp?.ok, description: resp?.description, mediaKind: "photo" };
   }
@@ -140,11 +150,16 @@ async function sendWelcomeBlock(opts: {
       userId: opts.userId, accountId: opts.premiumAccountId!, chatId: opts.chatId,
       text: opts.text, allowPlain: true,
     }).catch((e) => ({ applied: true, ok: false, error: e instanceof Error ? e.message : String(e) } as const));
-    if (r.applied && r.ok) return { ok: true, mediaKind: "text" };
+    if (r.applied && r.ok) {
+      if (reply_markup) {
+        await callTelegram(opts.botToken, "sendMessage", { chat_id: opts.chatId, text: "\u2063", reply_markup });
+      }
+      return { ok: true, mediaKind: "text" };
+    }
     // fall back to bot api
   }
   const resp = await callTelegram(opts.botToken, "sendMessage", {
-    chat_id: opts.chatId, text: opts.text, parse_mode,
+    chat_id: opts.chatId, text: opts.text, parse_mode, reply_markup,
     disable_web_page_preview: true,
   });
   return { ok: !!resp?.ok, description: resp?.description, mediaKind: "text" };

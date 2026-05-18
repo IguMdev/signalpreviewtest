@@ -41,6 +41,7 @@ import { Route as ApiPublicCronDispatchSignalsRouteImport } from './routes/api/p
 import { Route as ApiPublicCronDispatchSessionsRouteImport } from './routes/api/public/cron/dispatch-sessions'
 import { Route as ApiPublicCronDispatchRecurringRouteImport } from './routes/api/public/cron/dispatch-recurring'
 import { Route as ApiPublicCronDispatchMarketTipsRouteImport } from './routes/api/public/cron/dispatch-market-tips'
+import { Route as ApiPublicCronDispatchFollowupsRouteImport } from './routes/api/public/cron/dispatch-followups'
 import { Route as ApiPublicCronCheckTelegramWebhooksRouteImport } from './routes/api/public/cron/check-telegram-webhooks'
 import { Route as ApiPublicCronCheckPremiumAccountsRouteImport } from './routes/api/public/cron/check-premium-accounts'
 import { Route as AuthenticatedRoomsRoomIdEditRouteImport } from './routes/_authenticated/rooms.$roomId.edit'
@@ -224,6 +225,12 @@ const ApiPublicCronDispatchMarketTipsRoute =
     path: '/api/public/cron/dispatch-market-tips',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicCronDispatchFollowupsRoute =
+  ApiPublicCronDispatchFollowupsRouteImport.update({
+    id: '/api/public/cron/dispatch-followups',
+    path: '/api/public/cron/dispatch-followups',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicCronCheckTelegramWebhooksRoute =
   ApiPublicCronCheckTelegramWebhooksRouteImport.update({
     id: '/api/public/cron/check-telegram-webhooks',
@@ -290,6 +297,7 @@ export interface FileRoutesByFullPath {
   '/rooms/$roomId/edit': typeof AuthenticatedRoomsRoomIdEditRoute
   '/api/public/cron/check-premium-accounts': typeof ApiPublicCronCheckPremiumAccountsRoute
   '/api/public/cron/check-telegram-webhooks': typeof ApiPublicCronCheckTelegramWebhooksRoute
+  '/api/public/cron/dispatch-followups': typeof ApiPublicCronDispatchFollowupsRoute
   '/api/public/cron/dispatch-market-tips': typeof ApiPublicCronDispatchMarketTipsRoute
   '/api/public/cron/dispatch-recurring': typeof ApiPublicCronDispatchRecurringRoute
   '/api/public/cron/dispatch-sessions': typeof ApiPublicCronDispatchSessionsRoute
@@ -329,6 +337,7 @@ export interface FileRoutesByTo {
   '/rooms/$roomId/edit': typeof AuthenticatedRoomsRoomIdEditRoute
   '/api/public/cron/check-premium-accounts': typeof ApiPublicCronCheckPremiumAccountsRoute
   '/api/public/cron/check-telegram-webhooks': typeof ApiPublicCronCheckTelegramWebhooksRoute
+  '/api/public/cron/dispatch-followups': typeof ApiPublicCronDispatchFollowupsRoute
   '/api/public/cron/dispatch-market-tips': typeof ApiPublicCronDispatchMarketTipsRoute
   '/api/public/cron/dispatch-recurring': typeof ApiPublicCronDispatchRecurringRoute
   '/api/public/cron/dispatch-sessions': typeof ApiPublicCronDispatchSessionsRoute
@@ -370,6 +379,7 @@ export interface FileRoutesById {
   '/_authenticated/rooms/$roomId/edit': typeof AuthenticatedRoomsRoomIdEditRoute
   '/api/public/cron/check-premium-accounts': typeof ApiPublicCronCheckPremiumAccountsRoute
   '/api/public/cron/check-telegram-webhooks': typeof ApiPublicCronCheckTelegramWebhooksRoute
+  '/api/public/cron/dispatch-followups': typeof ApiPublicCronDispatchFollowupsRoute
   '/api/public/cron/dispatch-market-tips': typeof ApiPublicCronDispatchMarketTipsRoute
   '/api/public/cron/dispatch-recurring': typeof ApiPublicCronDispatchRecurringRoute
   '/api/public/cron/dispatch-sessions': typeof ApiPublicCronDispatchSessionsRoute
@@ -411,6 +421,7 @@ export interface FileRouteTypes {
     | '/rooms/$roomId/edit'
     | '/api/public/cron/check-premium-accounts'
     | '/api/public/cron/check-telegram-webhooks'
+    | '/api/public/cron/dispatch-followups'
     | '/api/public/cron/dispatch-market-tips'
     | '/api/public/cron/dispatch-recurring'
     | '/api/public/cron/dispatch-sessions'
@@ -450,6 +461,7 @@ export interface FileRouteTypes {
     | '/rooms/$roomId/edit'
     | '/api/public/cron/check-premium-accounts'
     | '/api/public/cron/check-telegram-webhooks'
+    | '/api/public/cron/dispatch-followups'
     | '/api/public/cron/dispatch-market-tips'
     | '/api/public/cron/dispatch-recurring'
     | '/api/public/cron/dispatch-sessions'
@@ -490,6 +502,7 @@ export interface FileRouteTypes {
     | '/_authenticated/rooms/$roomId/edit'
     | '/api/public/cron/check-premium-accounts'
     | '/api/public/cron/check-telegram-webhooks'
+    | '/api/public/cron/dispatch-followups'
     | '/api/public/cron/dispatch-market-tips'
     | '/api/public/cron/dispatch-recurring'
     | '/api/public/cron/dispatch-sessions'
@@ -507,6 +520,7 @@ export interface RootRouteChildren {
   SignupRoute: typeof SignupRoute
   ApiPublicCronCheckPremiumAccountsRoute: typeof ApiPublicCronCheckPremiumAccountsRoute
   ApiPublicCronCheckTelegramWebhooksRoute: typeof ApiPublicCronCheckTelegramWebhooksRoute
+  ApiPublicCronDispatchFollowupsRoute: typeof ApiPublicCronDispatchFollowupsRoute
   ApiPublicCronDispatchMarketTipsRoute: typeof ApiPublicCronDispatchMarketTipsRoute
   ApiPublicCronDispatchRecurringRoute: typeof ApiPublicCronDispatchRecurringRoute
   ApiPublicCronDispatchSessionsRoute: typeof ApiPublicCronDispatchSessionsRoute
@@ -744,6 +758,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicCronDispatchMarketTipsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/cron/dispatch-followups': {
+      id: '/api/public/cron/dispatch-followups'
+      path: '/api/public/cron/dispatch-followups'
+      fullPath: '/api/public/cron/dispatch-followups'
+      preLoaderRoute: typeof ApiPublicCronDispatchFollowupsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/cron/check-telegram-webhooks': {
       id: '/api/public/cron/check-telegram-webhooks'
       path: '/api/public/cron/check-telegram-webhooks'
@@ -859,6 +880,7 @@ const rootRouteChildren: RootRouteChildren = {
     ApiPublicCronCheckPremiumAccountsRoute,
   ApiPublicCronCheckTelegramWebhooksRoute:
     ApiPublicCronCheckTelegramWebhooksRoute,
+  ApiPublicCronDispatchFollowupsRoute: ApiPublicCronDispatchFollowupsRoute,
   ApiPublicCronDispatchMarketTipsRoute: ApiPublicCronDispatchMarketTipsRoute,
   ApiPublicCronDispatchRecurringRoute: ApiPublicCronDispatchRecurringRoute,
   ApiPublicCronDispatchSessionsRoute: ApiPublicCronDispatchSessionsRoute,
