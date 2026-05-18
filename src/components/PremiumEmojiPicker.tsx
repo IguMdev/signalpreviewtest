@@ -110,6 +110,19 @@ type Props = {
   className?: string;
 };
 
+function isTextControl(el: Element | null): el is HTMLTextAreaElement | HTMLInputElement {
+  return el instanceof HTMLTextAreaElement || el instanceof HTMLInputElement;
+}
+
+function setTextControlCursor(el: HTMLTextAreaElement | HTMLInputElement, pos: number) {
+  try {
+    el.focus();
+    el.setSelectionRange(pos, pos);
+  } catch {
+    el.focus();
+  }
+}
+
 export function PremiumEmojiPicker({ value, onChange, targetRef, size = "sm", className }: Props) {
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
@@ -124,12 +137,11 @@ export function PremiumEmojiPicker({ value, onChange, targetRef, size = "sm", cl
     let el = ref.current as HTMLTextAreaElement | HTMLInputElement | null;
     if (!el) {
       const active = document.activeElement;
-      if (active instanceof HTMLTextAreaElement || active instanceof HTMLInputElement) {
+      if (isTextControl(active)) {
         el = active;
       }
     }
-    if (!el) {
-      savedSelection.current = null;
+    if (!el || typeof el.selectionStart !== "number" || typeof el.selectionEnd !== "number") {
       return;
     }
     savedSelection.current = {
@@ -183,12 +195,13 @@ export function PremiumEmojiPicker({ value, onChange, targetRef, size = "sm", cl
     const token = `{${name}}`;
     const saved = savedSelection.current;
     if (saved) {
-      const next = value.slice(0, saved.start) + token + value.slice(saved.end);
+      const start = Math.min(saved.start, value.length);
+      const end = Math.min(Math.max(saved.end, start), value.length);
+      const next = value.slice(0, start) + token + value.slice(end);
       onChange(next);
-      const pos = saved.start + token.length;
+      const pos = start + token.length;
       requestAnimationFrame(() => {
-        saved.el.focus();
-        saved.el.setSelectionRange(pos, pos);
+        setTextControlCursor(saved.el, pos);
       });
     } else {
       insertAtCursor(ref.current, value, token, onChange);
@@ -205,7 +218,6 @@ export function PremiumEmojiPicker({ value, onChange, targetRef, size = "sm", cl
           size={size === "sm" ? "sm" : "default"}
           className={className}
           onPointerDown={captureSelection}
-          onFocus={captureSelection}
           title="Inserir emoji premium"
         >
           <Sparkles className="size-4 text-amber-400" />
