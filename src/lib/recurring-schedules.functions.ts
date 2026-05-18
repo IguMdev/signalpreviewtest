@@ -70,7 +70,6 @@ const FollowUpInput = z.object({
   videoId: z.string().uuid().nullable().optional(),
   buttonText: z.string().max(64).nullable().optional(),
   buttonUrl: z.string().url().max(2048).nullable().optional(),
-  folderId: z.string().uuid().nullable().optional(),
 });
 
 const ScheduleInput = z.object({
@@ -94,6 +93,7 @@ const ScheduleInput = z.object({
   timezone: z.string().default("America/Sao_Paulo"),
   buttonText: z.string().max(64).nullable().optional(),
   buttonUrl: z.string().url().max(2048).nullable().optional(),
+  folderId: z.string().uuid().nullable().optional(),
 });
 
 export const upsertSchedule = createServerFn({ method: "POST" })
