@@ -12,6 +12,48 @@ import { Send, Users, CalendarClock, Wallet, Sparkles, CreditCard, UserPlus, Use
 import { getMySubscriptions } from "@/lib/engagement.functions";
 import { getCurrentMemberCounts, getMemberStats } from "@/lib/telegram-tracking.functions";
 
+function getTzParts(date: Date, tz: string) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: tz,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    weekday: "short",
+    hour12: false,
+  }).formatToParts(date);
+  const get = (t: string) => parts.find((p) => p.type === t)?.value ?? "";
+  const wkMap: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+  return {
+    year: Number(get("year")),
+    month: Number(get("month")),
+    day: Number(get("day")),
+    hour: Number(get("hour")),
+    minute: Number(get("minute")),
+    weekday: wkMap[get("weekday")] ?? 0,
+  };
+}
+
+/** Build a UTC Date for a given local wall-clock time in tz (handling offset). */
+function tzDateAt(year: number, month: number, day: number, hour: number, minute: number, tz: string): Date {
+  // Start with UTC guess then adjust by tz offset at that instant.
+  const utcGuess = Date.UTC(year, month - 1, day, hour, minute);
+  const parts = getTzParts(new Date(utcGuess), tz);
+  const asUtcOfParts = Date.UTC(parts.year, parts.month - 1, parts.day, parts.hour, parts.minute);
+  const offset = asUtcOfParts - utcGuess;
+  return new Date(utcGuess - offset);
+}
+
+function nextFireAt(now: Date, dayOffset: number, hhmm: string, tz: string): Date {
+  const today = getTzParts(now, tz);
+  const base = tzDateAt(today.year, today.month, today.day, 0, 0, tz);
+  const target = new Date(base.getTime() + dayOffset * 86400000);
+  const parts = getTzParts(target, tz);
+  const [h, m] = hhmm.split(":").map(Number);
+  return tzDateAt(parts.year, parts.month, parts.day, h, m, tz);
+}
+
 export const Route = createFileRoute("/_authenticated/dashboard")({
   component: DashboardPage,
 });
@@ -78,13 +120,60 @@ function DashboardPage() {
     queryKey: ["upcoming", user?.id],
     enabled: !!user,
     queryFn: async () => {
-      const { data } = await supabase
-        .from("scheduled_messages")
-        .select("id, content, scheduled_at, status, room_id")
-        .eq("status", "pending")
-        .order("scheduled_at")
-        .limit(5);
-      return data ?? [];
+      const [oneTime, recurring] = await Promise.all([
+        supabase
+          .from("scheduled_messages")
+          .select("id, content, scheduled_at, status, room_id")
+          .eq("status", "pending")
+          .order("scheduled_at")
+          .limit(10),
+        supabase
+          .from("recurring_schedules")
+          .select("id, title, content, times, weekdays, timezone, is_active")
+          .eq("is_active", true),
+      ]);
+      type Item = { id: string; content: string | null; scheduled_at: string; status: string };
+      const items: Item[] = (oneTime.data ?? []).map((m) => ({
+        id: m.id,
+        content: m.content,
+        scheduled_at: m.scheduled_at,
+        status: m.status ?? "pending",
+      }));
+      const now = new Date();
+      const list = (recurring.data ?? []) as Array<{
+        id: string;
+        title: string | null;
+        content: string | null;
+        times: string[] | null;
+        weekdays: number[] | null;
+        timezone: string | null;
+      }>;
+      for (const r of list) {
+        const tz = r.timezone || "America/Sao_Paulo";
+        const times = (r.times ?? []).filter((t) => /^\d{2}:\d{2}$/.test(t));
+        const weekdays = r.weekdays ?? [0, 1, 2, 3, 4, 5, 6];
+        if (!times.length || !weekdays.length) continue;
+        let next: Date | null = null;
+        for (let d = 0; d < 14 && !next; d++) {
+          for (const t of times) {
+            const candidate = nextFireAt(now, d, t, tz);
+            const dow = getTzParts(candidate, tz).weekday;
+            if (!weekdays.includes(dow)) continue;
+            if (candidate.getTime() <= now.getTime()) continue;
+            if (!next || candidate < next) next = candidate;
+          }
+        }
+        if (next) {
+          items.push({
+            id: `r:${r.id}`,
+            content: r.title || r.content,
+            scheduled_at: next.toISOString(),
+            status: "recorrente",
+          });
+        }
+      }
+      items.sort((a, b) => a.scheduled_at.localeCompare(b.scheduled_at));
+      return items.slice(0, 5);
     },
   });
 
