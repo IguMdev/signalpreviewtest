@@ -8,6 +8,12 @@ import {
   type TipCategory,
 } from "@/lib/market-tips.server";
 
+// ╔══════════════════════════════════════════════════════════╗
+// ║  CRON: DISPATCH-MARKET-TIPS                              ║
+// ║  Dica de mercado (forex/crypto) enviada por sala         ║
+// ║  conforme o intervalo configurado, sem repetir links.    ║
+// ╚══════════════════════════════════════════════════════════╝
+
 // Cron rodando a cada minuto (pg_cron): seleciona salas com market_tips_enabled
 // cujo último disparo foi há >= market_tips_interval_hours, busca uma manchete
 // nova (não enviada antes) e despacha para todos os chats vinculados.
