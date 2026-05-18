@@ -901,9 +901,11 @@ function ScheduleDialog({
       setNewTime("");
       setButtonText(editing.button_text ?? "");
       setButtonUrl(editing.button_url ?? "");
+      setFolderId(editing.folder_id ?? "");
     } else {
       setButtonText("");
       setButtonUrl("");
+      setFolderId("");
     }
   }, [editing, presetRoomId]);
 
