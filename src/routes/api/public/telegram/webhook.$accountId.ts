@@ -505,6 +505,39 @@ export const Route = createFileRoute("/api/public/telegram/webhook/$accountId")(
               }).catch((e) => console.error("[track4you] capi failed:", e));
             }
           }
+
+          // ============ FOLLOW-UP: /start fu_<room_id> ============
+          const fm = payload.match(/^fu_([0-9a-fA-F-]{36})$/);
+          if (fm && msg.chat?.type === "private") {
+            const roomId = fm[1];
+            const { data: room } = await supabaseAdmin
+              .from("rooms")
+              .select("id, user_id")
+              .eq("id", roomId)
+              .maybeSingle();
+            if (room && room.user_id === acc.user_id) {
+              await supabaseAdmin
+                .from("followup_leads" as never)
+                .upsert(
+                  {
+                    user_id: acc.user_id,
+                    room_id: roomId,
+                    account_id: acc.id,
+                    tg_user_id: msg.from.id,
+                    chat_id: msg.chat.id,
+                    first_name: msg.from.first_name ?? null,
+                    username: msg.from.username ?? null,
+                    status: "active",
+                  } as never,
+                  { onConflict: "room_id,tg_user_id" },
+                );
+              // Welcome confirmation
+              await callTelegram(acc.bot_token, "sendMessage", {
+                chat_id: msg.chat.id,
+                text: `Olá ${msg.from.first_name ?? ""}! Você está inscrito para receber novidades diárias. 🎉`,
+              }).catch(() => undefined);
+            }
+          }
         }
 
         await cacheDetectedChat({
