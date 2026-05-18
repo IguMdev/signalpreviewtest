@@ -564,6 +564,7 @@ export type Database = {
           button_url: string | null
           content: string | null
           created_at: string
+          folder_id: string | null
           follow_ups: Json
           id: string
           image_mime: string | null
@@ -589,6 +590,7 @@ export type Database = {
           button_url?: string | null
           content?: string | null
           created_at?: string
+          folder_id?: string | null
           follow_ups?: Json
           id?: string
           image_mime?: string | null
@@ -614,6 +616,7 @@ export type Database = {
           button_url?: string | null
           content?: string | null
           created_at?: string
+          folder_id?: string | null
           follow_ups?: Json
           id?: string
           image_mime?: string | null
@@ -633,7 +636,15 @@ export type Database = {
           weekday_overrides?: Json
           weekdays?: number[]
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "recurring_schedules_folder_id_fkey"
+            columns: ["folder_id"]
+            isOneToOne: false
+            referencedRelation: "schedule_folders"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       room_assets: {
         Row: {
@@ -1238,6 +1249,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      schedule_folders: {
+        Row: {
+          color: string
+          created_at: string
+          id: string
+          name: string
+          sort_order: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          id?: string
+          name: string
+          sort_order?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          id?: string
+          name?: string
+          sort_order?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       scheduled_messages: {
         Row: {
