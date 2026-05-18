@@ -103,7 +103,8 @@ export function nowParts(tz: string) {
   });
   const parts = fmt.formatToParts(new Date());
   const get = (t: string) => parts.find((p) => p.type === t)?.value ?? "";
-  const wdMap: Record<string, number> = { Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6, Sun: 7 };
+  // Convenção JS (Date.getDay): Dom=0, Seg=1 ... Sáb=6 — bate com a UI das janelas.
+  const wdMap: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
   return {
     weekday: wdMap[get("weekday")] ?? 0,
     hhmm: `${get("hour").padStart(2, "0")}:${get("minute").padStart(2, "0")}`,
