@@ -548,6 +548,25 @@ export const Route = createFileRoute("/api/public/telegram/webhook/$accountId")(
 
         const cm = update.chat_member ?? update.my_chat_member;
         if (cm) {
+          // Detect lead blocking the bot in private chat
+          if (
+            update.my_chat_member &&
+            cm.chat?.type === "private" &&
+            (cm.new_chat_member?.status === "kicked" || cm.new_chat_member?.status === "left")
+          ) {
+            const u = cm.new_chat_member?.user ?? cm.from ?? {};
+            if (u.id) {
+              await supabaseAdmin
+                .from("followup_leads" as never)
+                .update({
+                  status: "stopped",
+                  stopped_at: new Date().toISOString(),
+                  stopped_reason: "blocked",
+                } as never)
+                .eq("account_id", acc.id)
+                .eq("tg_user_id", u.id);
+            }
+          }
           const eventType = classify(cm.old_chat_member?.status, cm.new_chat_member?.status);
           if (eventType) {
             const u = cm.new_chat_member?.user ?? cm.old_chat_member?.user ?? {};
