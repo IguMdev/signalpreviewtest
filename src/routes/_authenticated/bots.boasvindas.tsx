@@ -195,7 +195,31 @@ function BoasVindasPage() {
             <CardTitle className="text-base flex items-center justify-between">
               Configuração
               <div className="flex items-center gap-2 text-xs">
-                Ativado <Switch checked={enabled} onCheckedChange={setEnabled} />
+                Ativado <Switch
+                  checked={enabled}
+                  onCheckedChange={(v) => {
+                    setEnabled(v);
+                    upsert({
+                      data: {
+                        roomId,
+                        enabled: v,
+                        message: message || null,
+                        imagePath: imagePath || null,
+                        videoId: videoId || null,
+                        premiumEnabled,
+                        premiumAccountId: premiumAccountId || null,
+                      },
+                    })
+                      .then(() => {
+                        toast.success(v ? "BotBoasVindas ativado" : "BotBoasVindas desativado");
+                        qc.invalidateQueries({ queryKey: ["welcome-cfg", roomId] });
+                      })
+                      .catch((e: Error) => {
+                        setEnabled(!v);
+                        toast.error(e.message);
+                      });
+                  }}
+                />
               </div>
             </CardTitle>
           </CardHeader>
