@@ -91,9 +91,11 @@ async function sendWelcomeBlock(opts: {
   videoId: string | null | undefined;
   premiumEnabled?: boolean | null;
   premiumAccountId?: string | null;
+  replyMarkup?: Record<string, unknown> | null;
 }): Promise<{ ok: boolean; description?: string; mediaKind: "video_note" | "video" | "photo" | "text" }> {
   const parse_mode = opts.parseMode || "HTML";
   const usePremium = !!opts.premiumEnabled && !!opts.premiumAccountId;
+  const reply_markup = opts.replyMarkup ?? undefined;
 
   if (opts.videoId) {
     const { data: vid } = await supabaseAdmin
@@ -103,16 +105,19 @@ async function sendWelcomeBlock(opts: {
       const method = vid.kind === "round" ? "sendVideoNote" : "sendVideo";
       const body: Record<string, unknown> = { chat_id: opts.chatId };
       if (method === "sendVideoNote") body.video_note = url;
-      else { body.video = url; body.caption = opts.text; body.parse_mode = parse_mode; }
+      else { body.video = url; body.caption = opts.text; body.parse_mode = parse_mode; if (reply_markup) body.reply_markup = reply_markup; }
       const resp = await callTelegram(opts.botToken, method, body);
       if (method === "sendVideoNote") {
         if (usePremium) {
           await sendTextWithPremiumEmojis({
             userId: opts.userId, accountId: opts.premiumAccountId!, chatId: opts.chatId,
             text: opts.text, allowPlain: true,
-          }).catch(() => callTelegram(opts.botToken, "sendMessage", { chat_id: opts.chatId, text: opts.text, parse_mode }));
+          }).catch(() => callTelegram(opts.botToken, "sendMessage", { chat_id: opts.chatId, text: opts.text, parse_mode, reply_markup }));
+          if (reply_markup) {
+            await callTelegram(opts.botToken, "sendMessage", { chat_id: opts.chatId, text: "\u2063", reply_markup });
+          }
         } else {
-          await callTelegram(opts.botToken, "sendMessage", { chat_id: opts.chatId, text: opts.text, parse_mode });
+          await callTelegram(opts.botToken, "sendMessage", { chat_id: opts.chatId, text: opts.text, parse_mode, reply_markup });
         }
       }
       return { ok: !!resp?.ok, description: resp?.description, mediaKind: method === "sendVideoNote" ? "video_note" : "video" };
@@ -126,11 +131,16 @@ async function sendWelcomeBlock(opts: {
         userId: opts.userId, accountId: opts.premiumAccountId!, chatId: opts.chatId,
         photoUrl: url, caption: opts.text, strict: false,
       }).catch((e) => ({ applied: true, ok: false, error: e instanceof Error ? e.message : String(e) } as const));
-      if (r.applied && r.ok) return { ok: true, mediaKind: "photo" };
+      if (r.applied && r.ok) {
+        if (reply_markup) {
+          await callTelegram(opts.botToken, "sendMessage", { chat_id: opts.chatId, text: "\u2063", reply_markup });
+        }
+        return { ok: true, mediaKind: "photo" };
+      }
       // fall back to bot api
     }
     const resp = await callTelegram(opts.botToken, "sendPhoto", {
-      chat_id: opts.chatId, photo: url, caption: opts.text, parse_mode,
+      chat_id: opts.chatId, photo: url, caption: opts.text, parse_mode, reply_markup,
     });
     return { ok: !!resp?.ok, description: resp?.description, mediaKind: "photo" };
   }
@@ -140,11 +150,16 @@ async function sendWelcomeBlock(opts: {
       userId: opts.userId, accountId: opts.premiumAccountId!, chatId: opts.chatId,
       text: opts.text, allowPlain: true,
     }).catch((e) => ({ applied: true, ok: false, error: e instanceof Error ? e.message : String(e) } as const));
-    if (r.applied && r.ok) return { ok: true, mediaKind: "text" };
+    if (r.applied && r.ok) {
+      if (reply_markup) {
+        await callTelegram(opts.botToken, "sendMessage", { chat_id: opts.chatId, text: "\u2063", reply_markup });
+      }
+      return { ok: true, mediaKind: "text" };
+    }
     // fall back to bot api
   }
   const resp = await callTelegram(opts.botToken, "sendMessage", {
-    chat_id: opts.chatId, text: opts.text, parse_mode,
+    chat_id: opts.chatId, text: opts.text, parse_mode, reply_markup,
     disable_web_page_preview: true,
   });
   return { ok: !!resp?.ok, description: resp?.description, mediaKind: "text" };
@@ -192,7 +207,7 @@ async function runWelcomeBot(opts: {
 
   const { data: cfg } = await supabaseAdmin
     .from("room_engagement_settings")
-    .select("welcome_bot_enabled, welcome_message, welcome_image_path, welcome_image_mime, welcome_video_id, welcome_parse_mode, welcome_premium_enabled, welcome_premium_account_id")
+    .select("welcome_bot_enabled, welcome_message, welcome_image_path, welcome_image_mime, welcome_video_id, welcome_parse_mode, welcome_premium_enabled, welcome_premium_account_id, followup_cta_enabled, followup_cta_button_text")
     .eq("room_id", rc.room_id)
     .maybeSingle();
   if (!cfg?.welcome_bot_enabled) {
@@ -213,6 +228,27 @@ async function runWelcomeBot(opts: {
 
   const parse_mode = cfg.welcome_parse_mode ?? "HTML";
 
+  // Build CTA reply_markup if follow-up CTA enabled
+  let ctaReplyMarkup: Record<string, unknown> | null = null;
+  const ctaEnabled = (cfg as { followup_cta_enabled?: boolean }).followup_cta_enabled;
+  if (ctaEnabled) {
+    const { data: bot } = await supabaseAdmin
+      .from("telegram_accounts")
+      .select("bot_username")
+      .eq("id", opts.accountId)
+      .maybeSingle();
+    if (bot?.bot_username) {
+      const ctaText =
+        (cfg as { followup_cta_button_text?: string }).followup_cta_button_text ||
+        "Iniciar conversa privada 💬";
+      ctaReplyMarkup = {
+        inline_keyboard: [
+          [{ text: ctaText, url: `https://t.me/${bot.bot_username}?start=fu_${rc.room_id}` }],
+        ],
+      };
+    }
+  }
+
   const first = await sendWelcomeBlock({
     userId: opts.userId,
     botToken: opts.botToken,
@@ -223,6 +259,7 @@ async function runWelcomeBot(opts: {
     videoId: cfg.welcome_video_id,
     premiumEnabled: (cfg as any).welcome_premium_enabled,
     premiumAccountId: (cfg as any).welcome_premium_account_id,
+    replyMarkup: ctaReplyMarkup,
   });
   await logBot({
     userId: opts.userId, accountId: opts.accountId, roomId: rc.room_id, botType: "boasvindas",
@@ -468,6 +505,39 @@ export const Route = createFileRoute("/api/public/telegram/webhook/$accountId")(
               }).catch((e) => console.error("[track4you] capi failed:", e));
             }
           }
+
+          // ============ FOLLOW-UP: /start fu_<room_id> ============
+          const fm = payload.match(/^fu_([0-9a-fA-F-]{36})$/);
+          if (fm && msg.chat?.type === "private") {
+            const roomId = fm[1];
+            const { data: room } = await supabaseAdmin
+              .from("rooms")
+              .select("id, user_id")
+              .eq("id", roomId)
+              .maybeSingle();
+            if (room && room.user_id === acc.user_id) {
+              await supabaseAdmin
+                .from("followup_leads" as never)
+                .upsert(
+                  {
+                    user_id: acc.user_id,
+                    room_id: roomId,
+                    account_id: acc.id,
+                    tg_user_id: msg.from.id,
+                    chat_id: msg.chat.id,
+                    first_name: msg.from.first_name ?? null,
+                    username: msg.from.username ?? null,
+                    status: "active",
+                  } as never,
+                  { onConflict: "room_id,tg_user_id" },
+                );
+              // Welcome confirmation
+              await callTelegram(acc.bot_token, "sendMessage", {
+                chat_id: msg.chat.id,
+                text: `Olá ${msg.from.first_name ?? ""}! Você está inscrito para receber novidades diárias. 🎉`,
+              }).catch(() => undefined);
+            }
+          }
         }
 
         await cacheDetectedChat({
@@ -478,6 +548,25 @@ export const Route = createFileRoute("/api/public/telegram/webhook/$accountId")(
 
         const cm = update.chat_member ?? update.my_chat_member;
         if (cm) {
+          // Detect lead blocking the bot in private chat
+          if (
+            update.my_chat_member &&
+            cm.chat?.type === "private" &&
+            (cm.new_chat_member?.status === "kicked" || cm.new_chat_member?.status === "left")
+          ) {
+            const u = cm.new_chat_member?.user ?? cm.from ?? {};
+            if (u.id) {
+              await supabaseAdmin
+                .from("followup_leads" as never)
+                .update({
+                  status: "stopped",
+                  stopped_at: new Date().toISOString(),
+                  stopped_reason: "blocked",
+                } as never)
+                .eq("account_id", acc.id)
+                .eq("tg_user_id", u.id);
+            }
+          }
           const eventType = classify(cm.old_chat_member?.status, cm.new_chat_member?.status);
           if (eventType) {
             const u = cm.new_chat_member?.user ?? cm.old_chat_member?.user ?? {};

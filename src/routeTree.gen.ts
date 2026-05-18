@@ -33,6 +33,7 @@ import { Route as AuthenticatedTrackeamentoDominiosRouteImport } from './routes/
 import { Route as AuthenticatedTrackeamentoCanalRouteImport } from './routes/_authenticated/trackeamento.canal'
 import { Route as AuthenticatedIntegracoesMetaRouteImport } from './routes/_authenticated/integracoes.meta'
 import { Route as AuthenticatedBotsLogsRouteImport } from './routes/_authenticated/bots.logs'
+import { Route as AuthenticatedBotsFollowupRouteImport } from './routes/_authenticated/bots.followup'
 import { Route as AuthenticatedBotsEncaminhadorRouteImport } from './routes/_authenticated/bots.encaminhador'
 import { Route as AuthenticatedBotsBoasvindasRouteImport } from './routes/_authenticated/bots.boasvindas'
 import { Route as ApiPublicTrackClickRouteImport } from './routes/api/public/track/click'
@@ -41,6 +42,7 @@ import { Route as ApiPublicCronDispatchSignalsRouteImport } from './routes/api/p
 import { Route as ApiPublicCronDispatchSessionsRouteImport } from './routes/api/public/cron/dispatch-sessions'
 import { Route as ApiPublicCronDispatchRecurringRouteImport } from './routes/api/public/cron/dispatch-recurring'
 import { Route as ApiPublicCronDispatchMarketTipsRouteImport } from './routes/api/public/cron/dispatch-market-tips'
+import { Route as ApiPublicCronDispatchFollowupsRouteImport } from './routes/api/public/cron/dispatch-followups'
 import { Route as ApiPublicCronCheckTelegramWebhooksRouteImport } from './routes/api/public/cron/check-telegram-webhooks'
 import { Route as ApiPublicCronCheckPremiumAccountsRouteImport } from './routes/api/public/cron/check-premium-accounts'
 import { Route as AuthenticatedRoomsRoomIdEditRouteImport } from './routes/_authenticated/rooms.$roomId.edit'
@@ -178,6 +180,12 @@ const AuthenticatedBotsLogsRoute = AuthenticatedBotsLogsRouteImport.update({
   path: '/bots/logs',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedBotsFollowupRoute =
+  AuthenticatedBotsFollowupRouteImport.update({
+    id: '/bots/followup',
+    path: '/bots/followup',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedBotsEncaminhadorRoute =
   AuthenticatedBotsEncaminhadorRouteImport.update({
     id: '/bots/encaminhador',
@@ -222,6 +230,12 @@ const ApiPublicCronDispatchMarketTipsRoute =
   ApiPublicCronDispatchMarketTipsRouteImport.update({
     id: '/api/public/cron/dispatch-market-tips',
     path: '/api/public/cron/dispatch-market-tips',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicCronDispatchFollowupsRoute =
+  ApiPublicCronDispatchFollowupsRouteImport.update({
+    id: '/api/public/cron/dispatch-followups',
+    path: '/api/public/cron/dispatch-followups',
     getParentRoute: () => rootRouteImport,
   } as any)
 const ApiPublicCronCheckTelegramWebhooksRoute =
@@ -276,6 +290,7 @@ export interface FileRoutesByFullPath {
   '/videos': typeof AuthenticatedVideosRoute
   '/bots/boasvindas': typeof AuthenticatedBotsBoasvindasRoute
   '/bots/encaminhador': typeof AuthenticatedBotsEncaminhadorRoute
+  '/bots/followup': typeof AuthenticatedBotsFollowupRoute
   '/bots/logs': typeof AuthenticatedBotsLogsRoute
   '/integracoes/meta': typeof AuthenticatedIntegracoesMetaRoute
   '/trackeamento/canal': typeof AuthenticatedTrackeamentoCanalRoute
@@ -290,6 +305,7 @@ export interface FileRoutesByFullPath {
   '/rooms/$roomId/edit': typeof AuthenticatedRoomsRoomIdEditRoute
   '/api/public/cron/check-premium-accounts': typeof ApiPublicCronCheckPremiumAccountsRoute
   '/api/public/cron/check-telegram-webhooks': typeof ApiPublicCronCheckTelegramWebhooksRoute
+  '/api/public/cron/dispatch-followups': typeof ApiPublicCronDispatchFollowupsRoute
   '/api/public/cron/dispatch-market-tips': typeof ApiPublicCronDispatchMarketTipsRoute
   '/api/public/cron/dispatch-recurring': typeof ApiPublicCronDispatchRecurringRoute
   '/api/public/cron/dispatch-sessions': typeof ApiPublicCronDispatchSessionsRoute
@@ -315,6 +331,7 @@ export interface FileRoutesByTo {
   '/': typeof AuthenticatedIndexRoute
   '/bots/boasvindas': typeof AuthenticatedBotsBoasvindasRoute
   '/bots/encaminhador': typeof AuthenticatedBotsEncaminhadorRoute
+  '/bots/followup': typeof AuthenticatedBotsFollowupRoute
   '/bots/logs': typeof AuthenticatedBotsLogsRoute
   '/integracoes/meta': typeof AuthenticatedIntegracoesMetaRoute
   '/trackeamento/canal': typeof AuthenticatedTrackeamentoCanalRoute
@@ -329,6 +346,7 @@ export interface FileRoutesByTo {
   '/rooms/$roomId/edit': typeof AuthenticatedRoomsRoomIdEditRoute
   '/api/public/cron/check-premium-accounts': typeof ApiPublicCronCheckPremiumAccountsRoute
   '/api/public/cron/check-telegram-webhooks': typeof ApiPublicCronCheckTelegramWebhooksRoute
+  '/api/public/cron/dispatch-followups': typeof ApiPublicCronDispatchFollowupsRoute
   '/api/public/cron/dispatch-market-tips': typeof ApiPublicCronDispatchMarketTipsRoute
   '/api/public/cron/dispatch-recurring': typeof ApiPublicCronDispatchRecurringRoute
   '/api/public/cron/dispatch-sessions': typeof ApiPublicCronDispatchSessionsRoute
@@ -356,6 +374,7 @@ export interface FileRoutesById {
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/bots/boasvindas': typeof AuthenticatedBotsBoasvindasRoute
   '/_authenticated/bots/encaminhador': typeof AuthenticatedBotsEncaminhadorRoute
+  '/_authenticated/bots/followup': typeof AuthenticatedBotsFollowupRoute
   '/_authenticated/bots/logs': typeof AuthenticatedBotsLogsRoute
   '/_authenticated/integracoes/meta': typeof AuthenticatedIntegracoesMetaRoute
   '/_authenticated/trackeamento/canal': typeof AuthenticatedTrackeamentoCanalRoute
@@ -370,6 +389,7 @@ export interface FileRoutesById {
   '/_authenticated/rooms/$roomId/edit': typeof AuthenticatedRoomsRoomIdEditRoute
   '/api/public/cron/check-premium-accounts': typeof ApiPublicCronCheckPremiumAccountsRoute
   '/api/public/cron/check-telegram-webhooks': typeof ApiPublicCronCheckTelegramWebhooksRoute
+  '/api/public/cron/dispatch-followups': typeof ApiPublicCronDispatchFollowupsRoute
   '/api/public/cron/dispatch-market-tips': typeof ApiPublicCronDispatchMarketTipsRoute
   '/api/public/cron/dispatch-recurring': typeof ApiPublicCronDispatchRecurringRoute
   '/api/public/cron/dispatch-sessions': typeof ApiPublicCronDispatchSessionsRoute
@@ -397,6 +417,7 @@ export interface FileRouteTypes {
     | '/videos'
     | '/bots/boasvindas'
     | '/bots/encaminhador'
+    | '/bots/followup'
     | '/bots/logs'
     | '/integracoes/meta'
     | '/trackeamento/canal'
@@ -411,6 +432,7 @@ export interface FileRouteTypes {
     | '/rooms/$roomId/edit'
     | '/api/public/cron/check-premium-accounts'
     | '/api/public/cron/check-telegram-webhooks'
+    | '/api/public/cron/dispatch-followups'
     | '/api/public/cron/dispatch-market-tips'
     | '/api/public/cron/dispatch-recurring'
     | '/api/public/cron/dispatch-sessions'
@@ -436,6 +458,7 @@ export interface FileRouteTypes {
     | '/'
     | '/bots/boasvindas'
     | '/bots/encaminhador'
+    | '/bots/followup'
     | '/bots/logs'
     | '/integracoes/meta'
     | '/trackeamento/canal'
@@ -450,6 +473,7 @@ export interface FileRouteTypes {
     | '/rooms/$roomId/edit'
     | '/api/public/cron/check-premium-accounts'
     | '/api/public/cron/check-telegram-webhooks'
+    | '/api/public/cron/dispatch-followups'
     | '/api/public/cron/dispatch-market-tips'
     | '/api/public/cron/dispatch-recurring'
     | '/api/public/cron/dispatch-sessions'
@@ -476,6 +500,7 @@ export interface FileRouteTypes {
     | '/_authenticated/'
     | '/_authenticated/bots/boasvindas'
     | '/_authenticated/bots/encaminhador'
+    | '/_authenticated/bots/followup'
     | '/_authenticated/bots/logs'
     | '/_authenticated/integracoes/meta'
     | '/_authenticated/trackeamento/canal'
@@ -490,6 +515,7 @@ export interface FileRouteTypes {
     | '/_authenticated/rooms/$roomId/edit'
     | '/api/public/cron/check-premium-accounts'
     | '/api/public/cron/check-telegram-webhooks'
+    | '/api/public/cron/dispatch-followups'
     | '/api/public/cron/dispatch-market-tips'
     | '/api/public/cron/dispatch-recurring'
     | '/api/public/cron/dispatch-sessions'
@@ -507,6 +533,7 @@ export interface RootRouteChildren {
   SignupRoute: typeof SignupRoute
   ApiPublicCronCheckPremiumAccountsRoute: typeof ApiPublicCronCheckPremiumAccountsRoute
   ApiPublicCronCheckTelegramWebhooksRoute: typeof ApiPublicCronCheckTelegramWebhooksRoute
+  ApiPublicCronDispatchFollowupsRoute: typeof ApiPublicCronDispatchFollowupsRoute
   ApiPublicCronDispatchMarketTipsRoute: typeof ApiPublicCronDispatchMarketTipsRoute
   ApiPublicCronDispatchRecurringRoute: typeof ApiPublicCronDispatchRecurringRoute
   ApiPublicCronDispatchSessionsRoute: typeof ApiPublicCronDispatchSessionsRoute
@@ -688,6 +715,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedBotsLogsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/bots/followup': {
+      id: '/_authenticated/bots/followup'
+      path: '/bots/followup'
+      fullPath: '/bots/followup'
+      preLoaderRoute: typeof AuthenticatedBotsFollowupRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/bots/encaminhador': {
       id: '/_authenticated/bots/encaminhador'
       path: '/bots/encaminhador'
@@ -742,6 +776,13 @@ declare module '@tanstack/react-router' {
       path: '/api/public/cron/dispatch-market-tips'
       fullPath: '/api/public/cron/dispatch-market-tips'
       preLoaderRoute: typeof ApiPublicCronDispatchMarketTipsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/cron/dispatch-followups': {
+      id: '/api/public/cron/dispatch-followups'
+      path: '/api/public/cron/dispatch-followups'
+      fullPath: '/api/public/cron/dispatch-followups'
+      preLoaderRoute: typeof ApiPublicCronDispatchFollowupsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/cron/check-telegram-webhooks': {
@@ -802,6 +843,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedBotsBoasvindasRoute: typeof AuthenticatedBotsBoasvindasRoute
   AuthenticatedBotsEncaminhadorRoute: typeof AuthenticatedBotsEncaminhadorRoute
+  AuthenticatedBotsFollowupRoute: typeof AuthenticatedBotsFollowupRoute
   AuthenticatedBotsLogsRoute: typeof AuthenticatedBotsLogsRoute
   AuthenticatedIntegracoesMetaRoute: typeof AuthenticatedIntegracoesMetaRoute
   AuthenticatedTrackeamentoCanalRoute: typeof AuthenticatedTrackeamentoCanalRoute
@@ -829,6 +871,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedBotsBoasvindasRoute: AuthenticatedBotsBoasvindasRoute,
   AuthenticatedBotsEncaminhadorRoute: AuthenticatedBotsEncaminhadorRoute,
+  AuthenticatedBotsFollowupRoute: AuthenticatedBotsFollowupRoute,
   AuthenticatedBotsLogsRoute: AuthenticatedBotsLogsRoute,
   AuthenticatedIntegracoesMetaRoute: AuthenticatedIntegracoesMetaRoute,
   AuthenticatedTrackeamentoCanalRoute: AuthenticatedTrackeamentoCanalRoute,
@@ -859,6 +902,7 @@ const rootRouteChildren: RootRouteChildren = {
     ApiPublicCronCheckPremiumAccountsRoute,
   ApiPublicCronCheckTelegramWebhooksRoute:
     ApiPublicCronCheckTelegramWebhooksRoute,
+  ApiPublicCronDispatchFollowupsRoute: ApiPublicCronDispatchFollowupsRoute,
   ApiPublicCronDispatchMarketTipsRoute: ApiPublicCronDispatchMarketTipsRoute,
   ApiPublicCronDispatchRecurringRoute: ApiPublicCronDispatchRecurringRoute,
   ApiPublicCronDispatchSessionsRoute: ApiPublicCronDispatchSessionsRoute,
@@ -873,13 +917,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
