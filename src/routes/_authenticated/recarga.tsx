@@ -12,9 +12,9 @@ import {
 } from "@/components/ui/table";
 import {
   DoorOpen, Sparkles, ExternalLink, Crown,
-  Users, Heart, MessageCircle, Forward,
+  Users, Heart, MessageCircle, Forward, Repeat,
   History, CheckCircle2, Clock, XCircle, AlertCircle,
-  Send, Target, Check,
+  Send, Target, Check, Lock,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -112,17 +112,18 @@ const trackingPlanos: TrackingPlano[] = [
   },
 ];
 
-type BotType = "inscritos" | "interacoes" | "boasvindas" | "encaminhador";
+type BotType = "inscritos" | "interacoes" | "boasvindas" | "encaminhador" | "followup";
 
 const BOT_META: Record<BotType, { title: string; icon: any; tagline: string; quotaLabel: string }> = {
   inscritos:    { title: "BotInscritos",    icon: Users,         tagline: "Novos membros para o seu canal",         quotaLabel: "membros/mês" },
   interacoes:   { title: "BotInterações",   icon: Heart,         tagline: "Reações automáticas em cada sinal",      quotaLabel: "reações/sinal" },
   boasvindas:   { title: "BotBoasVindas",   icon: MessageCircle, tagline: "Mensagem automática para novos membros", quotaLabel: "" },
   encaminhador: { title: "BotEncaminhador", icon: Forward,       tagline: "Encaminha mensagens entre canais",       quotaLabel: "" },
+  followup:     { title: "BotFollowUp",     icon: Repeat,        tagline: "Sequência de mensagens para leads do BoasVindas", quotaLabel: "" },
 };
 
 const BOT_ORDER: BotType[] = ["inscritos", "interacoes"];
-const BOT_PAIR: BotType[] = ["boasvindas", "encaminhador"];
+const BOT_PAIR: BotType[] = ["boasvindas", "encaminhador", "followup"];
 
 function RecargaPage() {
   const { user } = useAuth();
