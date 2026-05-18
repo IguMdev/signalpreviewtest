@@ -78,13 +78,64 @@ function DashboardPage() {
     queryKey: ["upcoming", user?.id],
     enabled: !!user,
     queryFn: async () => {
-      const { data } = await supabase
-        .from("scheduled_messages")
-        .select("id, content, scheduled_at, status, room_id")
-        .eq("status", "pending")
-        .order("scheduled_at")
-        .limit(5);
-      return data ?? [];
+      const [oneTime, recurring] = await Promise.all([
+        supabase
+          .from("scheduled_messages")
+          .select("id, content, scheduled_at, status, room_id")
+          .eq("status", "pending")
+          .order("scheduled_at")
+          .limit(10),
+        supabase
+          .from("recurring_schedules")
+          .select("id, title, content, times, weekdays, timezone, is_active")
+          .eq("is_active", true),
+      ]);
+      type Item = { id: string; content: string | null; scheduled_at: string; status: string };
+      const items: Item[] = (oneTime.data ?? []).map((m) => ({
+        id: m.id,
+        content: m.content,
+        scheduled_at: m.scheduled_at,
+        status: m.status ?? "pending",
+      }));
+      const now = new Date();
+      const list = (recurring.data ?? []) as Array<{
+        id: string;
+        title: string | null;
+        content: string | null;
+        times: string[] | null;
+        weekdays: number[] | null;
+        timezone: string | null;
+      }>;
+      for (const r of list) {
+        const tz = r.timezone || "America/Sao_Paulo";
+        const times = (r.times ?? []).filter((t) => /^\d{2}:\d{2}$/.test(t));
+        const weekdays = r.weekdays ?? [0, 1, 2, 3, 4, 5, 6];
+        if (!times.length || !weekdays.length) continue;
+        let next: Date | null = null;
+        for (let d = 0; d < 14 && !next; d++) {
+          for (const t of times) {
+            const candidate = nextFireAt(now, d, t, tz);
+            const dow = Number(
+              new Intl.DateTimeFormat("en-US", { timeZone: tz, weekday: "short" }).format(candidate) === "Sun"
+                ? 0
+                : new Date(candidate.toLocaleString("en-US", { timeZone: tz })).getDay(),
+            );
+            if (!weekdays.includes(dow)) continue;
+            if (candidate.getTime() <= now.getTime()) continue;
+            if (!next || candidate < next) next = candidate;
+          }
+        }
+        if (next) {
+          items.push({
+            id: `r:${r.id}`,
+            content: r.title || r.content,
+            scheduled_at: next.toISOString(),
+            status: "recorrente",
+          });
+        }
+      }
+      items.sort((a, b) => a.scheduled_at.localeCompare(b.scheduled_at));
+      return items.slice(0, 5);
     },
   });
 
