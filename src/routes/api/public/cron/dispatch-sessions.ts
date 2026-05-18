@@ -4,6 +4,12 @@ import { callTelegram } from "@/lib/telegram.server";
 import { getUserEmojiLookup } from "@/lib/premium-send.server";
 import { renderEmojiTokensPlain, hasEmojiTokens, renderEmojiTokensToHtml } from "@/lib/premium-emoji-render";
 
+// ╔══════════════════════════════════════════════════════════╗
+// ║  CRON: DISPATCH-SESSIONS (executado a cada minuto)       ║
+// ║  Envia o aviso "Iniciando sessão em X minutos" antes do  ║
+// ║  início de cada janela ativa do dia.                     ║
+// ╚══════════════════════════════════════════════════════════╝
+
 function nowParts(tz: string) {
   const fmt = new Intl.DateTimeFormat("en-GB", {
     timeZone: tz, weekday: "short", hour: "2-digit", minute: "2-digit", hour12: false,
