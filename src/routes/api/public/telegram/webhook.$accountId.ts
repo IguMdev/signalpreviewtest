@@ -7,6 +7,16 @@ import { fireTrackingEvent } from "@/lib/tracking.server";
 import { sendTextWithPremiumEmojis, sendPhotoWithPremiumEmojiCaption } from "@/lib/premium-send.server";
 import { forwardWithPremiumEmojis, hasPremiumEmojiEntities, type BotApiPost } from "@/lib/forwarder-premium.server";
 
+// ╔══════════════════════════════════════════════════════════╗
+// ║  WEBHOOK DO TELEGRAM — roteador único por conta de bot   ║
+// ║  Despacha para: BoasVindas, Encaminhador, Tracking,      ║
+// ║  Follow-Up e Meta CAPI conforme o tipo de update.        ║
+// ╚══════════════════════════════════════════════════════════╝
+
+// ╔══════════════════════════════════════════════════════════╗
+// ║  HELPERS COMPARTILHADOS                                  ║
+// ╚══════════════════════════════════════════════════════════╝
+
 function safeEqual(a: string, b: string): boolean {
   const left = Buffer.from(a);
   const right = Buffer.from(b);
@@ -445,6 +455,8 @@ async function cacheDetectedChat(opts: {
   );
 }
 
+// ── FIM: HELPERS COMPARTILHADOS ──────────────────────────────
+
 export const Route = createFileRoute("/api/public/telegram/webhook/$accountId")({
   server: {
     handlers: {
@@ -469,7 +481,10 @@ export const Route = createFileRoute("/api/public/telegram/webhook/$accountId")(
         const update = await request.json().catch(() => null);
         if (!update) return Response.json({ ok: true });
 
-        // ============ TRACK4YOU: /start tk_<click_id> ============
+        // ╔══════════════════════════════════════════════════════╗
+        // ║  TRACKEAMENTO AVANÇADO — /start tk_<click_id>        ║
+        // ║  Marca o lead como "joined" e dispara Meta CAPI.     ║
+        // ╚══════════════════════════════════════════════════════╝
         const msg = update.message;
         const text: string | undefined = msg?.text;
         if (msg?.from?.id && typeof text === "string" && text.startsWith("/start ")) {
@@ -505,8 +520,13 @@ export const Route = createFileRoute("/api/public/telegram/webhook/$accountId")(
               }).catch((e) => console.error("[track4you] capi failed:", e));
             }
           }
+          // ── FIM: TRACKEAMENTO AVANÇADO ─────────────────────────
 
-          // ============ FOLLOW-UP: /start fu_<room_id> ============
+          // ╔══════════════════════════════════════════════════════╗
+          // ║  FOLLOW-UP — /start fu_<room_id> (chat privado)      ║
+          // ║  Registra o lead em followup_leads para receber a    ║
+          // ║  sequência diária no privado.                        ║
+          // ╚══════════════════════════════════════════════════════╝
           const fm = payload.match(/^fu_([0-9a-fA-F-]{36})$/);
           if (fm && msg.chat?.type === "private") {
             const roomId = fm[1];
@@ -538,6 +558,7 @@ export const Route = createFileRoute("/api/public/telegram/webhook/$accountId")(
               }).catch(() => undefined);
             }
           }
+          // ── FIM: FOLLOW-UP /start ──────────────────────────────
         }
 
         await cacheDetectedChat({
@@ -548,7 +569,11 @@ export const Route = createFileRoute("/api/public/telegram/webhook/$accountId")(
 
         const cm = update.chat_member ?? update.my_chat_member;
         if (cm) {
-          // Detect lead blocking the bot in private chat
+          // ╔══════════════════════════════════════════════════════╗
+          // ║  FOLLOW-UP — DETECÇÃO DE BLOQUEIO DO BOT             ║
+          // ║  Quando o lead bloqueia/sai do privado, marca o      ║
+          // ║  lead como "stopped" para parar a sequência.         ║
+          // ╚══════════════════════════════════════════════════════╝
           if (
             update.my_chat_member &&
             cm.chat?.type === "private" &&
@@ -567,6 +592,13 @@ export const Route = createFileRoute("/api/public/telegram/webhook/$accountId")(
                 .eq("tg_user_id", u.id);
             }
           }
+          // ── FIM: FOLLOW-UP DETECÇÃO DE BLOQUEIO ────────────────
+
+          // ╔══════════════════════════════════════════════════════╗
+          // ║  TRACKEAMENTO DE MEMBROS (join/leave/kicked)         ║
+          // ║  Registra eventos em telegram_member_events e        ║
+          // ║  dispara Meta CAPI conforme mapeamento do usuário.   ║
+          // ╚══════════════════════════════════════════════════════╝
           const eventType = classify(cm.old_chat_member?.status, cm.new_chat_member?.status);
           if (eventType) {
             const u = cm.new_chat_member?.user ?? cm.old_chat_member?.user ?? {};
@@ -584,8 +616,7 @@ export const Route = createFileRoute("/api/public/telegram/webhook/$accountId")(
               occurred_at: new Date((cm.date ?? Math.floor(Date.now() / 1000)) * 1000).toISOString(),
             });
 
-            // Dispara CompleteRegistration no Meta CAPI quando alguém entra
-            // Dispara evento configurado no Meta CAPI conforme escolha do usuário
+            // ─── Meta CAPI: dispara evento conforme mapeamento ───
             if (u.id) {
               const { data: integ } = await supabaseAdmin
                 .from("meta_integrations")
@@ -614,7 +645,7 @@ export const Route = createFileRoute("/api/public/telegram/webhook/$accountId")(
               }
             }
 
-            // BotBoasVindas — dispara mensagem ao novo membro
+            // ─── Bot Boas-Vindas: dispara saudação ao novo membro ─
             if (eventType === "join") {
               await runWelcomeBot({
                 userId: acc.user_id,
@@ -625,9 +656,13 @@ export const Route = createFileRoute("/api/public/telegram/webhook/$accountId")(
               }).catch((e) => console.error("[welcome-bot] failed:", e));
             }
           }
+          // ── FIM: TRACKEAMENTO DE MEMBROS ───────────────────────
         }
 
-        // BotEncaminhador — copia mensagens do canal/grupo de origem para destinos
+        // ╔══════════════════════════════════════════════════════╗
+        // ║  BOT ENCAMINHADOR                                    ║
+        // ║  Copia mensagens do chat de origem para os destinos. ║
+        // ╚══════════════════════════════════════════════════════╝
         const post = update.channel_post ?? update.message;
         if (post?.chat?.id && post?.message_id) {
           const messageType =
@@ -654,6 +689,7 @@ export const Route = createFileRoute("/api/public/telegram/webhook/$accountId")(
             post: post as BotApiPost,
           }).catch((e) => console.error("[forwarder] failed:", e));
         }
+        // ── FIM: BOT ENCAMINHADOR ───────────────────────────────
 
         return Response.json({ ok: true });
       },
