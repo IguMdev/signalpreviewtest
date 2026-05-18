@@ -423,7 +423,7 @@ function RecargaPage() {
         })}
 
         {/* Boas-vindas + Encaminhador lado a lado */}
-        <div className="grid gap-6 md:grid-cols-2">
+        <div className="grid gap-6 md:grid-cols-3">
           {BOT_PAIR.map((bot) => {
             const meta = BOT_META[bot];
             const Icon = meta.icon;
@@ -435,6 +435,12 @@ function RecargaPage() {
               : 0;
 
             if (plans.length === 0) return null;
+
+            // BotFollowUp só pode ser adquirido se o BotBoasVindas estiver ativo
+            const boasvindasSub = subByBot.get("boasvindas");
+            const requiresBoasvindas = bot === "followup";
+            const boasvindasActive = boasvindasSub?.status === "active";
+            const locked = requiresBoasvindas && !boasvindasActive;
 
             return (
               <section key={bot} className="space-y-3">
