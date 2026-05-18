@@ -74,6 +74,12 @@ export const Route = createFileRoute("/_authenticated/bots/boasvindas")({
   component: BoasVindasPage,
 });
 
+// ╔══════════════════════════════════════════════════════════╗
+// ║  PÁGINA — BOT BOAS-VINDAS                                ║
+// ║  Configuração principal + Pré-visualização + Sequência   ║
+// ║  de mensagens extras (com mídia/premium emojis).         ║
+// ╚══════════════════════════════════════════════════════════╝
+
 function BoasVindasPage() {
   const qc = useQueryClient();
   const get = useServerFn(getWelcomeBotConfig);
@@ -189,6 +195,7 @@ function BoasVindasPage() {
         </CardContent>
       </Card>
 
+      {/* ─── BLOCO: CONFIGURAÇÃO PRINCIPAL (texto/mídia/premium) ── */}
       {roomId && (
         <Card>
           <CardHeader>
@@ -290,6 +297,7 @@ function BoasVindasPage() {
         </Card>
       )}
 
+      {/* ─── BLOCO: PRÉ-VISUALIZAÇÃO ───────────────────────────── */}
       {roomId && (
         <Card>
           <CardHeader><CardTitle className="text-base">Pré-visualização</CardTitle></CardHeader>
