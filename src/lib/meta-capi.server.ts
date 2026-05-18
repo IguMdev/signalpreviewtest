@@ -1,6 +1,11 @@
 import { createHash } from "crypto";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
+// ╔══════════════════════════════════════════════════════════╗
+// ║  LIB SERVER — META CAPI (Conversions API)                ║
+// ║  Envia eventos server-side para o Pixel da Meta.         ║
+// ╚══════════════════════════════════════════════════════════╝
+
 const GRAPH_VERSION = "v21.0";
 
 function sha256(value: string | null | undefined): string | undefined {
