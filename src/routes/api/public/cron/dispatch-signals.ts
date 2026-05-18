@@ -529,8 +529,16 @@ async function sendDueReports(): Promise<number> {
       .eq("is_active", true);
     for (const w of windows ?? []) {
       const key = `${reportDateKey(now, ctx.room.timezone)}:${String(w.end_time).slice(0, 5)}`;
-      const dueHHMM = fmtHHMM(new Date(now.getTime() - Math.max(0, Number(report.delay_minutes) || 0) * 60_000), ctx.room.timezone);
-      if (dueHHMM < String(w.end_time).slice(0, 5)) continue;
+      // Janela de disparo: a partir de end_time + delay, com tolerância de 6h
+      // (evita disparo lexicográfico errado após meia-noite e cobre eventuais retries).
+      const tzNowHHMM = fmtHHMM(now, ctx.room.timezone);
+      const toMin = (s: string) => { const [h, m] = s.split(":").map(Number); return h * 60 + m; };
+      const endMin = toMin(String(w.end_time).slice(0, 5));
+      const nowMin = toMin(tzNowHHMM);
+      const delay = Math.max(0, Number(report.delay_minutes) || 0);
+      const target = endMin + delay;
+      // mesma "data" (cross-midnight tratado pelo report_key idempotente)
+      if (nowMin < target || nowMin > target + 360) continue;
       const { data: claim } = await supabaseAdmin
         .from("room_report_runs")
         .insert({ user_id: report.user_id, room_id: report.room_id, window_id: w.id, report_key: key })
