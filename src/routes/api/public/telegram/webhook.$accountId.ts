@@ -207,7 +207,7 @@ async function runWelcomeBot(opts: {
 
   const { data: cfg } = await supabaseAdmin
     .from("room_engagement_settings")
-    .select("welcome_bot_enabled, welcome_message, welcome_image_path, welcome_image_mime, welcome_video_id, welcome_parse_mode, welcome_premium_enabled, welcome_premium_account_id")
+    .select("welcome_bot_enabled, welcome_message, welcome_image_path, welcome_image_mime, welcome_video_id, welcome_parse_mode, welcome_premium_enabled, welcome_premium_account_id, followup_cta_enabled, followup_cta_button_text")
     .eq("room_id", rc.room_id)
     .maybeSingle();
   if (!cfg?.welcome_bot_enabled) {
@@ -228,6 +228,27 @@ async function runWelcomeBot(opts: {
 
   const parse_mode = cfg.welcome_parse_mode ?? "HTML";
 
+  // Build CTA reply_markup if follow-up CTA enabled
+  let ctaReplyMarkup: Record<string, unknown> | null = null;
+  const ctaEnabled = (cfg as { followup_cta_enabled?: boolean }).followup_cta_enabled;
+  if (ctaEnabled) {
+    const { data: bot } = await supabaseAdmin
+      .from("telegram_accounts")
+      .select("bot_username")
+      .eq("id", opts.accountId)
+      .maybeSingle();
+    if (bot?.bot_username) {
+      const ctaText =
+        (cfg as { followup_cta_button_text?: string }).followup_cta_button_text ||
+        "Iniciar conversa privada 💬";
+      ctaReplyMarkup = {
+        inline_keyboard: [
+          [{ text: ctaText, url: `https://t.me/${bot.bot_username}?start=fu_${rc.room_id}` }],
+        ],
+      };
+    }
+  }
+
   const first = await sendWelcomeBlock({
     userId: opts.userId,
     botToken: opts.botToken,
@@ -238,6 +259,7 @@ async function runWelcomeBot(opts: {
     videoId: cfg.welcome_video_id,
     premiumEnabled: (cfg as any).welcome_premium_enabled,
     premiumAccountId: (cfg as any).welcome_premium_account_id,
+    replyMarkup: ctaReplyMarkup,
   });
   await logBot({
     userId: opts.userId, accountId: opts.accountId, roomId: rc.room_id, botType: "boasvindas",
