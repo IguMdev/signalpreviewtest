@@ -1729,6 +1729,62 @@ export type Database = {
         }
         Relationships: []
       }
+      tracking_integrations: {
+        Row: {
+          created_at: string
+          custom_event_name: string | null
+          event_type: string
+          id: string
+          is_active: boolean
+          meta_currency: string | null
+          meta_custom_event: string | null
+          meta_value: number | null
+          name: string
+          pixel_id: string
+          redirect_url: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          custom_event_name?: string | null
+          event_type: string
+          id?: string
+          is_active?: boolean
+          meta_currency?: string | null
+          meta_custom_event?: string | null
+          meta_value?: number | null
+          name: string
+          pixel_id: string
+          redirect_url: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          custom_event_name?: string | null
+          event_type?: string
+          id?: string
+          is_active?: boolean
+          meta_currency?: string | null
+          meta_custom_event?: string | null
+          meta_value?: number | null
+          name?: string
+          pixel_id?: string
+          redirect_url?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tracking_integrations_pixel_id_fkey"
+            columns: ["pixel_id"]
+            isOneToOne: false
+            referencedRelation: "tracking_pixels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tracking_offers: {
         Row: {
           created_at: string

@@ -503,3 +503,71 @@ export const testPostback = createServerFn({ method: "POST" })
       return { ok: false, status: 0, error: e?.message ?? "Falha de rede" };
     }
   });
+
+// ============ INTEGRATIONS (Track4You-style) ============
+export const INTEGRATION_EVENT_TYPES = ["register", "ftd", "deposit", "custom"] as const;
+
+const integrationSchema = z.object({
+  pixel_id: z.string().uuid(),
+  name: z.string().min(1).max(120),
+  event_type: z.enum(INTEGRATION_EVENT_TYPES),
+  custom_event_name: z.string().max(60).nullable().optional(),
+  redirect_url: z.string().url(),
+  meta_custom_event: z.string().max(60).nullable().optional(),
+  meta_value: z.number().nullable().optional(),
+  meta_currency: z.string().min(3).max(3).default("BRL"),
+  is_active: z.boolean().default(true),
+});
+
+export const listIntegrations = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabase } = context;
+    const { data, error } = await supabase
+      .from("tracking_integrations" as never)
+      .select("*")
+      .order("created_at", { ascending: false });
+    if (error) throw new Error(error.message);
+    return (data ?? []) as any[];
+  });
+
+export const createIntegration = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => integrationSchema.parse(d))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { data: inserted, error } = await supabase
+      .from("tracking_integrations" as never)
+      .insert({ ...data, user_id: userId } as never)
+      .select()
+      .single();
+    if (error) throw new Error(error.message);
+    return inserted as any;
+  });
+
+export const updateIntegration = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => integrationSchema.partial().extend({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    const { id, ...rest } = data;
+    const { error } = await supabase
+      .from("tracking_integrations" as never)
+      .update(rest as never)
+      .eq("id", id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const deleteIntegration = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    const { error } = await supabase
+      .from("tracking_integrations" as never)
+      .delete()
+      .eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
