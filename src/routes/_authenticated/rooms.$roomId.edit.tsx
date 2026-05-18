@@ -1707,7 +1707,7 @@ function ReportsCard({ roomId }: { roomId: string }) {
   };
 
   const [enabled, setEnabled] = useState<boolean>(false);
-  const [delay, setDelay] = useState<string>("1");
+  const [delay, setDelay] = useState<string>("0");
   const REPORT_DEFAULT = "📊 RELATÓRIO {SESSAO_NOME}\n{OPERACOES_LISTA}\n\n✅ Wins: {TOTAL_WINS}\n🔴 Losses: {TOTAL_LOSSES}\n📈 Operações: {TOTAL_OPERACOES}\n🎯 Win rate: {WIN_RATE}%";
   const [tpl, setTpl] = useState<string>(REPORT_DEFAULT);
   const [includeStats, setIncludeStats] = useState<boolean>(true);
@@ -1718,7 +1718,7 @@ function ReportsCard({ roomId }: { roomId: string }) {
   useEffect(() => {
     if (!report.data) return;
     setEnabled(report.data.enabled);
-    setDelay(String(report.data.delay_minutes ?? 1));
+    setDelay(String(report.data.delay_minutes ?? 0));
     setTpl(report.data.template && report.data.template.trim().length > 0 ? report.data.template : REPORT_DEFAULT);
     setIncludeStats(report.data.include_stats ?? true);
     setImagePath(report.data.image_path ?? null);
