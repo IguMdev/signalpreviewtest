@@ -71,6 +71,7 @@ const trackingLockedItems = [
 const botItems = [
   { to: "/bots/boasvindas", label: "BotBoasVindas", icon: MessageCircle, type: "boasvindas" as const },
   { to: "/bots/encaminhador", label: "BotEncaminhador", icon: Forward, type: "encaminhador" as const },
+  { to: "/bots/followup", label: "BotFollowUp", icon: MessageCircle, type: "boasvindas" as const },
 ] as const;
 const botLogsItem = { to: "/bots/logs", label: "Logs dos Bots", icon: ScrollText } as const;
 
