@@ -1664,6 +1664,7 @@ function ScheduleDialog({
                 timezone: "America/Sao_Paulo",
                 buttonText: buttonText.trim() || null,
                 buttonUrl: buttonUrl.trim() || null,
+                folderId: folderId || null,
               })
             }
           >
