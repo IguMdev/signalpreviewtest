@@ -1028,7 +1028,7 @@ function ScheduleDialog({
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-6xl max-h-[92vh] overflow-y-auto p-4 sm:p-6 w-[calc(100vw-1rem)] sm:w-auto">
         <DialogHeader>
           <DialogTitle>{editing?.id ? "Editar mensagem" : "Nova mensagem"}</DialogTitle>
         </DialogHeader>
@@ -1036,7 +1036,7 @@ function ScheduleDialog({
           {/* LEFT COLUMN */}
           <div className="space-y-4">
             {/* Identificação */}
-            <Card className="p-5 space-y-4">
+            <Card className="p-4 sm:p-5 space-y-4">
               <h3 className="font-semibold">Identificação</h3>
               <div className="space-y-2">
                 <Label>
@@ -1124,7 +1124,7 @@ function ScheduleDialog({
             </Card>
 
             {/* Conteúdo */}
-            <Card className="p-5 space-y-4">
+            <Card className="p-4 sm:p-5 space-y-4">
               <h3 className="font-semibold">Conteúdo</h3>
               <div className="space-y-2">
                 <Label>
@@ -1249,8 +1249,8 @@ function ScheduleDialog({
             </Card>
 
             {/* Follow-ups */}
-            <Card className="p-5 space-y-3">
-              <div className="flex items-center justify-between">
+            <Card className="p-4 sm:p-5 space-y-3">
+              <div className="flex items-start sm:items-center justify-between gap-2 flex-wrap">
                 <div>
                   <h3 className="font-semibold">Mensagens em sequência</h3>
                   <p className="text-xs text-muted-foreground mt-0.5">
@@ -1262,6 +1262,7 @@ function ScheduleDialog({
                   size="sm"
                   variant="outline"
                   disabled={followUps.length >= 10}
+                  className="shrink-0"
                   onClick={() =>
                     setFollowUps([
                       ...followUps,
@@ -1270,7 +1271,8 @@ function ScheduleDialog({
                   }
                 >
                   <Plus className="size-4" />
-                  Adicionar conteúdo
+                  <span className="hidden sm:inline">Adicionar conteúdo</span>
+                  <span className="sm:hidden">Adicionar</span>
                 </Button>
               </div>
               {followUps.length === 0 ? (
@@ -1502,7 +1504,7 @@ function ScheduleDialog({
           {/* RIGHT COLUMN */}
           <div className="space-y-4">
             {/* Dias da semana */}
-            <Card className="p-5 space-y-3">
+            <Card className="p-4 sm:p-5 space-y-3">
               <h3 className="font-semibold">
                 Dias da semana <span className="text-destructive">*</span>
               </h3>
@@ -1532,7 +1534,7 @@ function ScheduleDialog({
             </Card>
 
             {/* Horários */}
-            <Card className="p-5 space-y-3">
+            <Card className="p-4 sm:p-5 space-y-3">
               <h3 className="font-semibold">
                 Horários <span className="text-destructive">*</span>
               </h3>
@@ -1574,7 +1576,7 @@ function ScheduleDialog({
 
             {/* Horários por dia (override) */}
             {weekdays.length > 0 && (
-              <Card className="p-5 space-y-3">
+              <Card className="p-4 sm:p-5 space-y-3">
                 <h3 className="font-semibold">Horários específicos por dia (opcional)</h3>
                 <p className="text-xs text-muted-foreground">
                   Defina horários diferentes para um dia da semana. Quando houver
