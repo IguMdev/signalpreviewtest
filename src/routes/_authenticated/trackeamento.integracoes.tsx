@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Link2, Copy, Megaphone, Webhook, History, Download, Play } from "lucide-react";
+import { Link2, Copy, Megaphone, Webhook, History, Download, Play, Plus, Info } from "lucide-react";
 import { PixelFilterBar, usePixelFilter } from "@/components/tracking/PixelFilter";
 
 export const Route = createFileRoute("/_authenticated/trackeamento/integracoes")({
@@ -52,19 +52,45 @@ function IntegracoesPage() {
       </Card>
 
       <PixelFilterBar pixelId={effectiveId} pixels={pixels} setPixel={setPixel} />
-      {effectiveId && currentPixel && (
-        <>
-          <SnippetCard pixelId={effectiveId} baseHost={baseHost} />
-          <PostbackCard pixel={currentPixel} baseHost={baseHost} />
-          <PostbackTesterCard pixel={currentPixel} baseHost={baseHost} />
-          <EventsHistoryCard pixelId={effectiveId} />
-        </>
-      )}
+
+      <SnippetCard pixelId={effectiveId} baseHost={baseHost} />
+      <PostbackCard pixel={currentPixel} baseHost={baseHost} />
+      <PostbackTesterCard pixel={currentPixel} baseHost={baseHost} />
+      <EventsHistoryCard pixelId={effectiveId} />
     </div>
   );
 }
 
-function SnippetCard({ pixelId, baseHost }: { pixelId: string; baseHost: string }) {
+function EmptyPixelState({ title, description }: { title: string; description: string }) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base flex items-center gap-2"><Info className="size-4" /> {title}</CardTitle>
+        <CardDescription>{description}</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="flex flex-col items-center justify-center gap-3 py-6 text-center">
+          <p className="text-sm text-muted-foreground">
+            Crie um pixel de rastreamento para começar a usar esta funcionalidade.
+          </p>
+          <Link to="/trackeamento/pixels">
+            <Button><Plus className="size-4" /> Criar pixel</Button>
+          </Link>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function SnippetCard({ pixelId, baseHost }: { pixelId: string | null; baseHost: string }) {
+  if (!pixelId) {
+    return (
+      <EmptyPixelState
+        title="Snippet de captura"
+        description="Cole antes do </head> da sua landing page."
+      />
+    );
+  }
   const snippet = `<script>
 (function(){
   var u = new URL(location.href);
@@ -125,6 +151,14 @@ function buildPostbackUrl(baseHost: string, pixelId: string, secret: string, eve
 }
 
 function PostbackCard({ pixel, baseHost }: { pixel: any; baseHost: string }) {
+  if (!pixel) {
+    return (
+      <EmptyPixelState
+        title="URL de postback"
+        description="Gere a URL de postback para configurar na sua plataforma de afiliados."
+      />
+    );
+  }
   const [event, setEvent] = useState<"register" | "deposit" | "ftd">("register");
   const url = buildPostbackUrl(baseHost, pixel.id, pixel.postback_secret, event);
   return (
@@ -165,6 +199,14 @@ function PostbackCard({ pixel, baseHost }: { pixel: any; baseHost: string }) {
 }
 
 function PostbackTesterCard({ pixel, baseHost }: { pixel: any; baseHost: string }) {
+  if (!pixel) {
+    return (
+      <EmptyPixelState
+        title="Testar postback"
+        description="Dispare um postback de teste contra um click_id existente."
+      />
+    );
+  }
   const [clickId, setClickId] = useState("");
   const [event, setEvent] = useState<"register" | "deposit" | "ftd">("register");
   const [value, setValue] = useState("");
@@ -230,7 +272,15 @@ function PostbackTesterCard({ pixel, baseHost }: { pixel: any; baseHost: string 
   );
 }
 
-function EventsHistoryCard({ pixelId }: { pixelId: string }) {
+function EventsHistoryCard({ pixelId }: { pixelId: string | null }) {
+  if (!pixelId) {
+    return (
+      <EmptyPixelState
+        title="Histórico de eventos"
+        description="Filtre e exporte os eventos capturados para este pixel."
+      />
+    );
+  }
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [event, setEvent] = useState<"any" | "click" | "join" | "offer_click" | "register" | "deposit">("any");
