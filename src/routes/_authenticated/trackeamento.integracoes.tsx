@@ -1,11 +1,21 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { getMyRedirectBase } from "@/lib/tracking.functions";
+import {
+  getMyRedirectBase,
+  listClicksFiltered,
+  listPixels,
+  testPostback,
+} from "@/lib/tracking.functions";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Link2, Copy, Megaphone } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { Link2, Copy, Megaphone, Webhook, History, Download, Play } from "lucide-react";
 import { PixelFilterBar, usePixelFilter } from "@/components/tracking/PixelFilter";
 
 export const Route = createFileRoute("/_authenticated/trackeamento/integracoes")({
@@ -16,16 +26,17 @@ export const Route = createFileRoute("/_authenticated/trackeamento/integracoes")
 function IntegracoesPage() {
   const { pixelId, pixels, setPixel } = usePixelFilter();
   const effectiveId = pixelId ?? pixels[0]?.id ?? null;
+  const currentPixel = pixels.find((p) => p.id === effectiveId) ?? null;
   const baseFn = useServerFn(getMyRedirectBase);
   const base = useQuery({ queryKey: ["redirect-base"], queryFn: () => baseFn() });
   const baseHost = base.data?.domain ? `https://${base.data.domain}` : (typeof window !== "undefined" ? window.location.origin : "");
 
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className="space-y-6 max-w-5xl">
       <div>
         <h1 className="text-2xl font-bold flex items-center gap-2"><Link2 className="size-6" /> Integrações</h1>
         <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
-          Instale o snippet na sua landing page para capturar cliques, UTMs e cookies do Meta. Vincule também sua integração Meta CAPI.
+          Instale o snippet na sua landing page, gere URLs de postback para suas ofertas e acompanhe o histórico de eventos por pixel.
         </p>
       </div>
 
@@ -42,7 +53,14 @@ function IntegracoesPage() {
       </Card>
 
       <PixelFilterBar pixelId={effectiveId} pixels={pixels} setPixel={setPixel} />
-      {effectiveId && <SnippetCard pixelId={effectiveId} baseHost={baseHost} />}
+      {effectiveId && currentPixel && (
+        <>
+          <SnippetCard pixelId={effectiveId} baseHost={baseHost} />
+          <PostbackCard pixel={currentPixel} baseHost={baseHost} />
+          <PostbackTesterCard pixel={currentPixel} baseHost={baseHost} />
+          <EventsHistoryCard pixelId={effectiveId} />
+        </>
+      )}
     </div>
   );
 }
