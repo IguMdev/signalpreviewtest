@@ -492,7 +492,12 @@ function RecargaPage() {
                             <span className="text-xs font-normal text-muted-foreground">/mês</span>
                           </div>
                           <p className="text-xs text-muted-foreground min-h-[32px]">{p.description}</p>
-                          {p.kirvano_checkout_url ? (
+                          {locked ? (
+                            <Button size="sm" className="w-full" disabled variant="secondary">
+                              <Lock className="size-3 mr-1" />
+                              Requer BotBoasVindas ativo
+                            </Button>
+                          ) : p.kirvano_checkout_url ? (
                             isCurrent ? (
                               <Button asChild size="sm" variant="outline" className="w-full">
                                 <a href={KIRVANO_CUSTOMER_PORTAL} target="_blank" rel="noreferrer">
@@ -513,9 +518,15 @@ function RecargaPage() {
                               </Button>
                             )
                           ) : (
-                            <Button size="sm" className="w-full" disabled variant="secondary">
-                              Em breve
-                            </Button>
+                            isCurrent ? (
+                              <Button size="sm" className="w-full" variant="outline" disabled>
+                                <Check className="size-3 mr-1" /> Ativo
+                              </Button>
+                            ) : (
+                              <Button size="sm" className="w-full" disabled variant="secondary">
+                                Em breve
+                              </Button>
+                            )
                           )}
                         </CardContent>
                       </Card>
