@@ -553,7 +553,6 @@ async function sendDueReports(): Promise<number> {
       if (!claim) continue;
 
       // Agrega apenas operações TERMINAIS do ciclo de hoje (timezone da sala).
-      const tz = ctx.room.timezone;
       const since = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
       const { data: stats } = await supabaseAdmin
         .from("signal_events")
