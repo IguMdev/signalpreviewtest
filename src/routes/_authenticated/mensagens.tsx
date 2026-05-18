@@ -314,24 +314,24 @@ function MensagensPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5 sm:space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Mensagens Agendadas</h1>
-        <p className="text-sm text-muted-foreground">
+        <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Mensagens Agendadas</h1>
+        <p className="text-xs sm:text-sm text-muted-foreground">
           Gerencie mensagens automáticas enviadas nos horários e dias que você definir.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <StatCard icon={<CalendarIcon className="size-5" />} value={stats.total} label="Total" tone="primary" />
         <StatCard icon={<CheckCircle2 className="size-5" />} value={stats.active} label="Ativas" tone="success" />
         <StatCard icon={<Users className="size-5" />} value={stats.rooms} label="Salas" tone="info" />
-        <Card className="p-5 flex items-center text-sm text-muted-foreground">
+        <Card className="p-4 sm:p-5 flex items-center text-xs sm:text-sm text-muted-foreground col-span-2 lg:col-span-1">
           Execução automática a cada minuto pelo sistema
         </Card>
       </div>
 
-      <div className="flex items-center gap-2 flex-wrap">
+      <div className="flex items-center gap-2 flex-wrap -mx-1 px-1 overflow-x-auto sm:overflow-visible">
         <FolderChip
           active={activeFolder === "all"}
           onClick={() => setActiveFolder("all")}
@@ -357,13 +357,14 @@ function MensagensPage() {
             color={f.color}
           />
         ))}
-        <Button size="sm" variant="outline" onClick={() => setManageOpen(true)}>
+        <Button size="sm" variant="outline" onClick={() => setManageOpen(true)} className="shrink-0">
           <FolderPlus className="size-4" />
-          Gerenciar pastas
+          <span className="hidden sm:inline">Gerenciar pastas</span>
+          <span className="sm:hidden">Pastas</span>
         </Button>
       </div>
 
-      <div className="relative max-w-md">
+      <div className="relative w-full sm:max-w-md">
         <Search className="size-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
         <Input
           placeholder="Buscar por título ou conteúdo…"
@@ -393,7 +394,7 @@ function MensagensPage() {
           const items = grouped.get(room.id) ?? [];
           if (search && items.length === 0) return null;
           return (
-            <Card key={room.id} className="p-5 space-y-4">
+            <Card key={room.id} className="p-4 sm:p-5 space-y-4">
               <div className="flex items-center justify-between gap-3 flex-wrap">
                 <div className="flex items-center gap-3 min-w-0">
                   {room.photo_url ? (
@@ -408,31 +409,32 @@ function MensagensPage() {
                     </div>
                   )}
                   <div className="min-w-0">
-                    <p className="font-semibold truncate">{room.name}</p>
+                    <p className="font-semibold truncate text-sm sm:text-base">{room.name}</p>
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
                       <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 text-emerald-400 px-2 py-0.5">
                         <span className="size-1.5 rounded-full bg-emerald-400" /> Ativa
                       </span>
-                      <span>
+                      <span className="truncate">
                         {items.length} {items.length === 1 ? "mensagem agendada" : "mensagens agendadas"}
                       </span>
                     </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 w-full sm:w-auto">
                   <Button
                     size="sm"
                     variant="outline"
                     onClick={() => syncPhotoMut.mutate(room.id)}
                     disabled={syncPhotoMut.isPending && syncPhotoMut.variables === room.id}
                     title="Atualizar foto do grupo"
+                    className="flex-1 sm:flex-none"
                   >
                     <RefreshCw
                       className={`size-4 ${syncPhotoMut.isPending && syncPhotoMut.variables === room.id ? "animate-spin" : ""}`}
                     />
                     Foto
                   </Button>
-                  <Button size="sm" onClick={() => openNew(room.id)} data-tour="add-schedule">
+                  <Button size="sm" onClick={() => openNew(room.id)} data-tour="add-schedule" className="flex-1 sm:flex-none">
                     <Plus className="size-4" />
                     Adicionar
                   </Button>
@@ -444,14 +446,15 @@ function MensagensPage() {
               ) : (
                 <div className="divide-y divide-border/60">
                   {items.map((s) => (
-                    <div key={s.id} className="py-3 flex items-start gap-3">
-                      <span
-                        className={`mt-1.5 size-2 rounded-full shrink-0 ${
-                          s.is_active ? "bg-emerald-400" : "bg-muted-foreground/40"
-                        }`}
-                      />
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium">{s.title}</p>
+                    <div key={s.id} className="py-3 flex flex-col sm:flex-row sm:items-start gap-3">
+                      <div className="flex items-start gap-3 flex-1 min-w-0">
+                        <span
+                          className={`mt-1.5 size-2 rounded-full shrink-0 ${
+                            s.is_active ? "bg-emerald-400" : "bg-muted-foreground/40"
+                          }`}
+                        />
+                        <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm sm:text-base break-words">{s.title}</p>
                         <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs">
                           {s.times.map((t) => (
                             <span key={t} className="inline-flex items-center gap-1 text-muted-foreground">
@@ -463,7 +466,8 @@ function MensagensPage() {
                             const wd = WEEKDAYS.find((x) => x.value === w);
                             return (
                               <Badge key={w} variant="secondary" className="bg-sky-500/15 text-sky-300 border-0 font-normal">
-                                {wd?.label}
+                                <span className="hidden sm:inline">{wd?.label}</span>
+                                <span className="sm:hidden">{wd?.short}</span>
                               </Badge>
                             );
                           })}
@@ -492,8 +496,9 @@ function MensagensPage() {
                             Último envio: {new Date(s.last_sent_at).toLocaleString("pt-BR")}
                           </p>
                         )}
+                        </div>
                       </div>
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-1 flex-wrap sm:flex-nowrap justify-end pl-5 sm:pl-0">
                         <Switch
                           checked={s.is_active}
                           onCheckedChange={(v) => toggleMut.mutate({ id: s.id, isActive: v })}
@@ -504,7 +509,7 @@ function MensagensPage() {
                             moveMut.mutate({ id: s.id, folderId: v === "__none__" ? null : v })
                           }
                         >
-                          <SelectTrigger className="h-8 w-[140px]" title="Mover para pasta">
+                          <SelectTrigger className="h-8 w-[110px] sm:w-[140px] text-xs sm:text-sm" title="Mover para pasta">
                             <SelectValue placeholder="Pasta" />
                           </SelectTrigger>
                           <SelectContent>
@@ -527,7 +532,7 @@ function MensagensPage() {
                           ) : (
                             <Send className="size-4" />
                           )}
-                          Testar
+                          <span className="hidden sm:inline">Testar</span>
                         </Button>
                         <Button
                           size="sm"
@@ -537,7 +542,7 @@ function MensagensPage() {
                           className="h-8"
                         >
                           <Copy className="size-4" />
-                          Duplicar
+                          <span className="hidden sm:inline">Duplicar</span>
                         </Button>
                         <Button size="icon" variant="ghost" onClick={() => setEditing(s)}>
                           <Pencil className="size-4" />
@@ -657,13 +662,13 @@ function ManageFoldersDialog({
   const [busy, setBusy] = useState(false);
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md w-[calc(100vw-1rem)] sm:w-auto p-4 sm:p-6">
         <DialogHeader>
           <DialogTitle>Pastas de agendamentos</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
-          <div className="flex items-end gap-2">
-            <div className="flex-1 space-y-1">
+          <div className="flex items-end gap-2 flex-wrap sm:flex-nowrap">
+            <div className="flex-1 min-w-[60%] space-y-1">
               <Label>Nova pasta</Label>
               <Input
                 placeholder="Ex: Manhã, Sinais, Promo…"
@@ -675,9 +680,10 @@ function ManageFoldersDialog({
               type="color"
               value={color}
               onChange={(e) => setColor(e.target.value)}
-              className="h-10 w-12 rounded border border-border bg-transparent"
+              className="h-10 w-12 rounded border border-border bg-transparent shrink-0"
             />
             <Button
+              className="shrink-0"
               disabled={!name.trim() || busy}
               onClick={async () => {
                 setBusy(true);
@@ -806,11 +812,11 @@ function StatCard({
         ? "bg-sky-500/15 text-sky-400"
         : "bg-primary/15 text-primary";
   return (
-    <Card className="p-5 flex items-center gap-4">
-      <div className={`size-11 rounded-xl grid place-items-center ${toneCls}`}>{icon}</div>
+    <Card className="p-3 sm:p-5 flex items-center gap-3 sm:gap-4">
+      <div className={`size-9 sm:size-11 rounded-xl grid place-items-center shrink-0 ${toneCls}`}>{icon}</div>
       <div>
-        <p className="text-2xl font-bold leading-none">{value}</p>
-        <p className="text-sm text-muted-foreground mt-1">{label}</p>
+        <p className="text-xl sm:text-2xl font-bold leading-none">{value}</p>
+        <p className="text-xs sm:text-sm text-muted-foreground mt-1">{label}</p>
       </div>
     </Card>
   );
@@ -1023,7 +1029,7 @@ function ScheduleDialog({
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-6xl max-h-[92vh] overflow-y-auto p-4 sm:p-6 w-[calc(100vw-1rem)] sm:w-auto">
         <DialogHeader>
           <DialogTitle>{editing?.id ? "Editar mensagem" : "Nova mensagem"}</DialogTitle>
         </DialogHeader>
@@ -1031,7 +1037,7 @@ function ScheduleDialog({
           {/* LEFT COLUMN */}
           <div className="space-y-4">
             {/* Identificação */}
-            <Card className="p-5 space-y-4">
+            <Card className="p-4 sm:p-5 space-y-4">
               <h3 className="font-semibold">Identificação</h3>
               <div className="space-y-2">
                 <Label>
@@ -1119,7 +1125,7 @@ function ScheduleDialog({
             </Card>
 
             {/* Conteúdo */}
-            <Card className="p-5 space-y-4">
+            <Card className="p-4 sm:p-5 space-y-4">
               <h3 className="font-semibold">Conteúdo</h3>
               <div className="space-y-2">
                 <Label>
@@ -1244,8 +1250,8 @@ function ScheduleDialog({
             </Card>
 
             {/* Follow-ups */}
-            <Card className="p-5 space-y-3">
-              <div className="flex items-center justify-between">
+            <Card className="p-4 sm:p-5 space-y-3">
+              <div className="flex items-start sm:items-center justify-between gap-2 flex-wrap">
                 <div>
                   <h3 className="font-semibold">Mensagens em sequência</h3>
                   <p className="text-xs text-muted-foreground mt-0.5">
@@ -1257,6 +1263,7 @@ function ScheduleDialog({
                   size="sm"
                   variant="outline"
                   disabled={followUps.length >= 10}
+                  className="shrink-0"
                   onClick={() =>
                     setFollowUps([
                       ...followUps,
@@ -1265,7 +1272,8 @@ function ScheduleDialog({
                   }
                 >
                   <Plus className="size-4" />
-                  Adicionar conteúdo
+                  <span className="hidden sm:inline">Adicionar conteúdo</span>
+                  <span className="sm:hidden">Adicionar</span>
                 </Button>
               </div>
               {followUps.length === 0 ? (
@@ -1497,7 +1505,7 @@ function ScheduleDialog({
           {/* RIGHT COLUMN */}
           <div className="space-y-4">
             {/* Dias da semana */}
-            <Card className="p-5 space-y-3">
+            <Card className="p-4 sm:p-5 space-y-3">
               <h3 className="font-semibold">
                 Dias da semana <span className="text-destructive">*</span>
               </h3>
@@ -1527,7 +1535,7 @@ function ScheduleDialog({
             </Card>
 
             {/* Horários */}
-            <Card className="p-5 space-y-3">
+            <Card className="p-4 sm:p-5 space-y-3">
               <h3 className="font-semibold">
                 Horários <span className="text-destructive">*</span>
               </h3>
@@ -1569,7 +1577,7 @@ function ScheduleDialog({
 
             {/* Horários por dia (override) */}
             {weekdays.length > 0 && (
-              <Card className="p-5 space-y-3">
+              <Card className="p-4 sm:p-5 space-y-3">
                 <h3 className="font-semibold">Horários específicos por dia (opcional)</h3>
                 <p className="text-xs text-muted-foreground">
                   Defina horários diferentes para um dia da semana. Quando houver
@@ -1657,8 +1665,9 @@ function ScheduleDialog({
             )}
           </div>
         </div>
-        <DialogFooter className="gap-2 sm:gap-2">
+        <DialogFooter className="gap-2 flex-col-reverse sm:flex-row">
           <Button
+            className="w-full sm:w-auto"
             disabled={!canSave}
             onClick={() =>
               onSave({
@@ -1699,7 +1708,7 @@ function ScheduleDialog({
           >
             {editing?.id ? "Salvar alterações" : "Criar mensagem"}
           </Button>
-          <Button variant="secondary" onClick={onClose}>Cancelar</Button>
+          <Button variant="secondary" onClick={onClose} className="w-full sm:w-auto">Cancelar</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
