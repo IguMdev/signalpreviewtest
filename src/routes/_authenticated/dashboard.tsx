@@ -12,6 +12,48 @@ import { Send, Users, CalendarClock, Wallet, Sparkles, CreditCard, UserPlus, Use
 import { getMySubscriptions } from "@/lib/engagement.functions";
 import { getCurrentMemberCounts, getMemberStats } from "@/lib/telegram-tracking.functions";
 
+function getTzParts(date: Date, tz: string) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: tz,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    weekday: "short",
+    hour12: false,
+  }).formatToParts(date);
+  const get = (t: string) => parts.find((p) => p.type === t)?.value ?? "";
+  const wkMap: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+  return {
+    year: Number(get("year")),
+    month: Number(get("month")),
+    day: Number(get("day")),
+    hour: Number(get("hour")),
+    minute: Number(get("minute")),
+    weekday: wkMap[get("weekday")] ?? 0,
+  };
+}
+
+/** Build a UTC Date for a given local wall-clock time in tz (handling offset). */
+function tzDateAt(year: number, month: number, day: number, hour: number, minute: number, tz: string): Date {
+  // Start with UTC guess then adjust by tz offset at that instant.
+  const utcGuess = Date.UTC(year, month - 1, day, hour, minute);
+  const parts = getTzParts(new Date(utcGuess), tz);
+  const asUtcOfParts = Date.UTC(parts.year, parts.month - 1, parts.day, parts.hour, parts.minute);
+  const offset = asUtcOfParts - utcGuess;
+  return new Date(utcGuess - offset);
+}
+
+function nextFireAt(now: Date, dayOffset: number, hhmm: string, tz: string): Date {
+  const today = getTzParts(now, tz);
+  const base = tzDateAt(today.year, today.month, today.day, 0, 0, tz);
+  const target = new Date(base.getTime() + dayOffset * 86400000);
+  const parts = getTzParts(target, tz);
+  const [h, m] = hhmm.split(":").map(Number);
+  return tzDateAt(parts.year, parts.month, parts.day, h, m, tz);
+}
+
 export const Route = createFileRoute("/_authenticated/dashboard")({
   component: DashboardPage,
 });
