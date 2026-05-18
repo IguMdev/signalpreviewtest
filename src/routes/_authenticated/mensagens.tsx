@@ -792,6 +792,7 @@ function ScheduleDialog({
   rooms,
   accounts,
   videos,
+  folders,
   presetRoomId,
   onClose,
   onSave,
@@ -800,6 +801,7 @@ function ScheduleDialog({
   rooms: Room[];
   accounts: { id: string; label: string }[];
   videos: { id: string; title: string; kind?: string | null }[];
+  folders: ScheduleFolder[];
   presetRoomId: string | null;
   onClose: () => void;
   onSave: (data: {
@@ -830,6 +832,7 @@ function ScheduleDialog({
     timezone: string;
     buttonText?: string | null;
     buttonUrl?: string | null;
+    folderId?: string | null;
   }) => void;
 }) {
   const [title, setTitle] = useState("");
@@ -855,6 +858,7 @@ function ScheduleDialog({
   const [newTime, setNewTime] = useState("");
   const [buttonText, setButtonText] = useState("");
   const [buttonUrl, setButtonUrl] = useState("");
+  const [folderId, setFolderId] = useState<string>("");
 
   const open = !!editing;
   const videoKindById = useMemo(() => {
