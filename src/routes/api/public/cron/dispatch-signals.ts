@@ -547,10 +547,10 @@ async function sendDueReports(): Promise<number> {
       const nowMin = toMin(tzNowHHMM);
       const delay = Math.max(0, Number(report.delay_minutes) || 0);
       const target = (endMin + delay) % 1440;
-      // distância circular nowMin -> target (em minutos). Só dispara no minuto exato
-      // (tolerância de 1 min para o cron que roda * * * * *).
+      // distância circular nowMin -> target (em minutos). Tolerância de 5 min
+      // para absorver atrasos do cron (* * * * *) sem perder o relatório do dia.
       const diff = ((nowMin - target) + 1440) % 1440;
-      if (diff > 1) continue;
+      if (diff > 5) continue;
       // dia da janela: subtrai delay para o caso de cruzar a meia-noite.
       const windowDay = reportDateKey(new Date(now.getTime() - delay * 60_000), tz);
       const key = `${windowDay}:${String(w.end_time).slice(0, 5)}`;
