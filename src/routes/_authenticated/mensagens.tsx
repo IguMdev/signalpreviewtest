@@ -473,6 +473,19 @@ function MensagensPage() {
                               Premium
                             </Badge>
                           )}
+                          {(() => {
+                            const f = (folders.data ?? []).find((x) => x.id === s.folder_id);
+                            return f ? (
+                              <Badge
+                                variant="secondary"
+                                className="border-0 font-normal"
+                                style={{ backgroundColor: `${f.color}26`, color: f.color }}
+                              >
+                                <Folder className="size-3 mr-1" />
+                                {f.name}
+                              </Badge>
+                            ) : null;
+                          })()}
                         </div>
                         {s.last_sent_at && (
                           <p className="text-xs text-muted-foreground mt-1">
@@ -485,6 +498,22 @@ function MensagensPage() {
                           checked={s.is_active}
                           onCheckedChange={(v) => toggleMut.mutate({ id: s.id, isActive: v })}
                         />
+                        <Select
+                          value={s.folder_id ?? "__none__"}
+                          onValueChange={(v) =>
+                            moveMut.mutate({ id: s.id, folderId: v === "__none__" ? null : v })
+                          }
+                        >
+                          <SelectTrigger className="h-8 w-[140px]" title="Mover para pasta">
+                            <SelectValue placeholder="Pasta" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="__none__">Sem pasta</SelectItem>
+                            {(folders.data ?? []).map((f) => (
+                              <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                         <Button
                           size="sm"
                           variant="outline"
