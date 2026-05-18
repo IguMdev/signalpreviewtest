@@ -537,22 +537,20 @@ async function sendDueReports(): Promise<number> {
       .eq("room_id", report.room_id)
       .eq("is_active", true);
     for (const w of windows ?? []) {
-      // Dispara APENAS no minuto programado (end_time + delay), na timezone da sala.
-      // Suporta janelas que cruzam meia-noite: target é módulo 1440 e o report_key
-      // referencia o dia da janela (now - delay), não o dia do disparo.
+      // Dispara APENAS no horário programado (end_time + delay), na timezone da sala.
+      // Não usa tolerância circular para evitar que relatórios de sessões do dia
+      // sejam marcados/enviados indevidamente na virada de 00h.
       const tz = ctx.room.timezone;
       const tzNowHHMM = fmtHHMM(now, tz);
       const toMin = (s: string) => { const [h, m] = s.split(":").map(Number); return h * 60 + m; };
+      const fromMin = (m: number) => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
       const endMin = toMin(String(w.end_time).slice(0, 5));
-      const nowMin = toMin(tzNowHHMM);
       const delay = Math.max(0, Number(report.delay_minutes) || 0);
       const target = (endMin + delay) % 1440;
-      // distância circular nowMin -> target (em minutos). Tolerância de 5 min
-      // para absorver atrasos do cron (* * * * *) sem perder o relatório do dia.
-      const diff = ((nowMin - target) + 1440) % 1440;
-      if (diff > 5) continue;
+      if (tzNowHHMM !== fromMin(target)) continue;
       // dia da janela: subtrai delay para o caso de cruzar a meia-noite.
-      const windowDay = reportDateKey(new Date(now.getTime() - delay * 60_000), tz);
+      const windowDate = new Date(now.getTime() - delay * 60_000);
+      const windowDay = reportDateKey(windowDate, tz);
       const key = `${windowDay}:${String(w.end_time).slice(0, 5)}`;
       const { data: claim } = await supabaseAdmin
         .from("room_report_runs")
@@ -571,10 +569,10 @@ async function sendDueReports(): Promise<number> {
         .gte("entry_at", since);
       const { totalWins, totalLosses, total, winRate } = aggregateTerminalStats(
         (stats ?? []) as { status: string; gale_level: number; max_gales: number; entry_at: string }[],
-        { tz, now },
+        { tz, now: windowDate },
       );
       // Lista de operações terminais (HH:MM Ativo ✅/❌), ordenadas por horário.
-      const todayKey = reportDateKey(now, tz);
+      const todayKey = windowDay;
       const terminalList = ((stats ?? []) as Array<{ status: string; gale_level: number | null; max_gales: number | null; entry_at: string; asset_code: string | null }>)
         .filter((e) => reportDateKey(new Date(e.entry_at), tz) === todayKey)
         .filter((e) => {
