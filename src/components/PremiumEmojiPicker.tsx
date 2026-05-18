@@ -114,6 +114,10 @@ function isTextControl(el: Element | null): el is HTMLTextAreaElement | HTMLInpu
   return el instanceof HTMLTextAreaElement || el instanceof HTMLInputElement;
 }
 
+function isPickerTextControl(el: HTMLTextAreaElement | HTMLInputElement) {
+  return !!el.closest("[data-premium-emoji-picker]");
+}
+
 function setTextControlCursor(el: HTMLTextAreaElement | HTMLInputElement, pos: number) {
   try {
     el.focus();
@@ -133,15 +137,16 @@ export function PremiumEmojiPicker({ value, onChange, targetRef, size = "sm", cl
   // Captura a posição do cursor ANTES do popover roubar o foco.
   const savedSelection = useRef<{ el: HTMLTextAreaElement | HTMLInputElement; start: number; end: number } | null>(null);
 
-  const captureSelection = () => {
-    let el = ref.current as HTMLTextAreaElement | HTMLInputElement | null;
-    if (!el) {
-      const active = document.activeElement;
-      if (isTextControl(active)) {
-        el = active;
-      }
+  const captureSelection = (candidate?: EventTarget | null) => {
+    let el: HTMLTextAreaElement | HTMLInputElement | null = null;
+    if (isTextControl(candidate as Element | null)) {
+      el = candidate as HTMLTextAreaElement | HTMLInputElement;
+    } else if (ref.current) {
+      el = ref.current;
+    } else if (isTextControl(document.activeElement)) {
+      el = document.activeElement;
     }
-    if (!el || typeof el.selectionStart !== "number" || typeof el.selectionEnd !== "number") {
+    if (!el || isPickerTextControl(el) || typeof el.selectionStart !== "number" || typeof el.selectionEnd !== "number") {
       return;
     }
     savedSelection.current = {
@@ -150,6 +155,22 @@ export function PremiumEmojiPicker({ value, onChange, targetRef, size = "sm", cl
       end: el.selectionEnd ?? el.value.length,
     };
   };
+
+  useEffect(() => {
+    const rememberSelection = (event: Event) => captureSelection(event.target);
+    document.addEventListener("focusin", rememberSelection);
+    document.addEventListener("selectionchange", rememberSelection);
+    document.addEventListener("mouseup", rememberSelection);
+    document.addEventListener("keyup", rememberSelection);
+    document.addEventListener("input", rememberSelection);
+    return () => {
+      document.removeEventListener("focusin", rememberSelection);
+      document.removeEventListener("selectionchange", rememberSelection);
+      document.removeEventListener("mouseup", rememberSelection);
+      document.removeEventListener("keyup", rememberSelection);
+      document.removeEventListener("input", rememberSelection);
+    };
+  }, [ref]);
 
   const list = useQuery({
     queryKey: ["emojis", "picker"],
@@ -210,7 +231,7 @@ export function PremiumEmojiPicker({ value, onChange, targetRef, size = "sm", cl
   };
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={(next) => { if (next) captureSelection(); setOpen(next); }}>
       <PopoverTrigger asChild>
         <Button
           type="button"
@@ -224,7 +245,7 @@ export function PremiumEmojiPicker({ value, onChange, targetRef, size = "sm", cl
           {size !== "sm" && <span className="ml-1">Emoji premium</span>}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-80 p-3" align="end">
+      <PopoverContent className="w-80 p-3" align="end" data-premium-emoji-picker>
         <div className="space-y-2">
           <div className="relative">
             <Search className="size-4 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
