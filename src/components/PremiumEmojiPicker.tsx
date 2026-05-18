@@ -238,7 +238,7 @@ export function PremiumEmojiPicker({ value, onChange, targetRef, size = "sm", cl
           variant="outline"
           size={size === "sm" ? "sm" : "default"}
           className={className}
-          onPointerDown={captureSelection}
+          onPointerDown={() => captureSelection()}
           title="Inserir emoji premium"
         >
           <Sparkles className="size-4 text-amber-400" />
