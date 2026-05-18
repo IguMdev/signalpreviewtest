@@ -33,6 +33,7 @@ import { Route as AuthenticatedTrackeamentoDominiosRouteImport } from './routes/
 import { Route as AuthenticatedTrackeamentoCanalRouteImport } from './routes/_authenticated/trackeamento.canal'
 import { Route as AuthenticatedIntegracoesMetaRouteImport } from './routes/_authenticated/integracoes.meta'
 import { Route as AuthenticatedBotsLogsRouteImport } from './routes/_authenticated/bots.logs'
+import { Route as AuthenticatedBotsFollowupRouteImport } from './routes/_authenticated/bots.followup'
 import { Route as AuthenticatedBotsEncaminhadorRouteImport } from './routes/_authenticated/bots.encaminhador'
 import { Route as AuthenticatedBotsBoasvindasRouteImport } from './routes/_authenticated/bots.boasvindas'
 import { Route as ApiPublicTrackClickRouteImport } from './routes/api/public/track/click'
@@ -179,6 +180,12 @@ const AuthenticatedBotsLogsRoute = AuthenticatedBotsLogsRouteImport.update({
   path: '/bots/logs',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedBotsFollowupRoute =
+  AuthenticatedBotsFollowupRouteImport.update({
+    id: '/bots/followup',
+    path: '/bots/followup',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedBotsEncaminhadorRoute =
   AuthenticatedBotsEncaminhadorRouteImport.update({
     id: '/bots/encaminhador',
@@ -283,6 +290,7 @@ export interface FileRoutesByFullPath {
   '/videos': typeof AuthenticatedVideosRoute
   '/bots/boasvindas': typeof AuthenticatedBotsBoasvindasRoute
   '/bots/encaminhador': typeof AuthenticatedBotsEncaminhadorRoute
+  '/bots/followup': typeof AuthenticatedBotsFollowupRoute
   '/bots/logs': typeof AuthenticatedBotsLogsRoute
   '/integracoes/meta': typeof AuthenticatedIntegracoesMetaRoute
   '/trackeamento/canal': typeof AuthenticatedTrackeamentoCanalRoute
@@ -323,6 +331,7 @@ export interface FileRoutesByTo {
   '/': typeof AuthenticatedIndexRoute
   '/bots/boasvindas': typeof AuthenticatedBotsBoasvindasRoute
   '/bots/encaminhador': typeof AuthenticatedBotsEncaminhadorRoute
+  '/bots/followup': typeof AuthenticatedBotsFollowupRoute
   '/bots/logs': typeof AuthenticatedBotsLogsRoute
   '/integracoes/meta': typeof AuthenticatedIntegracoesMetaRoute
   '/trackeamento/canal': typeof AuthenticatedTrackeamentoCanalRoute
@@ -365,6 +374,7 @@ export interface FileRoutesById {
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/bots/boasvindas': typeof AuthenticatedBotsBoasvindasRoute
   '/_authenticated/bots/encaminhador': typeof AuthenticatedBotsEncaminhadorRoute
+  '/_authenticated/bots/followup': typeof AuthenticatedBotsFollowupRoute
   '/_authenticated/bots/logs': typeof AuthenticatedBotsLogsRoute
   '/_authenticated/integracoes/meta': typeof AuthenticatedIntegracoesMetaRoute
   '/_authenticated/trackeamento/canal': typeof AuthenticatedTrackeamentoCanalRoute
@@ -407,6 +417,7 @@ export interface FileRouteTypes {
     | '/videos'
     | '/bots/boasvindas'
     | '/bots/encaminhador'
+    | '/bots/followup'
     | '/bots/logs'
     | '/integracoes/meta'
     | '/trackeamento/canal'
@@ -447,6 +458,7 @@ export interface FileRouteTypes {
     | '/'
     | '/bots/boasvindas'
     | '/bots/encaminhador'
+    | '/bots/followup'
     | '/bots/logs'
     | '/integracoes/meta'
     | '/trackeamento/canal'
@@ -488,6 +500,7 @@ export interface FileRouteTypes {
     | '/_authenticated/'
     | '/_authenticated/bots/boasvindas'
     | '/_authenticated/bots/encaminhador'
+    | '/_authenticated/bots/followup'
     | '/_authenticated/bots/logs'
     | '/_authenticated/integracoes/meta'
     | '/_authenticated/trackeamento/canal'
@@ -702,6 +715,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedBotsLogsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/bots/followup': {
+      id: '/_authenticated/bots/followup'
+      path: '/bots/followup'
+      fullPath: '/bots/followup'
+      preLoaderRoute: typeof AuthenticatedBotsFollowupRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/bots/encaminhador': {
       id: '/_authenticated/bots/encaminhador'
       path: '/bots/encaminhador'
@@ -823,6 +843,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedBotsBoasvindasRoute: typeof AuthenticatedBotsBoasvindasRoute
   AuthenticatedBotsEncaminhadorRoute: typeof AuthenticatedBotsEncaminhadorRoute
+  AuthenticatedBotsFollowupRoute: typeof AuthenticatedBotsFollowupRoute
   AuthenticatedBotsLogsRoute: typeof AuthenticatedBotsLogsRoute
   AuthenticatedIntegracoesMetaRoute: typeof AuthenticatedIntegracoesMetaRoute
   AuthenticatedTrackeamentoCanalRoute: typeof AuthenticatedTrackeamentoCanalRoute
@@ -850,6 +871,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedBotsBoasvindasRoute: AuthenticatedBotsBoasvindasRoute,
   AuthenticatedBotsEncaminhadorRoute: AuthenticatedBotsEncaminhadorRoute,
+  AuthenticatedBotsFollowupRoute: AuthenticatedBotsFollowupRoute,
   AuthenticatedBotsLogsRoute: AuthenticatedBotsLogsRoute,
   AuthenticatedIntegracoesMetaRoute: AuthenticatedIntegracoesMetaRoute,
   AuthenticatedTrackeamentoCanalRoute: AuthenticatedTrackeamentoCanalRoute,
