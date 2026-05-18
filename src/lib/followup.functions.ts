@@ -6,6 +6,52 @@ import { callTelegram } from "@/lib/telegram.server";
 
 const TimeRe = /^([01]\d|2[0-3]):[0-5]\d$/;
 
+export type FollowupMessageRow = {
+  id: string;
+  user_id: string;
+  room_id: string;
+  day_number: number;
+  send_time: string;
+  content: string | null;
+  image_path: string | null;
+  image_mime: string | null;
+  video_id: string | null;
+  parse_mode: string;
+  premium_enabled: boolean;
+  premium_account_id: string | null;
+  button_text: string | null;
+  button_url: string | null;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type FollowupSettingsRow = {
+  room_id: string;
+  user_id: string;
+  enabled: boolean;
+  timezone: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type FollowupLeadRow = {
+  id: string;
+  user_id: string;
+  room_id: string;
+  account_id: string;
+  tg_user_id: number;
+  chat_id: number;
+  first_name: string | null;
+  username: string | null;
+  status: string;
+  started_at: string;
+  last_sent_day: number | null;
+  last_sent_at: string | null;
+  stopped_at: string | null;
+  stopped_reason: string | null;
+};
+
 // ===== Settings =====
 
 export const getFollowupSettings = createServerFn({ method: "GET" })
@@ -22,7 +68,7 @@ export const getFollowupSettings = createServerFn({ method: "GET" })
         .maybeSingle(),
     ]);
     return {
-      settings: (settings.data as Record<string, unknown> | null) ?? null,
+      settings: (settings.data as FollowupSettingsRow | null) ?? null,
       cta: (cta.data as { followup_cta_enabled: boolean; followup_cta_button_text: string } | null) ?? null,
     };
   });
@@ -82,7 +128,7 @@ export const listFollowupMessages = createServerFn({ method: "GET" })
       .eq("room_id", data.roomId)
       .order("day_number", { ascending: true });
     if (error) throw new Error(error.message);
-    return (rows as Record<string, unknown>[]) ?? [];
+    return (rows as FollowupMessageRow[] | null) ?? [];
   });
 
 const MessageInput = z.object({
@@ -165,7 +211,7 @@ export const listFollowupLeads = createServerFn({ method: "GET" })
       .order("started_at", { ascending: false })
       .limit(100);
     if (error) throw new Error(error.message);
-    const list = (rows as Record<string, unknown>[]) ?? [];
+    const list = (rows as FollowupLeadRow[] | null) ?? [];
     const counts = { active: 0, stopped: 0, completed: 0 };
     for (const r of list) {
       const s = String(r.status ?? "");
@@ -206,10 +252,10 @@ export const testFollowupMessage = createServerFn({ method: "POST" })
       .select("*")
       .eq("id", data.id)
       .maybeSingle();
-    if (!msg || (msg as Record<string, unknown>).user_id !== userId) {
+    if (!msg || (msg as FollowupMessageRow).user_id !== userId) {
       throw new Error("Mensagem não encontrada");
     }
-    const m = msg as Record<string, unknown>;
+    const m = msg as FollowupMessageRow;
     // Find any bot account belonging to user to use as sender
     const { data: acc } = await supabaseAdmin
       .from("telegram_accounts")
@@ -222,11 +268,11 @@ export const testFollowupMessage = createServerFn({ method: "POST" })
     if (!acc?.bot_token) throw new Error("Nenhuma conta de bot ativa");
     const r = await callTelegram(acc.bot_token, "sendMessage", {
       chat_id: data.chatId,
-      text: (m.content as string) ?? "(sem conteúdo)",
-      parse_mode: (m.parse_mode as string) ?? "HTML",
+      text: m.content ?? "(sem conteúdo)",
+      parse_mode: m.parse_mode ?? "HTML",
       reply_markup:
         m.button_text && m.button_url
-          ? { inline_keyboard: [[{ text: m.button_text as string, url: m.button_url as string }]] }
+          ? { inline_keyboard: [[{ text: m.button_text, url: m.button_url }]] }
           : undefined,
     });
     if (!r.ok) throw new Error(r.description ?? "Falha no envio");
