@@ -1,6 +1,8 @@
-// Fetcher de manchetes para o cartão "Dicas de Mercado".
-// Fontes RSS em pt-BR — categorias forex e crypto.
-// Sem dependências externas: parsing manual de RSS/Atom.
+// ╔══════════════════════════════════════════════════════════╗
+// ║  LIB SERVER — MARKET TIPS                                ║
+// ║  Fetcher de manchetes (RSS pt-BR) para o card "Dicas de  ║
+// ║  Mercado" — categorias forex e crypto. Sem deps externas.║
+// ╚══════════════════════════════════════════════════════════╝
 
 export type TipCategory = "forex" | "crypto";
 
