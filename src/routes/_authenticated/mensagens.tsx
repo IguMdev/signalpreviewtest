@@ -662,13 +662,13 @@ function ManageFoldersDialog({
   const [busy, setBusy] = useState(false);
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md w-[calc(100vw-1rem)] sm:w-auto p-4 sm:p-6">
         <DialogHeader>
           <DialogTitle>Pastas de agendamentos</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
-          <div className="flex items-end gap-2">
-            <div className="flex-1 space-y-1">
+          <div className="flex items-end gap-2 flex-wrap sm:flex-nowrap">
+            <div className="flex-1 min-w-[60%] space-y-1">
               <Label>Nova pasta</Label>
               <Input
                 placeholder="Ex: Manhã, Sinais, Promo…"
@@ -680,9 +680,10 @@ function ManageFoldersDialog({
               type="color"
               value={color}
               onChange={(e) => setColor(e.target.value)}
-              className="h-10 w-12 rounded border border-border bg-transparent"
+              className="h-10 w-12 rounded border border-border bg-transparent shrink-0"
             />
             <Button
+              className="shrink-0"
               disabled={!name.trim() || busy}
               onClick={async () => {
                 setBusy(true);
