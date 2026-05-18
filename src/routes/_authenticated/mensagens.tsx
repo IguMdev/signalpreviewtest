@@ -1049,6 +1049,21 @@ function ScheduleDialog({
                   </Select>
                 </div>
               </div>
+              <div className="space-y-2">
+                <Label>Pasta</Label>
+                <Select
+                  value={folderId || "__none__"}
+                  onValueChange={(v) => setFolderId(v === "__none__" ? "" : v)}
+                >
+                  <SelectTrigger><SelectValue placeholder="Sem pasta" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">Sem pasta</SelectItem>
+                    {folders.map((f) => (
+                      <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               <div className="flex items-center gap-6 pt-1">
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input
