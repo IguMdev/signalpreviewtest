@@ -1,3 +1,9 @@
+// ╔══════════════════════════════════════════════════════════╗
+// ║  LIB SERVER — TELEGRAM BOT API (callTelegram)            ║
+// ║  Wrapper único de chamadas à Bot API. Usado por todos    ║
+// ║  os crons e pelo webhook.                                ║
+// ╚══════════════════════════════════════════════════════════╝
+
 const API_BASE = "https://api.telegram.org";
 
 export type TelegramResponse<T> = {

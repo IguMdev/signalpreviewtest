@@ -14,6 +14,15 @@ import {
 import { renderEmojiTokensPlain, hasEmojiTokens } from "@/lib/premium-emoji-render";
 import { mirrorIfMarked } from "@/lib/forwarder.server";
 
+// ╔══════════════════════════════════════════════════════════╗
+// ║  CRON: DISPATCH-RECURRING (executado a cada minuto)      ║
+// ║  Duas fases independentes por execução:                  ║
+// ║   1. GERAÇÃO DE PENDENTES — cria envios para cada slot   ║
+// ║      "{schedule, horário, follow-up}" do dia atual.      ║
+// ║   2. ENVIO DOS PENDENTES — envia ao Telegram texto/foto/ ║
+// ║      vídeo + replica via Encaminhador se marcado.        ║
+// ╚══════════════════════════════════════════════════════════╝
+
 const PREMIUM_LOCK_ERROR =
   "Envio bloqueado: a mensagem contém tokens {EMOJI} que não foram processados. Conecte uma conta Telegram Premium ativa e cadastre os emojis em Premium Emojis para liberar o envio.";
 

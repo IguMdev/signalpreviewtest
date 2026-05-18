@@ -3,6 +3,12 @@ import { createHash } from "crypto";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { callTelegram } from "@/lib/telegram.server";
 
+// ╔══════════════════════════════════════════════════════════╗
+// ║  CRON: CHECK-TELEGRAM-WEBHOOKS                           ║
+// ║  Garante que cada bot ativo tem o webhook apontando      ║
+// ║  para esta aplicação e com o secret_token correto.       ║
+// ╚══════════════════════════════════════════════════════════╝
+
 const ALLOWED_UPDATES = ["chat_member", "my_chat_member", "message", "channel_post"];
 
 function publicBaseUrl() {

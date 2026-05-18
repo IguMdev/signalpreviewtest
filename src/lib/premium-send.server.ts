@@ -1,4 +1,12 @@
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+
+// ╔══════════════════════════════════════════════════════════╗
+// ║  LIB SERVER — PREMIUM SEND (MTProto)                     ║
+// ║  Envia texto/foto/vídeo com emojis premium custom via    ║
+// ║  conta Telegram Premium. Fallback para Bot API quando    ║
+// ║  a conta premium não está disponível.                    ║
+// ╚══════════════════════════════════════════════════════════╝
+
 import {
   hasEmojiTokens,
   renderEmojiTokens,

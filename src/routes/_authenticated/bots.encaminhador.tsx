@@ -73,6 +73,12 @@ function ItemList({ title, empty, items, value, onChange }: {
   );
 }
 
+// ╔══════════════════════════════════════════════════════════╗
+// ║  PÁGINA — BOT ENCAMINHADOR                               ║
+// ║  Origem/Destinos + Premium + marcação de templates       ║
+// ║  para replicar via Encaminhador.                         ║
+// ╚══════════════════════════════════════════════════════════╝
+
 function EncaminhadorPage() {
   const qc = useQueryClient();
   const get = useServerFn(getForwarderConfig);
@@ -204,6 +210,7 @@ function EncaminhadorPage() {
         </CardContent>
       </Card>
 
+      {/* ─── BLOCO: CONFIGURAÇÃO (origem/destinos/premium/marcações) ─ */}
       {roomId && (
         <Card>
           <CardHeader>

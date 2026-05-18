@@ -1,4 +1,11 @@
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+
+// ╔══════════════════════════════════════════════════════════╗
+// ║  LIB SERVER — FORWARDER (mirrorIfMarked)                 ║
+// ║  Replica mensagens marcadas para os destinos do          ║
+// ║  Encaminhador, com dedupe via forwarder_dedupe.          ║
+// ╚══════════════════════════════════════════════════════════╝
+
 import { callTelegram } from "./telegram.server";
 import {
   sendPhotoWithPremiumEmojiCaptionRetry,

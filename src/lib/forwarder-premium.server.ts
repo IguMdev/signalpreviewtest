@@ -1,5 +1,10 @@
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
+// ╔══════════════════════════════════════════════════════════╗
+// ║  LIB SERVER — FORWARDER PREMIUM (MTProto)                ║
+// ║  Encaminha mensagens preservando emojis premium custom.  ║
+// ╚══════════════════════════════════════════════════════════╝
+
 /**
  * Reencaminhamento preservando custom_emoji (premium emojis).
  *

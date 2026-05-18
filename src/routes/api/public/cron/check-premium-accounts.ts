@@ -1,6 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
+// ╔══════════════════════════════════════════════════════════╗
+// ║  CRON: CHECK-PREMIUM-ACCOUNTS                            ║
+// ║  Valida contas Premium (MTProto) e marca como inativas   ║
+// ║  as que perderam sessão ou estão fora do ar.             ║
+// ╚══════════════════════════════════════════════════════════╝
+
 async function makeClient(apiId: number, apiHash: string, session: string) {
   const { TelegramClient } = await import("telegram");
   const { StringSession } = await import("telegram/sessions");

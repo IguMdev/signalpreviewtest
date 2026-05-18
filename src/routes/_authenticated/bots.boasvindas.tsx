@@ -74,6 +74,12 @@ export const Route = createFileRoute("/_authenticated/bots/boasvindas")({
   component: BoasVindasPage,
 });
 
+// ╔══════════════════════════════════════════════════════════╗
+// ║  PÁGINA — BOT BOAS-VINDAS                                ║
+// ║  Configuração principal + Pré-visualização + Sequência   ║
+// ║  de mensagens extras (com mídia/premium emojis).         ║
+// ╚══════════════════════════════════════════════════════════╝
+
 function BoasVindasPage() {
   const qc = useQueryClient();
   const get = useServerFn(getWelcomeBotConfig);
@@ -189,6 +195,7 @@ function BoasVindasPage() {
         </CardContent>
       </Card>
 
+      {/* ─── BLOCO: CONFIGURAÇÃO PRINCIPAL (texto/mídia/premium) ── */}
       {roomId && (
         <Card>
           <CardHeader>
@@ -290,6 +297,7 @@ function BoasVindasPage() {
         </Card>
       )}
 
+      {/* ─── BLOCO: PRÉ-VISUALIZAÇÃO ───────────────────────────── */}
       {roomId && (
         <Card>
           <CardHeader><CardTitle className="text-base">Pré-visualização</CardTitle></CardHeader>
@@ -346,6 +354,9 @@ type ExtraRow = {
 };
 
 function ExtrasSection({ roomId, videos, premiumAccounts }: { roomId: string; videos: any[]; premiumAccounts: any[] }) {
+  // ╔════════════════════════════════════════════════════════╗
+  // ║  SEQUÊNCIA DE MENSAGENS EXTRAS (welcome_extra_messages)║
+  // ╚════════════════════════════════════════════════════════╝
   const qc = useQueryClient();
   const listQ = useQuery({
     queryKey: ["welcome-extras", roomId],
@@ -428,6 +439,9 @@ function ExtrasSection({ roomId, videos, premiumAccounts }: { roomId: string; vi
 }
 
 function ExtraEditor({
+  // ╔════════════════════════════════════════════════════════╗
+  // ║  EDITOR DE UMA MENSAGEM EXTRA                          ║
+  // ╚════════════════════════════════════════════════════════╝
   row, index, total, videos, premiumAccounts, roomId, onChanged, onRemove, onMoveUp, onMoveDown,
 }: {
   row: ExtraRow;

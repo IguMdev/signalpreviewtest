@@ -33,6 +33,12 @@ function publicUrl(bucket: string, path: string) {
   return `${SUPABASE_URL.replace(/\/$/, "")}/storage/v1/object/public/${bucket}/${path}`;
 }
 
+// ╔══════════════════════════════════════════════════════════╗
+// ║  PÁGINA — BOT FOLLOW-UP                                  ║
+// ║  Configura a sequência diária enviada no privado para    ║
+// ║  leads que iniciam o bot via botão do Boas-Vindas.       ║
+// ╚══════════════════════════════════════════════════════════╝
+
 function FollowUpPage() {
   const qc = useQueryClient();
   const getSettings = useServerFn(getFollowupSettings);
@@ -189,6 +195,7 @@ function FollowUpPage() {
         </CardContent>
       </Card>
 
+      {/* ─── BLOCO: CONFIGURAÇÃO + CTA NO BOAS-VINDAS ─────────── */}
       {roomId && (
         <Card>
           <CardHeader>
@@ -224,6 +231,7 @@ function FollowUpPage() {
         </Card>
       )}
 
+      {/* ─── BLOCO: SEQUÊNCIA DE MENSAGENS (lista por dia) ────── */}
       {roomId && (
         <Card>
           <CardHeader>
@@ -277,6 +285,7 @@ function FollowUpPage() {
         </Card>
       )}
 
+      {/* ─── BLOCO: EDITOR DE MENSAGEM (texto/mídia/botão/teste) ─ */}
       {editing && (
         <Card>
           <CardHeader>
@@ -413,6 +422,7 @@ function FollowUpPage() {
         </Card>
       )}
 
+      {/* ─── BLOCO: LEADS (contadores + lista + pausar/reativar) ─ */}
       {roomId && (
         <Card>
           <CardHeader>

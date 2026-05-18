@@ -3,6 +3,13 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { callTelegram } from "@/lib/telegram.server";
 import { sendTextWithPremiumEmojis, sendPhotoWithPremiumEmojiCaption } from "@/lib/premium-send.server";
 
+// ╔══════════════════════════════════════════════════════════╗
+// ║  CRON: DISPATCH-FOLLOWUPS (executado a cada minuto)      ║
+// ║  Envia mensagens diárias no privado dos leads inscritos  ║
+// ║  no Bot Follow-Up. Inclui dedupe, stop por bloqueio e    ║
+// ║  marca lead como "completed" ao fim da sequência.        ║
+// ╚══════════════════════════════════════════════════════════╝
+
 function publicUrl(bucket: string, path: string): string {
   const base = (process.env.SUPABASE_URL ?? "").replace(/\/$/, "");
   return `${base}/storage/v1/object/public/${bucket}/${path}`;

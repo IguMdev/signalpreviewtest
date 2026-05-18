@@ -1,5 +1,11 @@
 import { ASSETS_CATALOG, type AssetCategory } from "./assets-catalog";
 
+// ╔══════════════════════════════════════════════════════════╗
+// ║  LIB SERVER — SIGNALS (helpers de sinais)                ║
+// ║  Slots de envio, escolha de ativo/binário e candle M1.   ║
+// ║  Usado por dispatch-signals.                             ║
+// ╚══════════════════════════════════════════════════════════╝
+
 // Mapeia assets do catálogo para símbolos da Binance Spot (somente cripto reais)
 const BINANCE_SYMBOL_MAP: Record<string, string> = {
   ADAUSDT: "ADAUSDT", BNBUSDT: "BNBUSDT", BTCUSDT: "BTCUSDT",
