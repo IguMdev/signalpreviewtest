@@ -494,6 +494,45 @@ async function postResult(
   if (outcome === "loss" && s.gale_level < (s.max_gales ?? 0)) {
     const nextEntry = new Date(new Date(s.entry_at).getTime() + 60_000 * (s.gale_level + 1));
     const nextExpires = new Date(nextEntry.getTime() + 60_000);
+    const galeNumero = s.gale_level + 1;
+    const galeTpl = getTpl(
+      ctx.templates,
+      "gale",
+      "🔁 VAMOS PARA A {GALE_NUMERO}ª POSIÇÃO\n🌎 Ativo: {ATIVO}\n📊 Direção: {DIRECAO}\n⏰ Entrada: {ENTRADA}",
+    );
+    const galeText = renderTemplate(galeTpl.content, {
+      ATIVO: s.asset_code,
+      TIMEFRAME: s.timeframe,
+      DIRECAO: dirLabel(s.direction as "buy" | "sell"),
+      ENTRADA: fmtHHMM(nextEntry, ctx.room.timezone),
+      GALE_NUMERO: String(galeNumero),
+    });
+    const galeReplyMarkup = await buildReplyMarkup(ctx.room.user_id, ctx.buttons, "gale");
+    const galeIds = await sendToRoom({
+      userId: ctx.room.user_id,
+      botToken: ctx.botToken,
+      chatIds: ctx.chatIds,
+      text: galeText,
+      parseMode: galeTpl.parse_mode,
+      imagePath: galeTpl.image_path,
+      replyTo,
+      replyMarkup: galeReplyMarkup,
+    });
+    for (const [cid, mid] of Object.entries(galeIds)) {
+      await mirrorIfMarked({
+        roomId: s.room_id,
+        fromChatId: Number(cid),
+        messageId: mid,
+        origin: { kind: "template", id: "gale" },
+        payload: {
+          userId: ctx.room.user_id,
+          content: galeText,
+          parseMode: galeTpl.parse_mode,
+          imagePath: galeTpl.image_path,
+          replyMarkup: galeReplyMarkup,
+        },
+      });
+    }
     await supabaseAdmin.from("signal_events").insert({
       user_id: s.user_id,
       room_id: s.room_id,
@@ -504,10 +543,10 @@ async function postResult(
       timeframe: s.timeframe,
       entry_at: nextEntry.toISOString(),
       expires_at: nextExpires.toISOString(),
-      gale_level: s.gale_level + 1,
+      gale_level: galeNumero,
       max_gales: s.max_gales ?? 0,
       status: "sent", // já consideramos enviado pois é continuação
-      signal_message_ids: replyTo,
+      signal_message_ids: Object.keys(galeIds).length ? galeIds : replyTo,
     });
   }
 
