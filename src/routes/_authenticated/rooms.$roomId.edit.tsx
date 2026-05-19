@@ -1400,6 +1400,26 @@ function TemplateEditor({
         />
       )}
 
+      {kind === "gale" && (
+        <div className="space-y-1.5">
+          <Label className="text-xs">Pré-visualização (placeholders preenchidos)</Label>
+          <div className="rounded-md border bg-background/60 p-3 text-sm whitespace-pre-wrap font-mono">
+            {(content || placeholder)
+              .replaceAll("{GALE_NUMERO}", "1")
+              .replaceAll("{ATIVO}", "EURUSD")
+              .replaceAll("{DIRECAO}", "🟢 COMPRA")
+              .replaceAll("{ENTRADA}", "10:15")
+              .replaceAll("{TIMEFRAME}", "M1")
+              .replaceAll("{MARTINGALE}", "2")}
+          </div>
+          <p className="text-[11px] text-muted-foreground">
+            Exemplo com <code>{"{GALE_NUMERO}=1"}</code>, <code>{"{ATIVO}=EURUSD"}</code>,{" "}
+            <code>{"{DIRECAO}=🟢 COMPRA"}</code>, <code>{"{ENTRADA}=10:15"}</code>. Esta mensagem é
+            enviada automaticamente após um LOSS, antes de cada nova tentativa de martingale.
+          </p>
+        </div>
+      )}
+
       {showButtonManager && <div className="space-y-2">
         <Label className="text-xs">Botões inline (opcional)</Label>
         {buttons.length === 0 && (
