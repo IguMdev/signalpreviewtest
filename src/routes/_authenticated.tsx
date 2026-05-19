@@ -39,6 +39,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
 import { TourProvider } from "@/components/tour/TourProvider";
+import { BoostAllocationDialog } from "@/components/engagement/BoostAllocationDialog";
 export const Route = createFileRoute("/_authenticated")({
   component: AuthenticatedLayout,
 });
@@ -412,6 +413,7 @@ function AuthenticatedLayout() {
           <Outlet />
         </div>
       </main>
+      <BoostAllocationDialog />
     </div>
     </TourProvider>
   );

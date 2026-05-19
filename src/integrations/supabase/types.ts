@@ -2152,6 +2152,7 @@ export type Database = {
       }
       user_engagement_subscriptions: {
         Row: {
+          auto_dispatched_at: string | null
           bot_type: Database["public"]["Enums"]["engagement_bot_type"] | null
           created_at: string
           current_period_end: string | null
@@ -2165,11 +2166,13 @@ export type Database = {
           reactions_used: number
           status: Database["public"]["Enums"]["engagement_sub_status"]
           target_link: string | null
+          target_room_id: string | null
           units_used: number
           updated_at: string
           user_id: string
         }
         Insert: {
+          auto_dispatched_at?: string | null
           bot_type?: Database["public"]["Enums"]["engagement_bot_type"] | null
           created_at?: string
           current_period_end?: string | null
@@ -2183,11 +2186,13 @@ export type Database = {
           reactions_used?: number
           status?: Database["public"]["Enums"]["engagement_sub_status"]
           target_link?: string | null
+          target_room_id?: string | null
           units_used?: number
           updated_at?: string
           user_id: string
         }
         Update: {
+          auto_dispatched_at?: string | null
           bot_type?: Database["public"]["Enums"]["engagement_bot_type"] | null
           created_at?: string
           current_period_end?: string | null
@@ -2201,6 +2206,7 @@ export type Database = {
           reactions_used?: number
           status?: Database["public"]["Enums"]["engagement_sub_status"]
           target_link?: string | null
+          target_room_id?: string | null
           units_used?: number
           updated_at?: string
           user_id?: string
@@ -2211,6 +2217,13 @@ export type Database = {
             columns: ["plan_id"]
             isOneToOne: false
             referencedRelation: "engagement_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_engagement_subscriptions_target_room_id_fkey"
+            columns: ["target_room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
             referencedColumns: ["id"]
           },
         ]
