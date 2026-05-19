@@ -26,6 +26,7 @@ import {
   getRoomEngagementSettings,
   upsertRoomEngagementSettings,
   getMySubscriptions,
+  dispatchEngagementBoost,
 } from "@/lib/engagement.functions";
 import { sendRoomTest } from "@/lib/accounts.functions";
 import { testWindow } from "@/lib/test-signal.functions";
