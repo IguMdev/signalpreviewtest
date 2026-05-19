@@ -19,7 +19,7 @@ import {
 import { toast } from "sonner";
 import {
   listEngagementPlans, getMySubscriptions, listMyPaymentHistory,
-  listMyEngagementOrders, setSubscriptionTarget,
+  listMyEngagementOrders, setSubscriptionTarget, listEngagementAudit,
 } from "@/lib/engagement.functions";
 import { useAuth } from "@/lib/auth-context";
 
@@ -131,6 +131,7 @@ function RecargaPage() {
   const fetchSubs = useServerFn(getMySubscriptions);
   const fetchHistory = useServerFn(listMyPaymentHistory);
   const fetchOrders = useServerFn(listMyEngagementOrders);
+  const fetchAudit = useServerFn(listEngagementAudit);
 
   const plansQ = useQuery({ queryKey: ["engagement-plans"], queryFn: () => fetchPlans() });
   const subsQ = useQuery({
@@ -148,6 +149,12 @@ function RecargaPage() {
     queryFn: () => fetchOrders(),
     enabled: !!user,
     refetchInterval: 30_000,
+  });
+  const auditQ = useQuery({
+    queryKey: ["smm-audit", user?.id],
+    queryFn: () => fetchAudit(),
+    enabled: !!user,
+    refetchInterval: 60_000,
   });
 
   const subs = (subsQ.data ?? []) as any[];
@@ -551,6 +558,11 @@ function RecargaPage() {
         isLoading={ordersQ.isLoading}
       />
 
+      <EngagementAuditSection
+        rows={(auditQ.data ?? []) as any[]}
+        isLoading={auditQ.isLoading}
+      />
+
       {/* Payment History */}
       <PaymentHistorySection
         rows={(historyQ.data ?? []) as any[]}
@@ -714,6 +726,79 @@ function ChooseChannelCard({ subscriptionId }: { subscriptionId: string }) {
 
 
 function PaymentHistorySection({ rows, isLoading }: { rows: any[]; isLoading: boolean }) {
+  return _PaymentHistorySectionImpl({ rows, isLoading });
+}
+
+function EngagementAuditSection({ rows, isLoading }: { rows: any[]; isLoading: boolean }) {
+  return (
+    <section className="space-y-3">
+      <div className="flex items-center gap-2">
+        <div className="size-9 rounded-md bg-destructive/10 flex items-center justify-center">
+          <AlertCircle className="size-5 text-destructive" />
+        </div>
+        <div>
+          <h2 className="font-semibold">Auditoria de entregas</h2>
+          <p className="text-xs text-muted-foreground">
+            Pedidos onde o painel diz “Concluído” mas a contagem real no Telegram está abaixo do esperado.
+          </p>
+        </div>
+      </div>
+
+      <Card>
+        <CardContent className="p-0">
+          {isLoading ? (
+            <div className="p-6 text-sm text-muted-foreground text-center">Auditando…</div>
+          ) : rows.length === 0 ? (
+            <div className="p-6 text-sm text-muted-foreground text-center flex items-center justify-center gap-2">
+              <CheckCircle2 className="size-4 text-emerald-500" />
+              Nenhuma divergência detectada — todas as entregas estão batendo com o Telegram.
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Pedido</TableHead>
+                  <TableHead>Destino</TableHead>
+                  <TableHead>Inicial</TableHead>
+                  <TableHead>Atual</TableHead>
+                  <TableHead>Esperado</TableHead>
+                  <TableHead>Faltando</TableHead>
+                  <TableHead>Status painel</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {rows.map((r) => (
+                  <TableRow key={r.id}>
+                    <TableCell className="text-xs font-mono whitespace-nowrap">#{r.smm_order_id ?? "—"}</TableCell>
+                    <TableCell className="text-xs max-w-[220px] truncate">
+                      <a href={r.target} target="_blank" rel="noreferrer" className="text-primary hover:underline">
+                        {r.target}
+                      </a>
+                    </TableCell>
+                    <TableCell className="text-sm">{r.start_count?.toLocaleString("pt-BR") ?? "—"}</TableCell>
+                    <TableCell className="text-sm font-medium">{r.current_count?.toLocaleString("pt-BR") ?? "—"}</TableCell>
+                    <TableCell className="text-sm">{r.expected_count?.toLocaleString("pt-BR") ?? "—"}</TableCell>
+                    <TableCell className="text-sm font-semibold text-destructive">
+                      -{Number(r.missing ?? 0).toLocaleString("pt-BR")}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="gap-1">
+                        <AlertCircle className="size-3" />
+                        {r.panel_status ?? r.status}
+                      </Badge>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+    </section>
+  );
+}
+
+function _PaymentHistorySectionImpl({ rows, isLoading }: { rows: any[]; isLoading: boolean }) {
   return (
     <section className="space-y-3">
       <div className="flex items-center gap-2">
