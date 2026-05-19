@@ -561,36 +561,125 @@ export const listMyEngagementOrders = createServerFn({ method: "GET" })
 
     const syncable = rows.filter((r: any) => r.smm_order_id && ["pending", "in_progress"].includes(r.status));
     if (syncable.length > 0) {
-      await Promise.all(syncable.slice(0, 10).map(async (order: any) => {
-        try {
-          const panel = await callSmmPanel({ action: "status", order: order.smm_order_id });
-          let nextStatus = mapSmmStatus(panel.status, panel.remains);
-          if (!nextStatus) return;
-          const nextRaw: Record<string, unknown> = { ...(order.raw_response ?? {}), status_check: panel };
-          if (order.type === "members" && nextStatus === "completed") {
-            const actualCount = await getTelegramMemberCountForOrder(order);
-            if (actualCount != null) {
-              const startCount = Number(panel.start_count ?? Number.NaN);
-              const expectedCount = Number.isFinite(startCount) ? startCount + Number(order.quantity ?? 0) : null;
-              nextRaw.telegram_count = { current: actualCount, expected: expectedCount };
-              if (expectedCount != null && actualCount < expectedCount) {
-                nextStatus = "in_progress";
-              }
-            }
+      await Promise.all(
+        syncable.slice(0, 10).map(async (order: any) => {
+          const updated = await syncOneEngagementOrder(order);
+          if (updated) {
+            order.status = updated.status;
+            order.raw_response = updated.raw_response;
           }
-          await supabaseAdmin
-            .from("engagement_orders")
-            .update({ status: nextStatus, raw_response: nextRaw as never } as never)
-            .eq("id", order.id)
-            .eq("user_id", userId);
-          order.status = nextStatus;
-          order.raw_response = nextRaw;
-        } catch (e) {
-          console.error("[listMyEngagementOrders] status sync failed:", e);
-        }
-      }));
+        }),
+      );
     }
     return rows;
+  });
+
+// Shared sync routine used by both listMyEngagementOrders (on-demand) and the
+// background cron (/api/public/cron/sync-engagement-orders). Idempotent: only
+// updates the row when the panel returns a known status. Returns the patched
+// fields, or null if nothing changed / the call failed.
+export async function syncOneEngagementOrder(
+  order: { id: string; user_id: string; type: string; target: string; quantity: number; smm_order_id: string | null; room_id?: string | null; status: string; raw_response: any },
+): Promise<{ status: string; raw_response: Record<string, unknown> } | null> {
+  if (!order.smm_order_id) return null;
+  try {
+    const panel = await callSmmPanel({ action: "status", order: order.smm_order_id });
+    let nextStatus = mapSmmStatus(panel.status, panel.remains);
+    if (!nextStatus) return null;
+    const nextRaw: Record<string, unknown> = { ...(order.raw_response ?? {}), status_check: panel };
+    if (order.type === "members") {
+      const actualCount = await getTelegramMemberCountForOrder(order);
+      if (actualCount != null) {
+        const startCount = Number(panel.start_count ?? Number.NaN);
+        const expectedCount = Number.isFinite(startCount) ? startCount + Number(order.quantity ?? 0) : null;
+        nextRaw.telegram_count = { current: actualCount, expected: expectedCount, checked_at: new Date().toISOString() };
+        if (nextStatus === "completed" && expectedCount != null && actualCount < expectedCount) {
+          nextStatus = "in_progress";
+        }
+      }
+    }
+    await supabaseAdmin
+      .from("engagement_orders")
+      .update({ status: nextStatus, raw_response: nextRaw as never } as never)
+      .eq("id", order.id)
+      .eq("user_id", order.user_id);
+    return { status: nextStatus, raw_response: nextRaw };
+  } catch (e) {
+    console.error("[syncOneEngagementOrder] failed for", order.id, e);
+    return null;
+  }
+}
+
+// Bulk sync used by the cron. Processes the oldest in_progress/pending orders
+// across all users, capped to avoid hammering the panel.
+export async function runEngagementOrdersSync(opts: { limit?: number } = {}) {
+  const limit = Math.max(1, Math.min(200, opts.limit ?? 100));
+  const { data, error } = await supabaseAdmin
+    .from("engagement_orders")
+    .select("id, user_id, type, target, quantity, smm_order_id, room_id, status, raw_response")
+    .in("status", ["pending", "in_progress"])
+    .not("smm_order_id", "is", null)
+    .order("updated_at", { ascending: true })
+    .limit(limit);
+  if (error) throw new Error(error.message);
+  const rows = (data ?? []) as any[];
+  let synced = 0;
+  let divergent = 0;
+  for (const r of rows) {
+    const u = await syncOneEngagementOrder(r);
+    if (u) {
+      synced++;
+      const tc = (u.raw_response as any)?.telegram_count;
+      if (tc && typeof tc.current === "number" && typeof tc.expected === "number" && tc.current < tc.expected) {
+        divergent++;
+      }
+    }
+  }
+  return { checked: rows.length, synced, divergent };
+}
+
+// Audit endpoint: lists user's member orders whose stored Telegram count is
+// below the expected count (start_count + ordered quantity). Re-checks the
+// fresh Telegram member count for each row so the operator sees current data.
+export const listEngagementAudit = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabase, userId } = context;
+    const { data, error } = await supabase
+      .from("engagement_orders")
+      .select("*")
+      .eq("type", "members")
+      .in("status", ["completed", "partial", "in_progress"])
+      .order("created_at", { ascending: false })
+      .limit(30);
+    if (error) throw new Error(error.message);
+    const rows = (data ?? []) as any[];
+    const enriched = await Promise.all(
+      rows.map(async (r) => {
+        const rawStatus = r.raw_response?.status_check ?? {};
+        const startCount = Number(rawStatus.start_count ?? Number.NaN);
+        const expected = Number.isFinite(startCount) ? startCount + Number(r.quantity ?? 0) : null;
+        const liveCount = await getTelegramMemberCountForOrder({ ...r, user_id: userId }).catch(() => null);
+        const stored = r.raw_response?.telegram_count?.current ?? null;
+        const current = liveCount ?? stored ?? null;
+        const divergent = expected != null && current != null && current < expected;
+        return {
+          id: r.id,
+          target: r.target,
+          quantity: r.quantity,
+          status: r.status,
+          smm_order_id: r.smm_order_id,
+          created_at: r.created_at,
+          start_count: Number.isFinite(startCount) ? startCount : null,
+          expected_count: expected,
+          current_count: current,
+          missing: divergent && expected != null && current != null ? expected - current : 0,
+          divergent,
+          panel_status: rawStatus.status ?? null,
+        };
+      }),
+    );
+    return enriched.filter((e) => e.divergent);
   });
 
 export const listMyPaymentHistory = createServerFn({ method: "GET" })
