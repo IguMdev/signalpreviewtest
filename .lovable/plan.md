@@ -1,64 +1,49 @@
 ## Objetivo
+Validar end-to-end que conseguimos disparar um pedido real no **n1panel** a partir do app (BotInterações/BotInscritos), com o saldo que você acabou de carregar.
 
-Tornar o código visualmente "limpo" delimitando cada feature com blocos de comentário bem marcados, para que ao editar uma área (ex.: Tracking) seja impossível bagunçar acidentalmente outra (ex.: Boas-Vindas). **Nenhum código é movido, renomeado ou alterado logicamente** — só anotações de seção. Risco zero de quebra.
+## Estado atual
+- `src/lib/engagement.functions.ts` está hardcoded em JAP:
+  - URL: `https://justanotherpanel.com/api/v2`
+  - Key: `process.env.JAP_API_KEY`
+  - Service IDs padrão: `8485` (reações) / `7102` (membros)
+- O fluxo já existe: `dispatchEngagementBoost` insere `engagement_orders` → chama painel → atualiza status. Só precisa apontar para o n1panel.
 
-## Padrão de separadores
+## Plano
 
-Usarei um padrão único em todo o projeto, fácil de buscar com `rg`:
+### 1. Guardar a chave do n1panel como secret
+Adicionar `N1PANEL_API_KEY = 6dc3d1150f5c992cd99a21000a7d121d` via `add_secret` (não commitar no código).
+> JAP_API_KEY fica preservada — se quiser voltar/usar como fallback depois, basta um toggle.
 
-```ts
-// ╔══════════════════════════════════════════════════════════╗
-// ║  TRACKEAMENTO AVANÇADO (Meta CAPI + cliques)             ║
-// ╚══════════════════════════════════════════════════════════╝
-... código da feature ...
-// ── FIM: TRACKEAMENTO AVANÇADO ──────────────────────────────
-```
+### 2. Tornar o provedor configurável (mudança mínima em `engagement.functions.ts`)
+- Trocar as constantes no topo do arquivo:
+  ```ts
+  const SMM_PANEL_URL = process.env.SMM_PANEL_URL || "https://n1panel.com/api/v2";
+  const SVC_REACTIONS = Number(process.env.SMM_SERVICE_REACTIONS_ID || "3232");
+  const SVC_MEMBERS   = Number(process.env.SMM_SERVICE_MEMBERS_ID   || "3440");
+  ```
+- Em `callSmmPanel`, ler `process.env.N1PANEL_API_KEY` primeiro, depois `JAP_API_KEY` como fallback.
+- Sem mudança em UI, schemas ou tabelas — o contrato da API é idêntico (action=add/status/balance).
 
-Cada bloco terá: cabeçalho (nome da feature + responsabilidade em 1 linha) e rodapé "FIM:". Sub-blocos usam `// ─── Sub-seção ───`.
+### 3. Teste end-to-end (sequência)
+1. **Smoke do saldo**: chamar `action=balance` no n1panel via um pequeno utilitário/serverFn pra confirmar que a chave + saldo respondem (> $0).
+2. **Disparo real menor possível** — para limitar gasto:
+   - **Reações** (svc 3232): quantidade mínima do serviço (geralmente 10–50), apontando para um post público seu em `https://t.me/<seucanal>/<id>`.
+     - Custo estimado: ~$0.0007 (≈ R$ 0,004).
+   - **Membros** (svc 3440): mínimo do serviço (normalmente 100), apontando para `https://t.me/<seucanal>`.
+     - Custo estimado: ~$0.008 (≈ R$ 0,04).
+3. **Verificações**:
+   - Linha em `engagement_orders` com `status=in_progress` e `smm_order_id` preenchido.
+   - `action=status` no n1panel devolve progresso real.
+   - Contagem de reações/membros no canal sobe nos próximos minutos.
 
-## Arquivos e seções
+### 4. Pré-requisitos que preciso de você antes de implementar
+- **Link público do canal** que posso usar para o teste (precisa de @username público — joinchat/+hash não funciona).
+- **Para reações**: o `message_id` (ou link completo do post) onde quer ver as reações.
+- Confirmar se o BotInterações/BotInscritos já tem **assinatura ativa** na sua conta (o `dispatchEngagementBoost` exige); senão preciso inserir manualmente uma subscription de teste com cota suficiente.
 
-### 1. `src/routes/api/public/telegram/webhook.$accountId.ts` (661 linhas)
-Blocos:
-- HELPERS (publicUrl, escapeHtml, etc.)
-- COMANDO `/start fu_<roomId>` — FOLLOW-UP (registro de lead privado)
-- EVENTO `my_chat_member` — DETECÇÃO DE BLOQUEIO (followup stop)
-- EVENTO `chat_member` / `new_chat_members` — TRACKEAMENTO DE MEMBROS
-- BOT BOAS-VINDAS (envio do bloco welcome em grupos)
-- META CAPI (envio do evento de join/leave)
-- FALLBACK / LOG
+### 5. Rollback
+Se algo falhar, definir `SMM_PANEL_URL` de volta pra `https://justanotherpanel.com/api/v2` + usar `JAP_API_KEY` (já preservado no fallback). Zero migração de dados.
 
-### 2. Crons (`src/routes/api/public/cron/*.ts`)
-Cada arquivo recebe um cabeçalho único explicando sua responsabilidade e separadores internos quando há mais de uma rotina:
-- `dispatch-signals.ts` → SINAIS / INICIANDO SESSÃO / RELATÓRIO DE JANELA / GALE & RESULTADO
-- `dispatch-sessions.ts` → AVISO INICIANDO SESSÃO
-- `dispatch-followups.ts` → CARREGAR LEADS / DEDUP / ENVIO (texto/foto/vídeo) / STOP POR BLOQUEIO
-- `dispatch-recurring.ts` → CRIAÇÃO DE PENDENTES / ENVIO PRINCIPAL / ENVIO DE FOLLOW-UPS
-- `dispatch-market-tips.ts` → SELEÇÃO DE TIP / ENVIO
-- `check-premium-accounts.ts` / `check-telegram-webhooks.ts` → cabeçalho só
+---
 
-### 3. Páginas dos Bots (`src/routes/_authenticated/`)
-- `bots.boasvindas.tsx` → CONFIGURAÇÃO PRINCIPAL / UPLOAD DE MÍDIA / PREMIUM EMOJIS / TEMPLATES EXTRAS (linhas extras)
-- `bots.encaminhador.tsx` → ORIGEM/DESTINO / PREMIUM / MARCAÇÃO DE TEMPLATES
-- `bots.followup.tsx` → SELEÇÃO DE SALA / CONFIGURAÇÃO + CTA / SEQUÊNCIA DE MENSAGENS / EDITOR / LEADS
-
-### 4. Libs server (`src/lib/*.server.ts`)
-Cabeçalho de arquivo (3 linhas: nome, responsabilidade, quem chama) em:
-- `telegram.server.ts`, `premium-send.server.ts`, `forwarder.server.ts`, `forwarder-premium.server.ts`, `signals.server.ts`, `market-tips.server.ts`, `meta-capi.server.ts`, `tracking.server.ts`
-
-Quando há mais de uma função pública, cada uma ganha separador próprio.
-
-## O que NÃO vou fazer
-
-- Não mover, renomear, deletar ou reescrever nenhuma função.
-- Não extrair helpers para novos arquivos.
-- Não alterar imports nem assinaturas.
-- Não tocar em `routeTree.gen.ts`, `types.ts`, `client.ts`, migrações.
-
-## Como validar
-
-Após aplicar, a build do TS deve passar sem nenhuma mudança de comportamento. Os separadores ficam pesquisáveis com `rg "FIM: TRACKEAMENTO"` etc., facilitando localizar a fronteira de cada feature antes de editar.
-
-## Tempo estimado
-
-Edições puramente de comentário em ~15 arquivos. Aplico em uma única passada.
+**Próximo passo**: assim que você me passar o link do canal + post de teste e confirmar a subscription, eu (a) registro o secret, (b) aplico as 3 linhas no `engagement.functions.ts`, (c) rodo o smoke de saldo e o disparo real e te mostro os resultados das tabelas.
