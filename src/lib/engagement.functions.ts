@@ -2,20 +2,21 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { callTelegram } from "./telegram.server";
 
 // Painel SMM ativo para novos pedidos: n1panel.
 // JAP fica somente como fallback de leitura para pedidos antigos já criados lá.
 const N1PANEL_URL = "https://n1panel.com/api/v2";
 const LEGACY_JAP_URL = "https://justanotherpanel.com/api/v2";
 const DEFAULT_N1_REACTIONS_SERVICE_ID = 2208;
-const DEFAULT_N1_MEMBERS_SERVICE_ID = 3440;
+const DEFAULT_N1_MEMBERS_SERVICE_ID = 3107;
 
 // =====================================================================
 // Telegram URL normalization
 // =====================================================================
 
 /**
- * Normaliza um link do Telegram para o formato canônico aceito pelo painel JAP.
+ * Normaliza um link do Telegram para o formato canônico aceito pelo painel SMM.
  * Aceita entradas como:
  *   - "@canal"  →  "https://t.me/canal"
  *   - "canal"   →  "https://t.me/canal"
@@ -24,7 +25,7 @@ const DEFAULT_N1_MEMBERS_SERVICE_ID = 3440;
  *   - "https://t.me/canal/123" (post) → preservado
  *
  * Retorna `null` se for um link privado (joinchat / +hash) — esses não
- * funcionam no JAP porque o serviço precisa de um @username público.
+ * funcionam no painel porque o serviço precisa de um @username público.
  * Também retorna `null` para entradas vazias ou com caracteres inválidos.
  */
 export function normalizeTelegramLink(input: string): string | null {
@@ -63,7 +64,7 @@ export function normalizeTelegramLink(input: string): string | null {
 
   const first = segs[0];
 
-  // Links privados (convite) não funcionam no JAP
+  // Links privados (convite) não funcionam no painel
   if (first.toLowerCase() === "joinchat" || first.startsWith("+")) return null;
 
   // valida username público
