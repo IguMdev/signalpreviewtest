@@ -19,7 +19,7 @@ import {
 import { toast } from "sonner";
 import {
   listEngagementPlans, getMySubscriptions, listMyPaymentHistory,
-  setSubscriptionTarget,
+  listMyEngagementOrders, setSubscriptionTarget,
 } from "@/lib/engagement.functions";
 import { useAuth } from "@/lib/auth-context";
 
@@ -130,6 +130,7 @@ function RecargaPage() {
   const fetchPlans = useServerFn(listEngagementPlans);
   const fetchSubs = useServerFn(getMySubscriptions);
   const fetchHistory = useServerFn(listMyPaymentHistory);
+  const fetchOrders = useServerFn(listMyEngagementOrders);
 
   const plansQ = useQuery({ queryKey: ["engagement-plans"], queryFn: () => fetchPlans() });
   const subsQ = useQuery({
@@ -141,6 +142,12 @@ function RecargaPage() {
     queryKey: ["payment-history", user?.id],
     queryFn: () => fetchHistory(),
     enabled: !!user,
+  });
+  const ordersQ = useQuery({
+    queryKey: ["smm-orders", user?.id],
+    queryFn: () => fetchOrders(),
+    enabled: !!user,
+    refetchInterval: 30_000,
   });
 
   const subs = (subsQ.data ?? []) as any[];
@@ -539,6 +546,11 @@ function RecargaPage() {
         </div>
       </div>
 
+      <EngagementOrdersSection
+        rows={(ordersQ.data ?? []) as any[]}
+        isLoading={ordersQ.isLoading}
+      />
+
       {/* Payment History */}
       <PaymentHistorySection
         rows={(historyQ.data ?? []) as any[]}
@@ -556,6 +568,91 @@ const STATUS_META: Record<string, { label: string; variant: "default" | "seconda
   failed:   { label: "Pagamento recusado",   variant: "destructive", icon: AlertCircle },
   expired:  { label: "Expirado",             variant: "outline",   icon: XCircle },
 };
+
+const ORDER_STATUS_META: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline"; icon: any }> = {
+  pending: { label: "Aguardando painel", variant: "secondary", icon: Clock },
+  in_progress: { label: "Em processamento", variant: "default", icon: Clock },
+  completed: { label: "Concluído", variant: "default", icon: CheckCircle2 },
+  partial: { label: "Parcial", variant: "outline", icon: AlertCircle },
+  canceled: { label: "Cancelado", variant: "outline", icon: XCircle },
+  failed: { label: "Falhou", variant: "destructive", icon: AlertCircle },
+};
+
+function EngagementOrdersSection({ rows, isLoading }: { rows: any[]; isLoading: boolean }) {
+  return (
+    <section className="space-y-3">
+      <div className="flex items-center gap-2">
+        <div className="size-9 rounded-md bg-primary/10 flex items-center justify-center">
+          <Send className="size-5 text-primary" />
+        </div>
+        <div>
+          <h2 className="font-semibold">Entregas automáticas</h2>
+          <p className="text-xs text-muted-foreground">
+            Acompanhe pedidos enviados ao painel de inscritos e interações.
+          </p>
+        </div>
+      </div>
+
+      <Card>
+        <CardContent className="p-0">
+          {isLoading ? (
+            <div className="p-6 text-sm text-muted-foreground text-center">Carregando…</div>
+          ) : rows.length === 0 ? (
+            <div className="p-6 text-sm text-muted-foreground text-center">
+              Nenhuma entrega automática registrada ainda.
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Data</TableHead>
+                  <TableHead>Tipo</TableHead>
+                  <TableHead>Destino</TableHead>
+                  <TableHead>Quantidade</TableHead>
+                  <TableHead>Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {rows.map((r) => {
+                  const meta = ORDER_STATUS_META[r.status] ?? { label: r.status, variant: "outline" as const, icon: AlertCircle };
+                  const Icon = meta.icon;
+                  const date = r.created_at ? new Date(r.created_at).toLocaleString("pt-BR", {
+                    day: "2-digit", month: "2-digit", year: "numeric",
+                    hour: "2-digit", minute: "2-digit",
+                  }) : "—";
+                  return (
+                    <TableRow key={r.id}>
+                      <TableCell className="text-xs text-muted-foreground whitespace-nowrap">{date}</TableCell>
+                      <TableCell className="text-sm">{r.type === "members" ? "Inscritos" : "Interações"}</TableCell>
+                      <TableCell className="text-xs max-w-[220px] truncate">
+                        <a href={r.target} target="_blank" rel="noreferrer" className="text-primary hover:underline">
+                          {r.target}
+                        </a>
+                      </TableCell>
+                      <TableCell className="text-sm font-medium">{Number(r.quantity ?? 0).toLocaleString("pt-BR")}</TableCell>
+                      <TableCell>
+                        <Badge variant={meta.variant} className="gap-1">
+                          <Icon className="size-3" />
+                          {meta.label}
+                        </Badge>
+                        {r.smm_order_id && (
+                          <div className="text-[11px] text-muted-foreground mt-1">Pedido #{r.smm_order_id}</div>
+                        )}
+                        {r.error && (
+                          <div className="text-[11px] text-destructive mt-1 max-w-[220px] truncate">{r.error}</div>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+    </section>
+  );
+}
 
 function ChooseChannelCard({ subscriptionId }: { subscriptionId: string }) {
   const setTarget = useServerFn(setSubscriptionTarget);
