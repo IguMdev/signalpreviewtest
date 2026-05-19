@@ -3,12 +3,12 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
-// Painel SMM ativo: n1panel (3× mais barato que JAP em reações).
-// Para voltar ao JAP, defina SMM_PANEL_URL=https://justanotherpanel.com/api/v2
-// e ajuste os service IDs via env.
-const SMM_PANEL_URL = process.env.SMM_PANEL_URL || "https://n1panel.com/api/v2";
-const SVC_REACTIONS = Number(process.env.SMM_SERVICE_REACTIONS_ID || "3232");
-const SVC_MEMBERS = Number(process.env.SMM_SERVICE_MEMBERS_ID || "3440");
+// Painel SMM ativo para novos pedidos: n1panel.
+// JAP fica somente como fallback de leitura para pedidos antigos já criados lá.
+const N1PANEL_URL = "https://n1panel.com/api/v2";
+const LEGACY_JAP_URL = "https://justanotherpanel.com/api/v2";
+const DEFAULT_N1_REACTIONS_SERVICE_ID = 2208;
+const DEFAULT_N1_MEMBERS_SERVICE_ID = 3440;
 
 // =====================================================================
 // Telegram URL normalization
