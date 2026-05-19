@@ -445,7 +445,9 @@ export const dispatchEngagementBoost = createServerFn({ method: "POST" })
       throw new Error(`Cota insuficiente. Restam ${remaining}.`);
     }
 
-    const serviceId = data.type === "reaction" ? SVC_REACTIONS : SVC_MEMBERS;
+    const serviceId = data.type === "reaction"
+      ? (plan?.smm_service_id ?? DEFAULT_N1_REACTIONS_SERVICE_ID)
+      : (plan?.smm_service_id ?? DEFAULT_N1_MEMBERS_SERVICE_ID);
 
     // Insert pending order
     const { data: order, error: orderErr } = await supabaseAdmin
@@ -695,7 +697,7 @@ export async function allocateAndAutoDispatch(opts: {
 
   // inscritos: dispara a cota mensal inteira no n1panel
   // Usa o service_id do env (validado no n1panel) e cai para o do plano caso não configurado.
-  const serviceId = SVC_MEMBERS || plan.smm_service_id;
+  const serviceId = plan.smm_service_id ?? DEFAULT_N1_MEMBERS_SERVICE_ID;
   const quantity = plan.smm_default_quantity ?? plan.monthly_quota ?? 0;
   if (!serviceId || !quantity) {
     throw new Error("Plano sem configuração SMM (service_id/quantity).");
@@ -823,7 +825,7 @@ export const setSubscriptionTarget = createServerFn({ method: "POST" })
       throw new Error("Apenas assinaturas de inscritos precisam de canal.");
     }
 
-    const serviceId = SVC_MEMBERS || plan.smm_service_id;
+    const serviceId = plan.smm_service_id ?? DEFAULT_N1_MEMBERS_SERVICE_ID;
     const quantity = plan.smm_default_quantity ?? plan.monthly_quota ?? 0;
     if (!serviceId || !quantity) throw new Error("Plano sem configuração SMM.");
 
@@ -873,7 +875,7 @@ export const retryEngagementOrder = createServerFn({ method: "POST" })
     }
 
     const normalized = normalizeTelegramLink(order.target) ?? order.target;
-    const serviceId = order.smm_service_id ?? (order.type === "reaction" ? SVC_REACTIONS : SVC_MEMBERS);
+    const serviceId = order.smm_service_id ?? (order.type === "reaction" ? DEFAULT_N1_REACTIONS_SERVICE_ID : DEFAULT_N1_MEMBERS_SERVICE_ID);
 
     // Reset para pending antes de tentar de novo
     await supabaseAdmin
@@ -989,7 +991,7 @@ export async function triggerSignalReactions(opts: {
     }
 
     const link = `https://t.me/${chat.username}/${opts.telegramMessageId}`;
-    const serviceId = SVC_REACTIONS || plan.smm_service_id;
+    const serviceId = plan.smm_service_id ?? DEFAULT_N1_REACTIONS_SERVICE_ID;
 
     const result = await placeSmmOrder({
       userId: opts.userId,
