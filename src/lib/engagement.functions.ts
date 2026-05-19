@@ -1074,13 +1074,6 @@ export async function triggerSignalReactions(opts: {
       return;
     }
 
-    // Respeita cota mensal — sem disparar se já excedeu.
-    const remaining = (plan.monthly_quota ?? qty) - ((sub as any).units_used ?? 0);
-    if (remaining < qty) {
-      await releaseReactionClaim(opts.chatId, opts.telegramMessageId);
-      return;
-    }
-
     const { data: chat } = await supabaseAdmin
       .from("telegram_chats")
       .select("username")
@@ -1105,10 +1098,6 @@ export async function triggerSignalReactions(opts: {
       roomId: opts.roomId ?? null,
     });
     if (result.ok) {
-      await supabaseAdmin
-        .from("user_engagement_subscriptions")
-        .update({ units_used: ((sub as any).units_used ?? 0) + qty })
-        .eq("id", (sub as any).id);
       await supabaseAdmin
         .from("engagement_reaction_dispatches")
         .update({
