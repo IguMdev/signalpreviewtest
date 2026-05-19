@@ -533,6 +533,203 @@ export const listMyPaymentHistory = createServerFn({ method: "GET" })
   });
 
 // =====================================================================
+// Alocação automática de assinaturas em sala (modal pós-pagamento + renovação)
+// =====================================================================
+
+/**
+ * Retorna assinaturas ativas de inscritos/interacoes que ainda NÃO foram
+ * alocadas a uma sala (target_room_id IS NULL). O dialog global usa isso
+ * para abrir automaticamente o modal de escolha de canal.
+ */
+export const listPendingBoostAllocations = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabase } = context;
+    const { data, error } = await supabase
+      .from("user_engagement_subscriptions")
+      .select("id, bot_type, current_period_end, plan:engagement_plans(name, monthly_quota, smm_service_id, smm_default_quantity, bot_type)")
+      .eq("status", "active")
+      .in("bot_type", ["inscritos", "interacoes"])
+      .is("target_room_id", null)
+      .order("created_at", { ascending: false });
+    if (error) throw new Error(error.message);
+    return data ?? [];
+  });
+
+/**
+ * Lista as salas do usuário que têm um canal Telegram público vinculado
+ * (com @username) — únicas elegíveis para receber boost SMM.
+ */
+export const listEligibleBoostRooms = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabase, userId } = context;
+    const { data: rooms, error } = await supabase
+      .from("rooms")
+      .select("id, name, photo_url")
+      .eq("is_active", true)
+      .order("created_at", { ascending: false });
+    if (error) throw new Error(error.message);
+    if (!rooms?.length) return [];
+
+    // Para cada sala, descobre o canal vinculado e o username público
+    const ids = rooms.map((r) => r.id);
+    const { data: chats } = await supabaseAdmin
+      .from("room_chats")
+      .select("room_id, chat_id")
+      .in("room_id", ids);
+    const chatIds = (chats ?? []).map((c) => c.chat_id);
+    const { data: tchats } = await supabaseAdmin
+      .from("telegram_chats")
+      .select("chat_id, username, title, type")
+      .in("chat_id", chatIds.length ? chatIds : [0])
+      .eq("user_id", userId);
+    const byChat = new Map((tchats ?? []).map((t) => [String(t.chat_id), t]));
+    const byRoom = new Map(
+      (chats ?? []).map((c) => [c.room_id, byChat.get(String(c.chat_id))]),
+    );
+
+    return rooms
+      .map((r) => {
+        const tc = byRoom.get(r.id);
+        return {
+          id: r.id,
+          name: r.name,
+          photoUrl: r.photo_url,
+          username: tc?.username ?? null,
+          channelTitle: tc?.title ?? null,
+          hasPublicChannel: !!tc?.username,
+        };
+      })
+      .filter((r) => r.hasPublicChannel);
+  });
+
+/**
+ * Aloca uma sala a uma assinatura e dispara automaticamente a cota inteira.
+ *   • inscritos → fire-and-forget de monthly_quota membros no n1panel
+ *   • interacoes → apenas salva a sala (cota é consumida por sinal pelo
+ *     triggerSignalReactions)
+ * Idempotente: se a sub já tem target_room_id, retorna 409.
+ */
+export const allocateSubscriptionToRoom = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) =>
+    z.object({
+      subscriptionId: z.string().uuid(),
+      roomId: z.string().uuid(),
+    }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { userId } = context;
+    return await allocateAndAutoDispatch({
+      userId,
+      subscriptionId: data.subscriptionId,
+      roomId: data.roomId,
+    });
+  });
+
+/**
+ * Núcleo reutilizável de alocação+disparo. Usado tanto pela função do cliente
+ * acima quanto pelo webhook Kirvano (renovação repete o canal anterior).
+ */
+export async function allocateAndAutoDispatch(opts: {
+  userId: string;
+  subscriptionId: string;
+  roomId: string;
+}) {
+  const { data: sub, error: subErr } = await supabaseAdmin
+    .from("user_engagement_subscriptions")
+    .select("*, plan:engagement_plans(*)")
+    .eq("id", opts.subscriptionId)
+    .eq("user_id", opts.userId)
+    .maybeSingle();
+  if (subErr) throw new Error(subErr.message);
+  if (!sub) throw new Error("Assinatura não encontrada.");
+  if ((sub as any).target_room_id) {
+    throw new Error("Esta assinatura já está alocada a uma sala.");
+  }
+  const plan = (sub as any).plan;
+  if (!plan) throw new Error("Plano não encontrado.");
+  const botType = plan.bot_type as string;
+  if (botType !== "inscritos" && botType !== "interacoes") {
+    throw new Error("Apenas Inscritos/Interações precisam de canal.");
+  }
+
+  // Verifica posse da sala e canal público
+  const { data: room } = await supabaseAdmin
+    .from("rooms")
+    .select("id, user_id")
+    .eq("id", opts.roomId)
+    .eq("user_id", opts.userId)
+    .maybeSingle();
+  if (!room) throw new Error("Sala inválida.");
+
+  const { data: rc } = await supabaseAdmin
+    .from("room_chats")
+    .select("chat_id")
+    .eq("room_id", opts.roomId)
+    .maybeSingle();
+  if (!rc?.chat_id) throw new Error("A sala não tem canal vinculado.");
+
+  const { data: chat } = await supabaseAdmin
+    .from("telegram_chats")
+    .select("username")
+    .eq("chat_id", rc.chat_id)
+    .eq("user_id", opts.userId)
+    .maybeSingle();
+  if (!chat?.username) {
+    throw new Error("O canal da sala não é público (sem @username).");
+  }
+
+  const link = `https://t.me/${chat.username}`;
+
+  // Marca a alocação imediatamente (idempotência)
+  await supabaseAdmin
+    .from("user_engagement_subscriptions")
+    .update({ target_room_id: opts.roomId, target_link: link })
+    .eq("id", opts.subscriptionId);
+
+  if (botType === "interacoes") {
+    // Reações são consumidas por sinal — não dispara cota inteira agora.
+    return { ok: true, mode: "saved" as const, link };
+  }
+
+  // inscritos: dispara a cota mensal inteira no n1panel
+  const serviceId = plan.smm_service_id ?? SVC_MEMBERS;
+  const quantity = plan.smm_default_quantity ?? plan.monthly_quota ?? 0;
+  if (!serviceId || !quantity) {
+    throw new Error("Plano sem configuração SMM (service_id/quantity).");
+  }
+
+  const result = await placeSmmOrder({
+    userId: opts.userId,
+    subscriptionId: opts.subscriptionId,
+    serviceId,
+    link,
+    quantity,
+    type: "members",
+    roomId: opts.roomId,
+  });
+  if (!result.ok) {
+    throw new Error(`Falha ao despachar inscritos: ${result.error}`);
+  }
+  await supabaseAdmin
+    .from("user_engagement_subscriptions")
+    .update({
+      units_used: quantity,
+      auto_dispatched_at: new Date().toISOString(),
+    })
+    .eq("id", opts.subscriptionId);
+  return {
+    ok: true,
+    mode: "dispatched" as const,
+    smmOrderId: result.smmOrderId,
+    quantity,
+    link,
+  };
+}
+
+// =====================================================================
 // SMM dispatch helpers
 // =====================================================================
 
