@@ -695,7 +695,8 @@ export async function allocateAndAutoDispatch(opts: {
   }
 
   // inscritos: dispara a cota mensal inteira no n1panel
-  const serviceId = plan.smm_service_id ?? SVC_MEMBERS;
+  // Usa o service_id do env (validado no n1panel) e cai para o do plano caso não configurado.
+  const serviceId = SVC_MEMBERS || plan.smm_service_id;
   const quantity = plan.smm_default_quantity ?? plan.monthly_quota ?? 0;
   if (!serviceId || !quantity) {
     throw new Error("Plano sem configuração SMM (service_id/quantity).");
