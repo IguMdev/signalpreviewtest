@@ -2,20 +2,21 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { callTelegram } from "./telegram.server";
 
 // Painel SMM ativo para novos pedidos: n1panel.
 // JAP fica somente como fallback de leitura para pedidos antigos já criados lá.
 const N1PANEL_URL = "https://n1panel.com/api/v2";
 const LEGACY_JAP_URL = "https://justanotherpanel.com/api/v2";
 const DEFAULT_N1_REACTIONS_SERVICE_ID = 2208;
-const DEFAULT_N1_MEMBERS_SERVICE_ID = 3440;
+const DEFAULT_N1_MEMBERS_SERVICE_ID = 3107;
 
 // =====================================================================
 // Telegram URL normalization
 // =====================================================================
 
 /**
- * Normaliza um link do Telegram para o formato canônico aceito pelo painel JAP.
+ * Normaliza um link do Telegram para o formato canônico aceito pelo painel SMM.
  * Aceita entradas como:
  *   - "@canal"  →  "https://t.me/canal"
  *   - "canal"   →  "https://t.me/canal"
@@ -24,7 +25,7 @@ const DEFAULT_N1_MEMBERS_SERVICE_ID = 3440;
  *   - "https://t.me/canal/123" (post) → preservado
  *
  * Retorna `null` se for um link privado (joinchat / +hash) — esses não
- * funcionam no JAP porque o serviço precisa de um @username público.
+ * funcionam no painel porque o serviço precisa de um @username público.
  * Também retorna `null` para entradas vazias ou com caracteres inválidos.
  */
 export function normalizeTelegramLink(input: string): string | null {
@@ -63,7 +64,7 @@ export function normalizeTelegramLink(input: string): string | null {
 
   const first = segs[0];
 
-  // Links privados (convite) não funcionam no JAP
+  // Links privados (convite) não funcionam no painel
   if (first.toLowerCase() === "joinchat" || first.startsWith("+")) return null;
 
   // valida username público
@@ -373,7 +374,46 @@ async function callSmmPanel(params: Record<string, string | number>) {
   const res = await fetch(N1PANEL_URL, { method: "POST", body });
   const json = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(`SMM panel ${res.status}: ${JSON.stringify(json)}`);
-  return json as { order?: number; error?: string; status?: string; charge?: string };
+  return json as { order?: number; error?: string; status?: string; charge?: string; remains?: string; start_count?: string; currency?: string };
+}
+
+function mapSmmStatus(status?: string, remains?: string | number | null) {
+  const normalized = String(status ?? "").trim().toLowerCase();
+  const remaining = Number(remains ?? Number.NaN);
+  if (normalized === "completed" && remaining === 0) return "completed";
+  if (normalized === "completed") return "in_progress";
+  if (normalized === "partial") return "partial";
+  if (normalized === "canceled" || normalized === "cancelled") return "canceled";
+  if (normalized === "processing" || normalized === "in progress" || normalized === "pending") return "in_progress";
+  return null;
+}
+
+async function getTelegramMemberCountForOrder(order: { room_id?: string | null; user_id: string; target: string }) {
+  const username = normalizeTelegramLink(order.target)?.split("/").filter(Boolean).at(-1);
+  if (!username || /^\d+$/.test(username)) return null;
+  let accountId: string | null = null;
+  if (order.room_id) {
+    const { data: room } = await supabaseAdmin
+      .from("rooms")
+      .select("default_account_id")
+      .eq("id", order.room_id)
+      .eq("user_id", order.user_id)
+      .maybeSingle();
+    accountId = (room as any)?.default_account_id ?? null;
+  }
+  const query = supabaseAdmin
+    .from("telegram_accounts")
+    .select("bot_token")
+    .eq("user_id", order.user_id)
+    .eq("is_active", true)
+    .not("bot_token", "is", null)
+    .limit(1);
+  const { data: account } = accountId
+    ? await query.eq("id", accountId).maybeSingle()
+    : await query.maybeSingle();
+  if (!(account as any)?.bot_token) return null;
+  const resp = await callTelegram<number>((account as any).bot_token, "getChatMemberCount", { chat_id: `@${username}` });
+  return resp.ok && typeof resp.result === "number" ? resp.result : null;
 }
 
 export const dispatchEngagementBoost = createServerFn({ method: "POST" })
@@ -510,14 +550,47 @@ export const dispatchEngagementBoost = createServerFn({ method: "POST" })
 export const listMyEngagementOrders = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { supabase } = context;
+    const { supabase, userId } = context;
     const { data, error } = await supabase
       .from("engagement_orders")
       .select("*")
       .order("created_at", { ascending: false })
       .limit(50);
     if (error) throw new Error(error.message);
-    return data ?? [];
+    const rows = data ?? [];
+
+    const syncable = rows.filter((r: any) => r.smm_order_id && ["pending", "in_progress"].includes(r.status));
+    if (syncable.length > 0) {
+      await Promise.all(syncable.slice(0, 10).map(async (order: any) => {
+        try {
+          const panel = await callSmmPanel({ action: "status", order: order.smm_order_id });
+          let nextStatus = mapSmmStatus(panel.status, panel.remains);
+          if (!nextStatus) return;
+          const nextRaw: Record<string, unknown> = { ...(order.raw_response ?? {}), status_check: panel };
+          if (order.type === "members" && nextStatus === "completed") {
+            const actualCount = await getTelegramMemberCountForOrder(order);
+            if (actualCount != null) {
+              const startCount = Number(panel.start_count ?? Number.NaN);
+              const expectedCount = Number.isFinite(startCount) ? startCount + Number(order.quantity ?? 0) : null;
+              nextRaw.telegram_count = { current: actualCount, expected: expectedCount };
+              if (expectedCount != null && actualCount < expectedCount) {
+                nextStatus = "in_progress";
+              }
+            }
+          }
+          await supabaseAdmin
+            .from("engagement_orders")
+            .update({ status: nextStatus, raw_response: nextRaw as never } as never)
+            .eq("id", order.id)
+            .eq("user_id", userId);
+          order.status = nextStatus;
+          order.raw_response = nextRaw;
+        } catch (e) {
+          console.error("[listMyEngagementOrders] status sync failed:", e);
+        }
+      }));
+    }
+    return rows;
   });
 
 export const listMyPaymentHistory = createServerFn({ method: "GET" })
@@ -696,7 +769,6 @@ export async function allocateAndAutoDispatch(opts: {
   }
 
   // inscritos: dispara a cota mensal inteira no n1panel
-  // Usa o service_id do env (validado no n1panel) e cai para o do plano caso não configurado.
   const serviceId = plan.smm_service_id ?? DEFAULT_N1_MEMBERS_SERVICE_ID;
   const quantity = plan.smm_default_quantity ?? plan.monthly_quota ?? 0;
   if (!serviceId || !quantity) {
@@ -744,6 +816,11 @@ async function placeSmmOrder(opts: {
   type: "reaction" | "members";
   roomId?: string | null;
 }) {
+  const existing = await findReusableSmmOrder(opts);
+  if (existing) {
+    return { ok: true as const, smmOrderId: Number(existing.smm_order_id), orderId: existing.id };
+  }
+
   const { data: order, error: orderErr } = await supabaseAdmin
     .from("engagement_orders")
     .insert({
@@ -791,6 +868,31 @@ async function placeSmmOrder(opts: {
       .eq("id", order.id);
     return { ok: false as const, error: msg };
   }
+}
+
+async function findReusableSmmOrder(opts: {
+  userId: string;
+  subscriptionId: string;
+  serviceId: number;
+  link: string;
+  quantity: number;
+  type: "reaction" | "members";
+}) {
+  const { data } = await supabaseAdmin
+    .from("engagement_orders")
+    .select("id, smm_order_id, status")
+    .eq("user_id", opts.userId)
+    .eq("subscription_id", opts.subscriptionId)
+    .eq("type", opts.type)
+    .eq("target", opts.link)
+    .eq("quantity", opts.quantity)
+    .eq("smm_service_id", opts.serviceId)
+    .in("status", ["pending", "in_progress", "completed", "partial"])
+    .not("smm_order_id", "is", null)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return data as { id: string; smm_order_id: string; status: string } | null;
 }
 
 /**
@@ -972,13 +1074,6 @@ export async function triggerSignalReactions(opts: {
       return;
     }
 
-    // Respeita cota mensal — sem disparar se já excedeu.
-    const remaining = (plan.monthly_quota ?? qty) - ((sub as any).units_used ?? 0);
-    if (remaining < qty) {
-      await releaseReactionClaim(opts.chatId, opts.telegramMessageId);
-      return;
-    }
-
     const { data: chat } = await supabaseAdmin
       .from("telegram_chats")
       .select("username")
@@ -1003,10 +1098,6 @@ export async function triggerSignalReactions(opts: {
       roomId: opts.roomId ?? null,
     });
     if (result.ok) {
-      await supabaseAdmin
-        .from("user_engagement_subscriptions")
-        .update({ units_used: ((sub as any).units_used ?? 0) + qty })
-        .eq("id", (sub as any).id);
       await supabaseAdmin
         .from("engagement_reaction_dispatches")
         .update({
