@@ -1,0 +1,1 @@
+ALTER TYPE template_kind ADD VALUE IF NOT EXISTS 'gale';
