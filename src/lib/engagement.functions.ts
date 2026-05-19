@@ -381,20 +381,51 @@ export const dispatchEngagementBoost = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) =>
     z.object({
-      roomId: z.string().uuid().optional(),
+      roomId: z.string().uuid(),
       type: z.enum(["reaction", "members"]),
-      target: z.string().url(),
+      postId: z.number().int().positive().optional(),
       quantity: z.number().int().min(10).max(50000),
     }).parse(d),
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
 
-    const normalized = normalizeTelegramLink(data.target);
-    if (!normalized) {
-      throw new Error("Link do Telegram inválido. Use um @username público (ex: https://t.me/seucanal).");
+    // Confirma posse da sala e deriva username público do canal.
+    const { data: room } = await supabase
+      .from("rooms")
+      .select("id, name, default_account_id")
+      .eq("id", data.roomId)
+      .maybeSingle();
+    if (!room) throw new Error("Sala não encontrada (ou sem permissão).");
+
+    const { data: roomChat } = await supabaseAdmin
+      .from("room_chats")
+      .select("chat_id")
+      .eq("room_id", data.roomId)
+      .maybeSingle();
+    if (!roomChat?.chat_id) {
+      throw new Error("Esta sala não tem um canal Telegram vinculado. Vincule um chat primeiro.");
     }
-    data.target = normalized;
+    const { data: chat } = await supabaseAdmin
+      .from("telegram_chats")
+      .select("username, type, title")
+      .eq("chat_id", roomChat.chat_id)
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (!chat?.username) {
+      throw new Error(
+        "O canal desta sala não é público (não tem @username). O painel SMM precisa de canal público para entregar.",
+      );
+    }
+
+    const target =
+      data.type === "reaction" && data.postId != null
+        ? `https://t.me/${chat.username}/${data.postId}`
+        : `https://t.me/${chat.username}`;
+
+    if (data.type === "reaction" && data.postId == null) {
+      throw new Error("Para reações é necessário informar o número do post (postId).");
+    }
 
     // Pick the subscription that matches this bot type
     const botType = data.type === "reaction" ? "interacoes" : "inscritos";
@@ -425,7 +456,7 @@ export const dispatchEngagementBoost = createServerFn({ method: "POST" })
         room_id: data.roomId,
         subscription_id: (sub as any).id,
         type: data.type,
-        target: data.target,
+        target,
         quantity: data.quantity,
         smm_service_id: serviceId,
       })
@@ -437,7 +468,7 @@ export const dispatchEngagementBoost = createServerFn({ method: "POST" })
       const resp = await callSmmPanel({
         action: "add",
         service: serviceId,
-        link: data.target,
+        link: target,
         quantity: data.quantity,
       });
       if (resp.error || !resp.order) {
