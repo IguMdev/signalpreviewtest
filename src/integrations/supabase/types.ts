@@ -211,6 +211,33 @@ export type Database = {
         }
         Relationships: []
       }
+      engagement_reaction_dispatches: {
+        Row: {
+          chat_id: number
+          created_at: string
+          smm_order_id: string | null
+          subscription_id: string | null
+          telegram_message_id: number
+          user_id: string
+        }
+        Insert: {
+          chat_id: number
+          created_at?: string
+          smm_order_id?: string | null
+          subscription_id?: string | null
+          telegram_message_id: number
+          user_id: string
+        }
+        Update: {
+          chat_id?: number
+          created_at?: string
+          smm_order_id?: string | null
+          subscription_id?: string | null
+          telegram_message_id?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       followup_dispatch_log: {
         Row: {
           day_number: number
