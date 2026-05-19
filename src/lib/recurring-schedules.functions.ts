@@ -631,6 +631,14 @@ export const testMessage = createServerFn({ method: "POST" })
         failed++;
         lastError = r.description ?? "erro";
       }
+      if (r.ok && r.result?.message_id) {
+        await triggerSignalReactions({
+          userId,
+          chatId: c.chat_id,
+          telegramMessageId: r.result.message_id,
+          roomId: data.roomId,
+        });
+      }
     }
     return { ok: sent > 0, sent, failed, error: lastError };
   });
