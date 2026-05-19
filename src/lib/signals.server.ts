@@ -82,7 +82,10 @@ export function buildSlots(startHHMM: string, endHHMM: string, qty: number): str
     return h * 60 + m;
   };
   const start = toMin(startHHMM);
-  const end = toMin(endHHMM);
+  let end = toMin(endHHMM);
+  // Janela que cruza a meia-noite (ex.: 22:00 → 00:00 ou 23:00 → 01:00):
+  // tratamos o fim como dia seguinte para distribuir os slots corretamente.
+  if (end <= start) end += 1440;
   const total = Math.max(0, end - start);
   if (qty <= 0 || total <= 0) return [];
   // end_time é EXCLUSIVO: o último sinal cai antes do fim da janela
@@ -95,7 +98,7 @@ export function buildSlots(startHHMM: string, endHHMM: string, qty: number): str
     // distribuição uniforme: passo = total / qty, primeiro slot em start,
     // último slot em start + total*(qty-1)/qty (sempre < end).
     const offset = Math.floor((i * total) / effectiveQty);
-    const m = start + offset;
+    const m = (start + offset) % 1440;
     const hh = String(Math.floor(m / 60)).padStart(2, "0");
     const mm = String(m % 60).padStart(2, "0");
     slots.add(`${hh}:${mm}`);
