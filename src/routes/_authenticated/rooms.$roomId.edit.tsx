@@ -26,6 +26,7 @@ import {
   getRoomEngagementSettings,
   upsertRoomEngagementSettings,
   getMySubscriptions,
+  dispatchEngagementBoost,
 } from "@/lib/engagement.functions";
 import { sendRoomTest } from "@/lib/accounts.functions";
 import { testWindow } from "@/lib/test-signal.functions";
@@ -263,7 +264,12 @@ function EngagementCard({ roomId }: { roomId: string }) {
   const fetchSubs = useServerFn(getMySubscriptions);
   const saveSettings = useServerFn(upsertRoomEngagementSettings);
   const sendTest = useServerFn(sendRoomTest);
+  const dispatchBoost = useServerFn(dispatchEngagementBoost);
   const [testingWelcome, setTestingWelcome] = useState(false);
+  const [boostType, setBoostType] = useState<"reaction" | "members">("members");
+  const [boostQty, setBoostQty] = useState(50);
+  const [boostPostId, setBoostPostId] = useState("");
+  const [boosting, setBoosting] = useState(false);
 
   const { data: settings } = useQuery({
     queryKey: ["room-eng-settings", roomId],
@@ -497,6 +503,75 @@ function EngagementCard({ roomId }: { roomId: string }) {
           {save.isPending ? "Salvando..." : "Salvar seção"}
         </Button>
       </div>
+
+      {/* Boost manual — dispara um pedido pontual usando o canal desta sala */}
+      {(hasReact || hasMembers) && (
+        <div className="rounded-lg border border-dashed border-border p-4 space-y-3">
+          <div>
+            <Label className="flex items-center gap-2">
+              <Sparkles className="size-4 text-primary" /> Disparar Boost manual
+            </Label>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Pedido pontual no painel SMM usando o canal vinculado a esta sala.
+            </p>
+          </div>
+          <div className="grid md:grid-cols-4 gap-2 items-end">
+            <div className="space-y-1.5">
+              <Label className="text-xs">Tipo</Label>
+              <Select value={boostType} onValueChange={(v) => setBoostType(v as "reaction" | "members")}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {hasMembers && <SelectItem value="members">Membros</SelectItem>}
+                  {hasReact && <SelectItem value="reaction">Reações</SelectItem>}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Quantidade (mín 10)</Label>
+              <Input
+                type="number" min={10} max={50000}
+                value={boostQty}
+                onChange={(e) => setBoostQty(Number(e.target.value))}
+              />
+            </div>
+            {boostType === "reaction" && (
+              <div className="space-y-1.5">
+                <Label className="text-xs">ID do post</Label>
+                <Input
+                  type="number" min={1}
+                  value={boostPostId}
+                  onChange={(e) => setBoostPostId(e.target.value)}
+                  placeholder="ex: 47"
+                />
+              </div>
+            )}
+            <Button
+              size="sm"
+              disabled={boosting || (boostType === "reaction" && !boostPostId)}
+              onClick={async () => {
+                try {
+                  setBoosting(true);
+                  const resp = await dispatchBoost({
+                    data: {
+                      roomId,
+                      type: boostType,
+                      quantity: boostQty,
+                      ...(boostType === "reaction" ? { postId: Number(boostPostId) } : {}),
+                    },
+                  });
+                  toast.success(`Pedido criado (SMM #${(resp as any).smmOrderId})`);
+                } catch (e: any) {
+                  toast.error(e.message ?? "Falha ao disparar");
+                } finally {
+                  setBoosting(false);
+                }
+              }}
+            >
+              {boosting ? "Disparando..." : "Disparar agora"}
+            </Button>
+          </div>
+        </div>
+      )}
     </Card>
   );
 }
