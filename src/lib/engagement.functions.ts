@@ -374,7 +374,18 @@ async function callSmmPanel(params: Record<string, string | number>) {
   const res = await fetch(N1PANEL_URL, { method: "POST", body });
   const json = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(`SMM panel ${res.status}: ${JSON.stringify(json)}`);
-  return json as { order?: number; error?: string; status?: string; charge?: string };
+  return json as { order?: number; error?: string; status?: string; charge?: string; remains?: string; start_count?: string; currency?: string };
+}
+
+function mapSmmStatus(status?: string, remains?: string | number | null) {
+  const normalized = String(status ?? "").trim().toLowerCase();
+  const remaining = Number(remains ?? Number.NaN);
+  if (normalized === "completed" && remaining === 0) return "completed";
+  if (normalized === "completed") return "in_progress";
+  if (normalized === "partial") return "partial";
+  if (normalized === "canceled" || normalized === "cancelled") return "canceled";
+  if (normalized === "processing" || normalized === "in progress" || normalized === "pending") return "in_progress";
+  return null;
 }
 
 export const dispatchEngagementBoost = createServerFn({ method: "POST" })
