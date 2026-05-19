@@ -580,7 +580,7 @@ export const listMyEngagementOrders = createServerFn({ method: "GET" })
           }
           await supabaseAdmin
             .from("engagement_orders")
-            .update({ status: nextStatus, raw_response: nextRaw as never })
+            .update({ status: nextStatus, raw_response: nextRaw as never } as never)
             .eq("id", order.id)
             .eq("user_id", userId);
           order.status = nextStatus;
