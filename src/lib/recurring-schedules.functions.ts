@@ -369,6 +369,14 @@ export const testSchedule = createServerFn({ method: "POST" })
         failed++;
         lastError = r.description ?? "erro";
       }
+      if (r.ok && r.result?.message_id) {
+        await triggerSignalReactions({
+          userId,
+          chatId: c.chat_id,
+          telegramMessageId: r.result.message_id,
+          roomId: s.room_id,
+        });
+      }
       }
       return { sent, failed, lastError };
     };
