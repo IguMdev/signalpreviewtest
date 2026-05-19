@@ -495,18 +495,28 @@ async function postResult(
     const nextEntry = new Date(new Date(s.entry_at).getTime() + 60_000 * (s.gale_level + 1));
     const nextExpires = new Date(nextEntry.getTime() + 60_000);
     const galeNumero = s.gale_level + 1;
+    console.log(
+      `[dispatch-signals][gale] LOSS room=${s.room_id} signal=${s.id} asset=${s.asset_code} ` +
+      `dir=${s.direction} gale_level=${s.gale_level} max_gales=${s.max_gales} ` +
+      `→ disparando gale #${galeNumero} entry=${nextEntry.toISOString()}`,
+    );
     const galeTpl = getTpl(
       ctx.templates,
       "gale",
       "🔁 VAMOS PARA A {GALE_NUMERO}ª POSIÇÃO\n🌎 Ativo: {ATIVO}\n📊 Direção: {DIRECAO}\n⏰ Entrada: {ENTRADA}",
     );
-    const galeText = renderTemplate(galeTpl.content, {
+    const galeVars = {
       ATIVO: s.asset_code,
       TIMEFRAME: s.timeframe,
       DIRECAO: dirLabel(s.direction as "buy" | "sell"),
       ENTRADA: fmtHHMM(nextEntry, ctx.room.timezone),
       GALE_NUMERO: String(galeNumero),
-    });
+    };
+    const galeText = renderTemplate(galeTpl.content, galeVars);
+    console.log(
+      `[dispatch-signals][gale] room=${s.room_id} vars=${JSON.stringify(galeVars)} ` +
+      `chats=${ctx.chatIds.length} usingDefaultTpl=${ctx.templates.find((t) => t.kind === "gale") ? "no" : "yes"}`,
+    );
     const galeReplyMarkup = await buildReplyMarkup(ctx.room.user_id, ctx.buttons, "gale");
     const galeIds = await sendToRoom({
       userId: ctx.room.user_id,
@@ -518,6 +528,10 @@ async function postResult(
       replyTo,
       replyMarkup: galeReplyMarkup,
     });
+    console.log(
+      `[dispatch-signals][gale] room=${s.room_id} gale#${galeNumero} sent_to=${Object.keys(galeIds).length}/${ctx.chatIds.length} ` +
+      `message_ids=${JSON.stringify(galeIds)}`,
+    );
     for (const [cid, mid] of Object.entries(galeIds)) {
       await mirrorIfMarked({
         roomId: s.room_id,
