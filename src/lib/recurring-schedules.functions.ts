@@ -15,6 +15,7 @@ import {
   renderEmojiTokensPlain,
   hasEmojiTokens,
 } from "@/lib/premium-emoji-render";
+import { triggerSignalReactions } from "@/lib/engagement.functions";
 
 async function renderButtonTextForUser(
   userId: string,
