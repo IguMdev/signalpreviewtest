@@ -931,6 +931,26 @@ export async function triggerSignalReactions(opts: {
   roomId?: string | null;
 }) {
   try {
+    // Idempotência: registra (chat_id, message_id) ANTES de disparar.
+    // Em retries ou chamadas duplicadas (manual + mirror + cron), o conflito
+    // na PK garante que o JAP só recebe a ordem uma vez por mensagem real.
+    const { data: claim, error: claimErr } = await supabaseAdmin
+      .from("engagement_reaction_dispatches")
+      .insert({
+        chat_id: opts.chatId,
+        telegram_message_id: opts.telegramMessageId,
+        user_id: opts.userId,
+      } as never)
+      .select("chat_id")
+      .maybeSingle();
+    if (claimErr) {
+      // 23505 = unique_violation -> já disparado, sem-op silencioso
+      if ((claimErr as { code?: string }).code === "23505") return;
+      console.error("[triggerSignalReactions] claim failed:", claimErr);
+      return;
+    }
+    if (!claim) return;
+
     const { data: sub } = await supabaseAdmin
       .from("user_engagement_subscriptions")
       .select("*, plan:engagement_plans(*)")
@@ -940,10 +960,23 @@ export async function triggerSignalReactions(opts: {
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
-    if (!sub || !(sub as any).plan) return;
+    if (!sub || !(sub as any).plan) {
+      await releaseReactionClaim(opts.chatId, opts.telegramMessageId);
+      return;
+    }
     const plan = (sub as any).plan;
     const qty = plan.smm_default_quantity ?? plan.monthly_quota ?? 0;
-    if (!qty) return;
+    if (!qty) {
+      await releaseReactionClaim(opts.chatId, opts.telegramMessageId);
+      return;
+    }
+
+    // Respeita cota mensal — sem disparar se já excedeu.
+    const remaining = (plan.monthly_quota ?? qty) - ((sub as any).units_used ?? 0);
+    if (remaining < qty) {
+      await releaseReactionClaim(opts.chatId, opts.telegramMessageId);
+      return;
+    }
 
     const { data: chat } = await supabaseAdmin
       .from("telegram_chats")
@@ -951,7 +984,10 @@ export async function triggerSignalReactions(opts: {
       .eq("chat_id", opts.chatId)
       .eq("user_id", opts.userId)
       .maybeSingle();
-    if (!chat?.username) return; // chat privado — JAP precisa link público
+    if (!chat?.username) {
+      await releaseReactionClaim(opts.chatId, opts.telegramMessageId);
+      return; // chat privado — JAP precisa link público
+    }
 
     const link = `https://t.me/${chat.username}/${opts.telegramMessageId}`;
     const serviceId = SVC_REACTIONS || plan.smm_service_id;
@@ -970,8 +1006,28 @@ export async function triggerSignalReactions(opts: {
         .from("user_engagement_subscriptions")
         .update({ units_used: ((sub as any).units_used ?? 0) + qty })
         .eq("id", (sub as any).id);
+      await supabaseAdmin
+        .from("engagement_reaction_dispatches")
+        .update({
+          subscription_id: (sub as any).id,
+          smm_order_id: result.smmOrderId ? String(result.smmOrderId) : null,
+        } as never)
+        .eq("chat_id", opts.chatId)
+        .eq("telegram_message_id", opts.telegramMessageId);
+    } else {
+      // Falha no SMM: libera o claim para permitir nova tentativa futura.
+      await releaseReactionClaim(opts.chatId, opts.telegramMessageId);
     }
   } catch (e) {
     console.error("[triggerSignalReactions] failed:", e);
+    await releaseReactionClaim(opts.chatId, opts.telegramMessageId).catch(() => undefined);
   }
+}
+
+async function releaseReactionClaim(chatId: number, telegramMessageId: number) {
+  await supabaseAdmin
+    .from("engagement_reaction_dispatches")
+    .delete()
+    .eq("chat_id", chatId)
+    .eq("telegram_message_id", telegramMessageId);
 }
