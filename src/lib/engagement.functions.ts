@@ -388,6 +388,34 @@ function mapSmmStatus(status?: string, remains?: string | number | null) {
   return null;
 }
 
+async function getTelegramMemberCountForOrder(order: { room_id?: string | null; user_id: string; target: string }) {
+  const username = normalizeTelegramLink(order.target)?.split("/").filter(Boolean).at(-1);
+  if (!username || /^\d+$/.test(username)) return null;
+  let accountId: string | null = null;
+  if (order.room_id) {
+    const { data: room } = await supabaseAdmin
+      .from("rooms")
+      .select("default_account_id")
+      .eq("id", order.room_id)
+      .eq("user_id", order.user_id)
+      .maybeSingle();
+    accountId = (room as any)?.default_account_id ?? null;
+  }
+  const query = supabaseAdmin
+    .from("telegram_accounts")
+    .select("bot_token")
+    .eq("user_id", order.user_id)
+    .eq("is_active", true)
+    .not("bot_token", "is", null)
+    .limit(1);
+  const { data: account } = accountId
+    ? await query.eq("id", accountId).maybeSingle()
+    : await query.maybeSingle();
+  if (!(account as any)?.bot_token) return null;
+  const resp = await callTelegram<number>((account as any).bot_token, "getChatMemberCount", { chat_id: `@${username}` });
+  return resp.ok && typeof resp.result === "number" ? resp.result : null;
+}
+
 export const dispatchEngagementBoost = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) =>
