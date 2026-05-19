@@ -257,7 +257,19 @@ async function scheduleSignals(): Promise<number> {
     const entryHHMM = fmtHHMM(nextMinute, tz);
     const slots = buildSlots(w.start_time.slice(0, 5), w.end_time.slice(0, 5), w.signals_qty);
     if (!slots.includes(entryHHMM)) continue;
-    if (nowHHMM > w.end_time.slice(0, 5)) continue;
+    // Cutoff por fim da janela. Para janelas que cruzam a meia-noite
+    // (end <= start, ex.: 22:00→00:00), o cutoff só vale na faixa nova
+    // (after midnight) — caso contrário a comparação textual quebra.
+    const startStr = w.start_time.slice(0, 5);
+    const endStr = w.end_time.slice(0, 5);
+    const crossesMidnight = endStr <= startStr;
+    if (crossesMidnight) {
+      // Dentro da janela se: nowHHMM >= start  OU  nowHHMM < end.
+      const inWindow = nowHHMM >= startStr || nowHHMM < endStr;
+      if (!inWindow) continue;
+    } else {
+      if (nowHHMM > endStr) continue;
+    }
 
     // escolhe ativo
     let assetPool: string[] = [];
