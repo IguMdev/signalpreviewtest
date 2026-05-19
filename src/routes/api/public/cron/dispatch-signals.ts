@@ -262,7 +262,7 @@ async function scheduleSignals(): Promise<number> {
     // (after midnight) — caso contrário a comparação textual quebra.
     const startStr = w.start_time.slice(0, 5);
     const endStr = w.end_time.slice(0, 5);
-    const crossesMidnight = endStr <= startStr;
+    const crossesMidnight = endStr < startStr;
     if (crossesMidnight) {
       // Dentro da janela se: nowHHMM >= start  OU  nowHHMM < end.
       const inWindow = nowHHMM >= startStr || nowHHMM < endStr;
