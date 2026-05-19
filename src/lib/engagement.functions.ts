@@ -730,7 +730,6 @@ export async function allocateAndAutoDispatch(opts: {
   }
 
   // inscritos: dispara a cota mensal inteira no n1panel
-  // Usa o service_id do env (validado no n1panel) e cai para o do plano caso não configurado.
   const serviceId = plan.smm_service_id ?? DEFAULT_N1_MEMBERS_SERVICE_ID;
   const quantity = plan.smm_default_quantity ?? plan.monthly_quota ?? 0;
   if (!serviceId || !quantity) {
