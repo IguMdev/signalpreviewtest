@@ -19,7 +19,7 @@ import {
 import { toast } from "sonner";
 import {
   listEngagementPlans, getMySubscriptions, listMyPaymentHistory,
-  setSubscriptionTarget,
+  listMyEngagementOrders, setSubscriptionTarget,
 } from "@/lib/engagement.functions";
 import { useAuth } from "@/lib/auth-context";
 
@@ -130,6 +130,7 @@ function RecargaPage() {
   const fetchPlans = useServerFn(listEngagementPlans);
   const fetchSubs = useServerFn(getMySubscriptions);
   const fetchHistory = useServerFn(listMyPaymentHistory);
+  const fetchOrders = useServerFn(listMyEngagementOrders);
 
   const plansQ = useQuery({ queryKey: ["engagement-plans"], queryFn: () => fetchPlans() });
   const subsQ = useQuery({
@@ -141,6 +142,12 @@ function RecargaPage() {
     queryKey: ["payment-history", user?.id],
     queryFn: () => fetchHistory(),
     enabled: !!user,
+  });
+  const ordersQ = useQuery({
+    queryKey: ["smm-orders", user?.id],
+    queryFn: () => fetchOrders(),
+    enabled: !!user,
+    refetchInterval: 30_000,
   });
 
   const subs = (subsQ.data ?? []) as any[];
@@ -538,6 +545,11 @@ function RecargaPage() {
           })}
         </div>
       </div>
+
+      <EngagementOrdersSection
+        rows={(ordersQ.data ?? []) as any[]}
+        isLoading={ordersQ.isLoading}
+      />
 
       {/* Payment History */}
       <PaymentHistorySection
