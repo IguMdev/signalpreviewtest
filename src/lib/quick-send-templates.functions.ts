@@ -10,6 +10,7 @@ import {
 } from "@/lib/premium-send.server";
 import { mirrorIfMarked } from "@/lib/forwarder.server";
 import { hasEmojiTokens, renderEmojiTokensPlain } from "@/lib/premium-emoji-render";
+import { triggerSignalReactions } from "@/lib/engagement.functions";
 
 const UpsertInput = z.object({
   id: z.string().uuid().optional(),
@@ -247,6 +248,14 @@ export const sendQuickTemplate = createServerFn({ method: "POST" })
             imagePath,
           },
         }).catch(() => undefined);
+        if (r.result?.message_id) {
+          await triggerSignalReactions({
+            userId,
+            chatId: c.chat_id,
+            telegramMessageId: r.result.message_id,
+            roomId: data.roomId,
+          });
+        }
       }
     }
     return { ok: sent > 0, sent, failed, error: lastError };

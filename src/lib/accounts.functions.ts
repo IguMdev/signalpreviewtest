@@ -351,5 +351,14 @@ export const sendRoomTest = createServerFn({ method: "POST" })
         });
     }
     if (!r.ok) throw new Error(r.description ?? "Falha ao enviar");
+    if (r.result?.message_id) {
+      const { triggerSignalReactions } = await import("@/lib/engagement.functions");
+      await triggerSignalReactions({
+        userId,
+        chatId: chat.chat_id,
+        telegramMessageId: r.result.message_id,
+        roomId: room.id,
+      });
+    }
     return { ok: true, messageId: r.result?.message_id };
   });
