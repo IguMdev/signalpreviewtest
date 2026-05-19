@@ -85,7 +85,7 @@ export function buildSlots(startHHMM: string, endHHMM: string, qty: number): str
   let end = toMin(endHHMM);
   // Janela que cruza a meia-noite (ex.: 22:00 → 00:00 ou 23:00 → 01:00):
   // tratamos o fim como dia seguinte para distribuir os slots corretamente.
-  if (end <= start) end += 1440;
+  if (end < start) end += 1440;
   const total = Math.max(0, end - start);
   if (qty <= 0 || total <= 0) return [];
   // end_time é EXCLUSIVO: o último sinal cai antes do fim da janela
