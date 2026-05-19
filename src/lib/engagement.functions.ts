@@ -695,7 +695,8 @@ export async function allocateAndAutoDispatch(opts: {
   }
 
   // inscritos: dispara a cota mensal inteira no n1panel
-  const serviceId = plan.smm_service_id ?? SVC_MEMBERS;
+  // Usa o service_id do env (validado no n1panel) e cai para o do plano caso não configurado.
+  const serviceId = SVC_MEMBERS || plan.smm_service_id;
   const quantity = plan.smm_default_quantity ?? plan.monthly_quota ?? 0;
   if (!serviceId || !quantity) {
     throw new Error("Plano sem configuração SMM (service_id/quantity).");
@@ -823,7 +824,7 @@ export const setSubscriptionTarget = createServerFn({ method: "POST" })
       throw new Error("Apenas assinaturas de inscritos precisam de canal.");
     }
 
-    const serviceId = plan.smm_service_id ?? SVC_MEMBERS;
+    const serviceId = SVC_MEMBERS || plan.smm_service_id;
     const quantity = plan.smm_default_quantity ?? plan.monthly_quota ?? 0;
     if (!serviceId || !quantity) throw new Error("Plano sem configuração SMM.");
 
@@ -953,7 +954,7 @@ export async function triggerSignalReactions(opts: {
     if (!chat?.username) return; // chat privado — JAP precisa link público
 
     const link = `https://t.me/${chat.username}/${opts.telegramMessageId}`;
-    const serviceId = plan.smm_service_id ?? SVC_REACTIONS;
+    const serviceId = SVC_REACTIONS || plan.smm_service_id;
 
     const result = await placeSmmOrder({
       userId: opts.userId,
