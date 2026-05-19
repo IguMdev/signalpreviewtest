@@ -367,11 +367,10 @@ export const listForwarderSourceItems = createServerFn({ method: "GET" })
 async function callSmmPanel(params: Record<string, string | number>) {
   const key =
     process.env.N1PANEL_API_KEY ||
-    process.env.SMM_PANEL_API_KEY ||
-    process.env.JAP_API_KEY;
+    process.env.SMM_PANEL_API_KEY;
   if (!key) throw new Error("Nenhuma chave de painel SMM configurada (N1PANEL_API_KEY).");
   const body = new URLSearchParams({ key, ...Object.fromEntries(Object.entries(params).map(([k, v]) => [k, String(v)])) });
-  const res = await fetch(SMM_PANEL_URL, { method: "POST", body });
+  const res = await fetch(N1PANEL_URL, { method: "POST", body });
   const json = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(`SMM panel ${res.status}: ${JSON.stringify(json)}`);
   return json as { order?: number; error?: string; status?: string; charge?: string };
