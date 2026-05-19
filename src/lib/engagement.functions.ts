@@ -522,14 +522,36 @@ export const dispatchEngagementBoost = createServerFn({ method: "POST" })
 export const listMyEngagementOrders = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { supabase } = context;
+    const { supabase, userId } = context;
     const { data, error } = await supabase
       .from("engagement_orders")
       .select("*")
       .order("created_at", { ascending: false })
       .limit(50);
     if (error) throw new Error(error.message);
-    return data ?? [];
+    const rows = data ?? [];
+
+    const syncable = rows.filter((r: any) => r.smm_order_id && ["pending", "in_progress"].includes(r.status));
+    if (syncable.length > 0) {
+      await Promise.all(syncable.slice(0, 10).map(async (order: any) => {
+        try {
+          const panel = await callSmmPanel({ action: "status", order: order.smm_order_id });
+          const nextStatus = mapSmmStatus(panel.status, panel.remains);
+          if (!nextStatus) return;
+          const nextRaw = { ...(order.raw_response ?? {}), status_check: panel };
+          await supabaseAdmin
+            .from("engagement_orders")
+            .update({ status: nextStatus, raw_response: nextRaw as never })
+            .eq("id", order.id)
+            .eq("user_id", userId);
+          order.status = nextStatus;
+          order.raw_response = nextRaw;
+        } catch (e) {
+          console.error("[listMyEngagementOrders] status sync failed:", e);
+        }
+      }));
+    }
+    return rows;
   });
 
 export const listMyPaymentHistory = createServerFn({ method: "GET" })
