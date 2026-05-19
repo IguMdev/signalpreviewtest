@@ -14,6 +14,7 @@ import {
   type PremiumButtonRow,
 } from "./premium-send.server";
 import { hasEmojiTokens } from "./premium-emoji-render";
+import { triggerSignalReactions } from "./engagement.functions";
 
 type Origin =
   | { kind: "recurring"; id: string }
@@ -242,11 +243,19 @@ export async function mirrorIfMarked(opts: {
       }
     }
     console.log(`[forwarder] copyMessage origin=${opts.origin.kind}:${opts.origin.id} target=${t} (premium_enabled=${cfg.forwarder_premium_enabled})`);
-    await callTelegram(acc.bot_token, "copyMessage", {
+    const copyRes = await callTelegram<{ message_id: number }>(acc.bot_token, "copyMessage", {
       chat_id: t,
       from_chat_id: opts.fromChatId,
       message_id: opts.messageId,
-    }).catch(() => undefined);
+    }).catch(() => null);
+    if (copyRes?.ok && copyRes.result?.message_id && cfg.user_id) {
+      await triggerSignalReactions({
+        userId: cfg.user_id,
+        chatId: Number(t),
+        telegramMessageId: copyRes.result.message_id,
+        roomId: opts.roomId,
+      }).catch(() => undefined);
+    }
     await logForwarder({
       userId: cfg.user_id,
       roomId: opts.roomId,
