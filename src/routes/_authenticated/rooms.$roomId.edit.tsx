@@ -1149,7 +1149,7 @@ function MarketTipsCard({ room }: { room: RoomData }) {
 
 type TemplateKind =
   | "signal" | "win" | "win_martingale" | "loss"
-  | "buy_direction" | "sell_direction" | "entry" | "gain" | "event";
+  | "buy_direction" | "sell_direction" | "entry" | "gain" | "event" | "gale";
 
 const SIGNAL_PLACEHOLDERS = {
   message: "🎯 SINAL: {ATIVO}\n⏱ {TIMEFRAME}\n📈 {DIRECAO}\n💰 Entrada: {ENTRADA}\n🔁 Gale 1: {ENTRADAGALE1}\n🔁 Gale 2: {ENTRADAGALE2}",
@@ -1162,6 +1162,7 @@ const RESULT_TEMPLATES: { kind: TemplateKind; title: string; placeholder: string
   { kind: "win", title: "Vitória", placeholder: "✅ VITÓRIA no {ATIVO} 🟢", tone: "GAIN", defaultImagePath: DEFAULT_GAIN_IMAGE },
   { kind: "win_martingale", title: "Vitória Martingale", placeholder: "✅ VITÓRIA no martingale {ATIVO} 🟢", tone: "GAIN", defaultImagePath: DEFAULT_GAIN_IMAGE },
   { kind: "loss", title: "Derrota", placeholder: "🔴 DERROTA no {ATIVO}", tone: "LOSS", defaultImagePath: DEFAULT_LOSS_IMAGE },
+  { kind: "gale", title: "Entrada Martingale", placeholder: "🔁 VAMOS PARA A {GALE_NUMERO}ª POSIÇÃO\n🌎 Ativo: {ATIVO}\n📊 Direção: {DIRECAO}\n⏰ Entrada: {ENTRADA}", tone: "GAIN" },
 ];
 
 const DIRECTION_TEMPLATES: { kind: TemplateKind; title: string; placeholder: string }[] = [
