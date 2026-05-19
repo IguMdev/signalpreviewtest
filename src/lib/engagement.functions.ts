@@ -778,6 +778,11 @@ async function placeSmmOrder(opts: {
   type: "reaction" | "members";
   roomId?: string | null;
 }) {
+  const existing = await findReusableSmmOrder(opts);
+  if (existing) {
+    return { ok: true as const, smmOrderId: Number(existing.smm_order_id), orderId: existing.id };
+  }
+
   const { data: order, error: orderErr } = await supabaseAdmin
     .from("engagement_orders")
     .insert({
@@ -825,6 +830,31 @@ async function placeSmmOrder(opts: {
       .eq("id", order.id);
     return { ok: false as const, error: msg };
   }
+}
+
+async function findReusableSmmOrder(opts: {
+  userId: string;
+  subscriptionId: string;
+  serviceId: number;
+  link: string;
+  quantity: number;
+  type: "reaction" | "members";
+}) {
+  const { data } = await supabaseAdmin
+    .from("engagement_orders")
+    .select("id, smm_order_id, status")
+    .eq("user_id", opts.userId)
+    .eq("subscription_id", opts.subscriptionId)
+    .eq("type", opts.type)
+    .eq("target", opts.link)
+    .eq("quantity", opts.quantity)
+    .eq("smm_service_id", opts.serviceId)
+    .in("status", ["pending", "in_progress", "completed", "partial"])
+    .not("smm_order_id", "is", null)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return data as { id: string; smm_order_id: string; status: string } | null;
 }
 
 /**
