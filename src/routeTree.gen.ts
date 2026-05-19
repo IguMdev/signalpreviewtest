@@ -38,6 +38,7 @@ import { Route as AuthenticatedBotsEncaminhadorRouteImport } from './routes/_aut
 import { Route as AuthenticatedBotsBoasvindasRouteImport } from './routes/_authenticated/bots.boasvindas'
 import { Route as ApiPublicTrackClickRouteImport } from './routes/api/public/track/click'
 import { Route as ApiPublicKirvanoWebhookRouteImport } from './routes/api/public/kirvano/webhook'
+import { Route as ApiPublicCronSyncEngagementOrdersRouteImport } from './routes/api/public/cron/sync-engagement-orders'
 import { Route as ApiPublicCronDispatchSignalsRouteImport } from './routes/api/public/cron/dispatch-signals'
 import { Route as ApiPublicCronDispatchSessionsRouteImport } from './routes/api/public/cron/dispatch-sessions'
 import { Route as ApiPublicCronDispatchRecurringRouteImport } from './routes/api/public/cron/dispatch-recurring'
@@ -208,6 +209,12 @@ const ApiPublicKirvanoWebhookRoute = ApiPublicKirvanoWebhookRouteImport.update({
   path: '/api/public/kirvano/webhook',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicCronSyncEngagementOrdersRoute =
+  ApiPublicCronSyncEngagementOrdersRouteImport.update({
+    id: '/api/public/cron/sync-engagement-orders',
+    path: '/api/public/cron/sync-engagement-orders',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicCronDispatchSignalsRoute =
   ApiPublicCronDispatchSignalsRouteImport.update({
     id: '/api/public/cron/dispatch-signals',
@@ -310,6 +317,7 @@ export interface FileRoutesByFullPath {
   '/api/public/cron/dispatch-recurring': typeof ApiPublicCronDispatchRecurringRoute
   '/api/public/cron/dispatch-sessions': typeof ApiPublicCronDispatchSessionsRoute
   '/api/public/cron/dispatch-signals': typeof ApiPublicCronDispatchSignalsRoute
+  '/api/public/cron/sync-engagement-orders': typeof ApiPublicCronSyncEngagementOrdersRoute
   '/api/public/kirvano/webhook': typeof ApiPublicKirvanoWebhookRoute
   '/api/public/track/click': typeof ApiPublicTrackClickRoute
   '/api/public/telegram/webhook/$accountId': typeof ApiPublicTelegramWebhookAccountIdRoute
@@ -351,6 +359,7 @@ export interface FileRoutesByTo {
   '/api/public/cron/dispatch-recurring': typeof ApiPublicCronDispatchRecurringRoute
   '/api/public/cron/dispatch-sessions': typeof ApiPublicCronDispatchSessionsRoute
   '/api/public/cron/dispatch-signals': typeof ApiPublicCronDispatchSignalsRoute
+  '/api/public/cron/sync-engagement-orders': typeof ApiPublicCronSyncEngagementOrdersRoute
   '/api/public/kirvano/webhook': typeof ApiPublicKirvanoWebhookRoute
   '/api/public/track/click': typeof ApiPublicTrackClickRoute
   '/api/public/telegram/webhook/$accountId': typeof ApiPublicTelegramWebhookAccountIdRoute
@@ -394,6 +403,7 @@ export interface FileRoutesById {
   '/api/public/cron/dispatch-recurring': typeof ApiPublicCronDispatchRecurringRoute
   '/api/public/cron/dispatch-sessions': typeof ApiPublicCronDispatchSessionsRoute
   '/api/public/cron/dispatch-signals': typeof ApiPublicCronDispatchSignalsRoute
+  '/api/public/cron/sync-engagement-orders': typeof ApiPublicCronSyncEngagementOrdersRoute
   '/api/public/kirvano/webhook': typeof ApiPublicKirvanoWebhookRoute
   '/api/public/track/click': typeof ApiPublicTrackClickRoute
   '/api/public/telegram/webhook/$accountId': typeof ApiPublicTelegramWebhookAccountIdRoute
@@ -437,6 +447,7 @@ export interface FileRouteTypes {
     | '/api/public/cron/dispatch-recurring'
     | '/api/public/cron/dispatch-sessions'
     | '/api/public/cron/dispatch-signals'
+    | '/api/public/cron/sync-engagement-orders'
     | '/api/public/kirvano/webhook'
     | '/api/public/track/click'
     | '/api/public/telegram/webhook/$accountId'
@@ -478,6 +489,7 @@ export interface FileRouteTypes {
     | '/api/public/cron/dispatch-recurring'
     | '/api/public/cron/dispatch-sessions'
     | '/api/public/cron/dispatch-signals'
+    | '/api/public/cron/sync-engagement-orders'
     | '/api/public/kirvano/webhook'
     | '/api/public/track/click'
     | '/api/public/telegram/webhook/$accountId'
@@ -520,6 +532,7 @@ export interface FileRouteTypes {
     | '/api/public/cron/dispatch-recurring'
     | '/api/public/cron/dispatch-sessions'
     | '/api/public/cron/dispatch-signals'
+    | '/api/public/cron/sync-engagement-orders'
     | '/api/public/kirvano/webhook'
     | '/api/public/track/click'
     | '/api/public/telegram/webhook/$accountId'
@@ -538,6 +551,7 @@ export interface RootRouteChildren {
   ApiPublicCronDispatchRecurringRoute: typeof ApiPublicCronDispatchRecurringRoute
   ApiPublicCronDispatchSessionsRoute: typeof ApiPublicCronDispatchSessionsRoute
   ApiPublicCronDispatchSignalsRoute: typeof ApiPublicCronDispatchSignalsRoute
+  ApiPublicCronSyncEngagementOrdersRoute: typeof ApiPublicCronSyncEngagementOrdersRoute
   ApiPublicKirvanoWebhookRoute: typeof ApiPublicKirvanoWebhookRoute
   ApiPublicTrackClickRoute: typeof ApiPublicTrackClickRoute
   ApiPublicTelegramWebhookAccountIdRoute: typeof ApiPublicTelegramWebhookAccountIdRoute
@@ -750,6 +764,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicKirvanoWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/cron/sync-engagement-orders': {
+      id: '/api/public/cron/sync-engagement-orders'
+      path: '/api/public/cron/sync-engagement-orders'
+      fullPath: '/api/public/cron/sync-engagement-orders'
+      preLoaderRoute: typeof ApiPublicCronSyncEngagementOrdersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/cron/dispatch-signals': {
       id: '/api/public/cron/dispatch-signals'
       path: '/api/public/cron/dispatch-signals'
@@ -907,6 +928,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicCronDispatchRecurringRoute: ApiPublicCronDispatchRecurringRoute,
   ApiPublicCronDispatchSessionsRoute: ApiPublicCronDispatchSessionsRoute,
   ApiPublicCronDispatchSignalsRoute: ApiPublicCronDispatchSignalsRoute,
+  ApiPublicCronSyncEngagementOrdersRoute:
+    ApiPublicCronSyncEngagementOrdersRoute,
   ApiPublicKirvanoWebhookRoute: ApiPublicKirvanoWebhookRoute,
   ApiPublicTrackClickRoute: ApiPublicTrackClickRoute,
   ApiPublicTelegramWebhookAccountIdRoute:
