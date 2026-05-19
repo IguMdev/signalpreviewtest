@@ -63,6 +63,7 @@ export function renderTemplate(
     ENTRADAGALE1?: string;
     ENTRADAGALE2?: string;
     MARTINGALE?: string;
+    GALE_NUMERO?: string;
   },
 ): string {
   return tpl.replace(/\{(\w+)\}/g, (_m, key: string) => {
