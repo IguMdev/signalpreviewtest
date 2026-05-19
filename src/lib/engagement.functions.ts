@@ -536,9 +536,20 @@ export const listMyEngagementOrders = createServerFn({ method: "GET" })
       await Promise.all(syncable.slice(0, 10).map(async (order: any) => {
         try {
           const panel = await callSmmPanel({ action: "status", order: order.smm_order_id });
-          const nextStatus = mapSmmStatus(panel.status, panel.remains);
+          let nextStatus = mapSmmStatus(panel.status, panel.remains);
           if (!nextStatus) return;
-          const nextRaw = { ...(order.raw_response ?? {}), status_check: panel };
+          const nextRaw: Record<string, unknown> = { ...(order.raw_response ?? {}), status_check: panel };
+          if (order.type === "members" && nextStatus === "completed") {
+            const actualCount = await getTelegramMemberCountForOrder(order);
+            if (actualCount != null) {
+              const startCount = Number(panel.start_count ?? Number.NaN);
+              const expectedCount = Number.isFinite(startCount) ? startCount + Number(order.quantity ?? 0) : null;
+              nextRaw.telegram_count = { current: actualCount, expected: expectedCount };
+              if (expectedCount != null && actualCount < expectedCount) {
+                nextStatus = "in_progress";
+              }
+            }
+          }
           await supabaseAdmin
             .from("engagement_orders")
             .update({ status: nextStatus, raw_response: nextRaw as never })
