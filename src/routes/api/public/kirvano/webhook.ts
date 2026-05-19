@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { allocateAndAutoDispatch } from "@/lib/engagement.functions";
 
 // Kirvano envia POST com payload da venda. Autenticamos via header
 // `x-kirvano-token` comparado ao secret KIRVANO_WEBHOOK_TOKEN.
@@ -65,8 +66,21 @@ export const Route = createFileRoute("/api/public/kirvano/webhook")({
           const periodEnd = new Date(now);
           periodEnd.setMonth(periodEnd.getMonth() + 1);
 
+          // Procura sub ATIVA/PENDING anterior do mesmo bot_type pra herdar
+          // o canal escolhido (renovação repete a sala automaticamente).
+          const { data: prevSub } = await supabaseAdmin
+            .from("user_engagement_subscriptions")
+            .select("target_room_id")
+            .eq("user_id", userId)
+            .eq("bot_type", plan.bot_type)
+            .in("status", ["active", "pending", "canceled"])
+            .not("target_room_id", "is", null)
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          const inheritedRoomId = (prevSub as any)?.target_room_id ?? null;
+
           // Cancel previous active subs for this user FOR THE SAME bot type
-          // (user can have multiple subs across different bots)
           await supabaseAdmin
             .from("user_engagement_subscriptions")
             .update({ status: "canceled" })
@@ -74,7 +88,7 @@ export const Route = createFileRoute("/api/public/kirvano/webhook")({
             .eq("bot_type", plan.bot_type)
             .in("status", ["active", "pending"]);
 
-          const { error: insErr } = await supabaseAdmin
+          const { data: newSub, error: insErr } = await supabaseAdmin
             .from("user_engagement_subscriptions")
             .insert({
               user_id: userId,
@@ -86,9 +100,30 @@ export const Route = createFileRoute("/api/public/kirvano/webhook")({
               kirvano_sale_id: payload.sale_id ?? null,
               kirvano_customer_email: payload.customer?.email ?? null,
               last_event: payload as never,
-            });
+            })
+            .select("id")
+            .single();
           if (insErr) {
             return Response.json({ ok: false, error: insErr.message }, { status: 500 });
+          }
+
+          // Renovação automática: se havia sala anterior e o plano usa SMM,
+          // já dispara sem precisar de modal.
+          let autoDispatch: unknown = null;
+          if (
+            inheritedRoomId &&
+            newSub?.id &&
+            (plan.bot_type === "inscritos" || plan.bot_type === "interacoes")
+          ) {
+            try {
+              autoDispatch = await allocateAndAutoDispatch({
+                userId,
+                subscriptionId: newSub.id,
+                roomId: inheritedRoomId,
+              });
+            } catch (e) {
+              autoDispatch = { ok: false, error: e instanceof Error ? e.message : String(e) };
+            }
           }
 
           // Para planos de SALAS, creditar a quantidade de créditos do plano (monthly_quota)
@@ -113,7 +148,7 @@ export const Route = createFileRoute("/api/public/kirvano/webhook")({
               });
           }
 
-          return Response.json({ ok: true, action: "activated" });
+          return Response.json({ ok: true, action: "activated", inheritedRoomId, autoDispatch });
         }
 
         if (isCanceled && payload.sale_id) {
