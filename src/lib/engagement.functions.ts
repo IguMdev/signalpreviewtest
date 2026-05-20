@@ -377,6 +377,42 @@ async function callSmmPanel(params: Record<string, string | number>) {
   return json as { order?: number; error?: string; status?: string; charge?: string; remains?: string; start_count?: string; currency?: string };
 }
 
+// Serviços do tipo "Subscriptions" no n1panel (ex.: 3205 - AUTO reactions)
+// recebem parâmetros diferentes: username + min/max/posts, em vez de
+// link + quantity. Mantemos um conjunto explícito para roteamento seguro.
+const SUBSCRIPTION_REACTION_SERVICE_IDS = new Set<number>([3205]);
+
+function extractTelegramUsername(link: string): string | null {
+  const m = link.match(/t\.me\/([^/?#]+)/i);
+  if (!m) return null;
+  const u = m[1];
+  if (u.startsWith("+") || u === "joinchat") return null;
+  return u;
+}
+
+function buildAddOrderParams(args: { serviceId: number; link: string; quantity: number }): Record<string, string | number> {
+  if (SUBSCRIPTION_REACTION_SERVICE_IDS.has(args.serviceId)) {
+    const username = extractTelegramUsername(args.link);
+    if (!username) {
+      throw new Error(`Link inválido para serviço de assinatura ${args.serviceId}: ${args.link}`);
+    }
+    return {
+      action: "add",
+      service: args.serviceId,
+      username,
+      min: args.quantity,
+      max: args.quantity,
+      posts: 1,
+    };
+  }
+  return {
+    action: "add",
+    service: args.serviceId,
+    link: args.link,
+    quantity: args.quantity,
+  };
+}
+
 function mapSmmStatus(status?: string, remains?: string | number | null) {
   const normalized = String(status ?? "").trim().toLowerCase();
   const remaining = Number(remains ?? Number.NaN);
