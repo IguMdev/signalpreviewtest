@@ -40,10 +40,12 @@ import { Route as AuthenticatedBotsEncaminhadorRouteImport } from './routes/_aut
 import { Route as AuthenticatedBotsBoasvindasRouteImport } from './routes/_authenticated/bots.boasvindas'
 import { Route as ApiPublicTrackClickRouteImport } from './routes/api/public/track/click'
 import { Route as ApiPublicKirvanoWebhookRouteImport } from './routes/api/public/kirvano/webhook'
+import { Route as ApiPublicGoDispatchIdRouteImport } from './routes/api/public/go.$dispatchId'
 import { Route as ApiPublicCronSyncEngagementOrdersRouteImport } from './routes/api/public/cron/sync-engagement-orders'
 import { Route as ApiPublicCronDispatchSignalsRouteImport } from './routes/api/public/cron/dispatch-signals'
 import { Route as ApiPublicCronDispatchSessionsRouteImport } from './routes/api/public/cron/dispatch-sessions'
 import { Route as ApiPublicCronDispatchRecurringRouteImport } from './routes/api/public/cron/dispatch-recurring'
+import { Route as ApiPublicCronDispatchPromosRouteImport } from './routes/api/public/cron/dispatch-promos'
 import { Route as ApiPublicCronDispatchMarketTipsRouteImport } from './routes/api/public/cron/dispatch-market-tips'
 import { Route as ApiPublicCronDispatchFollowupsRouteImport } from './routes/api/public/cron/dispatch-followups'
 import { Route as ApiPublicCronCheckTelegramWebhooksRouteImport } from './routes/api/public/cron/check-telegram-webhooks'
@@ -223,6 +225,11 @@ const ApiPublicKirvanoWebhookRoute = ApiPublicKirvanoWebhookRouteImport.update({
   path: '/api/public/kirvano/webhook',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicGoDispatchIdRoute = ApiPublicGoDispatchIdRouteImport.update({
+  id: '/api/public/go/$dispatchId',
+  path: '/api/public/go/$dispatchId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicCronSyncEngagementOrdersRoute =
   ApiPublicCronSyncEngagementOrdersRouteImport.update({
     id: '/api/public/cron/sync-engagement-orders',
@@ -245,6 +252,12 @@ const ApiPublicCronDispatchRecurringRoute =
   ApiPublicCronDispatchRecurringRouteImport.update({
     id: '/api/public/cron/dispatch-recurring',
     path: '/api/public/cron/dispatch-recurring',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicCronDispatchPromosRoute =
+  ApiPublicCronDispatchPromosRouteImport.update({
+    id: '/api/public/cron/dispatch-promos',
+    path: '/api/public/cron/dispatch-promos',
     getParentRoute: () => rootRouteImport,
   } as any)
 const ApiPublicCronDispatchMarketTipsRoute =
@@ -330,10 +343,12 @@ export interface FileRoutesByFullPath {
   '/api/public/cron/check-telegram-webhooks': typeof ApiPublicCronCheckTelegramWebhooksRoute
   '/api/public/cron/dispatch-followups': typeof ApiPublicCronDispatchFollowupsRoute
   '/api/public/cron/dispatch-market-tips': typeof ApiPublicCronDispatchMarketTipsRoute
+  '/api/public/cron/dispatch-promos': typeof ApiPublicCronDispatchPromosRoute
   '/api/public/cron/dispatch-recurring': typeof ApiPublicCronDispatchRecurringRoute
   '/api/public/cron/dispatch-sessions': typeof ApiPublicCronDispatchSessionsRoute
   '/api/public/cron/dispatch-signals': typeof ApiPublicCronDispatchSignalsRoute
   '/api/public/cron/sync-engagement-orders': typeof ApiPublicCronSyncEngagementOrdersRoute
+  '/api/public/go/$dispatchId': typeof ApiPublicGoDispatchIdRoute
   '/api/public/kirvano/webhook': typeof ApiPublicKirvanoWebhookRoute
   '/api/public/track/click': typeof ApiPublicTrackClickRoute
   '/api/public/telegram/webhook/$accountId': typeof ApiPublicTelegramWebhookAccountIdRoute
@@ -374,10 +389,12 @@ export interface FileRoutesByTo {
   '/api/public/cron/check-telegram-webhooks': typeof ApiPublicCronCheckTelegramWebhooksRoute
   '/api/public/cron/dispatch-followups': typeof ApiPublicCronDispatchFollowupsRoute
   '/api/public/cron/dispatch-market-tips': typeof ApiPublicCronDispatchMarketTipsRoute
+  '/api/public/cron/dispatch-promos': typeof ApiPublicCronDispatchPromosRoute
   '/api/public/cron/dispatch-recurring': typeof ApiPublicCronDispatchRecurringRoute
   '/api/public/cron/dispatch-sessions': typeof ApiPublicCronDispatchSessionsRoute
   '/api/public/cron/dispatch-signals': typeof ApiPublicCronDispatchSignalsRoute
   '/api/public/cron/sync-engagement-orders': typeof ApiPublicCronSyncEngagementOrdersRoute
+  '/api/public/go/$dispatchId': typeof ApiPublicGoDispatchIdRoute
   '/api/public/kirvano/webhook': typeof ApiPublicKirvanoWebhookRoute
   '/api/public/track/click': typeof ApiPublicTrackClickRoute
   '/api/public/telegram/webhook/$accountId': typeof ApiPublicTelegramWebhookAccountIdRoute
@@ -420,10 +437,12 @@ export interface FileRoutesById {
   '/api/public/cron/check-telegram-webhooks': typeof ApiPublicCronCheckTelegramWebhooksRoute
   '/api/public/cron/dispatch-followups': typeof ApiPublicCronDispatchFollowupsRoute
   '/api/public/cron/dispatch-market-tips': typeof ApiPublicCronDispatchMarketTipsRoute
+  '/api/public/cron/dispatch-promos': typeof ApiPublicCronDispatchPromosRoute
   '/api/public/cron/dispatch-recurring': typeof ApiPublicCronDispatchRecurringRoute
   '/api/public/cron/dispatch-sessions': typeof ApiPublicCronDispatchSessionsRoute
   '/api/public/cron/dispatch-signals': typeof ApiPublicCronDispatchSignalsRoute
   '/api/public/cron/sync-engagement-orders': typeof ApiPublicCronSyncEngagementOrdersRoute
+  '/api/public/go/$dispatchId': typeof ApiPublicGoDispatchIdRoute
   '/api/public/kirvano/webhook': typeof ApiPublicKirvanoWebhookRoute
   '/api/public/track/click': typeof ApiPublicTrackClickRoute
   '/api/public/telegram/webhook/$accountId': typeof ApiPublicTelegramWebhookAccountIdRoute
@@ -466,10 +485,12 @@ export interface FileRouteTypes {
     | '/api/public/cron/check-telegram-webhooks'
     | '/api/public/cron/dispatch-followups'
     | '/api/public/cron/dispatch-market-tips'
+    | '/api/public/cron/dispatch-promos'
     | '/api/public/cron/dispatch-recurring'
     | '/api/public/cron/dispatch-sessions'
     | '/api/public/cron/dispatch-signals'
     | '/api/public/cron/sync-engagement-orders'
+    | '/api/public/go/$dispatchId'
     | '/api/public/kirvano/webhook'
     | '/api/public/track/click'
     | '/api/public/telegram/webhook/$accountId'
@@ -510,10 +531,12 @@ export interface FileRouteTypes {
     | '/api/public/cron/check-telegram-webhooks'
     | '/api/public/cron/dispatch-followups'
     | '/api/public/cron/dispatch-market-tips'
+    | '/api/public/cron/dispatch-promos'
     | '/api/public/cron/dispatch-recurring'
     | '/api/public/cron/dispatch-sessions'
     | '/api/public/cron/dispatch-signals'
     | '/api/public/cron/sync-engagement-orders'
+    | '/api/public/go/$dispatchId'
     | '/api/public/kirvano/webhook'
     | '/api/public/track/click'
     | '/api/public/telegram/webhook/$accountId'
@@ -555,10 +578,12 @@ export interface FileRouteTypes {
     | '/api/public/cron/check-telegram-webhooks'
     | '/api/public/cron/dispatch-followups'
     | '/api/public/cron/dispatch-market-tips'
+    | '/api/public/cron/dispatch-promos'
     | '/api/public/cron/dispatch-recurring'
     | '/api/public/cron/dispatch-sessions'
     | '/api/public/cron/dispatch-signals'
     | '/api/public/cron/sync-engagement-orders'
+    | '/api/public/go/$dispatchId'
     | '/api/public/kirvano/webhook'
     | '/api/public/track/click'
     | '/api/public/telegram/webhook/$accountId'
@@ -574,10 +599,12 @@ export interface RootRouteChildren {
   ApiPublicCronCheckTelegramWebhooksRoute: typeof ApiPublicCronCheckTelegramWebhooksRoute
   ApiPublicCronDispatchFollowupsRoute: typeof ApiPublicCronDispatchFollowupsRoute
   ApiPublicCronDispatchMarketTipsRoute: typeof ApiPublicCronDispatchMarketTipsRoute
+  ApiPublicCronDispatchPromosRoute: typeof ApiPublicCronDispatchPromosRoute
   ApiPublicCronDispatchRecurringRoute: typeof ApiPublicCronDispatchRecurringRoute
   ApiPublicCronDispatchSessionsRoute: typeof ApiPublicCronDispatchSessionsRoute
   ApiPublicCronDispatchSignalsRoute: typeof ApiPublicCronDispatchSignalsRoute
   ApiPublicCronSyncEngagementOrdersRoute: typeof ApiPublicCronSyncEngagementOrdersRoute
+  ApiPublicGoDispatchIdRoute: typeof ApiPublicGoDispatchIdRoute
   ApiPublicKirvanoWebhookRoute: typeof ApiPublicKirvanoWebhookRoute
   ApiPublicTrackClickRoute: typeof ApiPublicTrackClickRoute
   ApiPublicTelegramWebhookAccountIdRoute: typeof ApiPublicTelegramWebhookAccountIdRoute
@@ -804,6 +831,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicKirvanoWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/go/$dispatchId': {
+      id: '/api/public/go/$dispatchId'
+      path: '/api/public/go/$dispatchId'
+      fullPath: '/api/public/go/$dispatchId'
+      preLoaderRoute: typeof ApiPublicGoDispatchIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/cron/sync-engagement-orders': {
       id: '/api/public/cron/sync-engagement-orders'
       path: '/api/public/cron/sync-engagement-orders'
@@ -830,6 +864,13 @@ declare module '@tanstack/react-router' {
       path: '/api/public/cron/dispatch-recurring'
       fullPath: '/api/public/cron/dispatch-recurring'
       preLoaderRoute: typeof ApiPublicCronDispatchRecurringRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/cron/dispatch-promos': {
+      id: '/api/public/cron/dispatch-promos'
+      path: '/api/public/cron/dispatch-promos'
+      fullPath: '/api/public/cron/dispatch-promos'
+      preLoaderRoute: typeof ApiPublicCronDispatchPromosRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/cron/dispatch-market-tips': {
@@ -970,11 +1011,13 @@ const rootRouteChildren: RootRouteChildren = {
     ApiPublicCronCheckTelegramWebhooksRoute,
   ApiPublicCronDispatchFollowupsRoute: ApiPublicCronDispatchFollowupsRoute,
   ApiPublicCronDispatchMarketTipsRoute: ApiPublicCronDispatchMarketTipsRoute,
+  ApiPublicCronDispatchPromosRoute: ApiPublicCronDispatchPromosRoute,
   ApiPublicCronDispatchRecurringRoute: ApiPublicCronDispatchRecurringRoute,
   ApiPublicCronDispatchSessionsRoute: ApiPublicCronDispatchSessionsRoute,
   ApiPublicCronDispatchSignalsRoute: ApiPublicCronDispatchSignalsRoute,
   ApiPublicCronSyncEngagementOrdersRoute:
     ApiPublicCronSyncEngagementOrdersRoute,
+  ApiPublicGoDispatchIdRoute: ApiPublicGoDispatchIdRoute,
   ApiPublicKirvanoWebhookRoute: ApiPublicKirvanoWebhookRoute,
   ApiPublicTrackClickRoute: ApiPublicTrackClickRoute,
   ApiPublicTelegramWebhookAccountIdRoute:
@@ -985,3 +1028,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
