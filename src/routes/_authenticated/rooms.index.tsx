@@ -55,6 +55,7 @@ type RoomRow = {
   is_active: boolean;
   expires_at: string | null;
   default_account_id: string | null;
+  niche: "ob" | "promo";
   telegram_accounts: { id: string; label: string; bot_first_name: string | null; bot_username: string | null } | null;
   room_chats: { id: string; chat_id: number; chat_title: string | null }[];
 };
@@ -94,7 +95,7 @@ function RoomsPage() {
       const { data, error } = await supabase
         .from("rooms")
         .select(
-          "id, name, description, photo_url, broker, is_active, expires_at, default_account_id, telegram_accounts:default_account_id(id, label, bot_first_name, bot_username), room_chats(id, chat_id, chat_title)",
+          "id, name, description, photo_url, broker, is_active, expires_at, default_account_id, niche, telegram_accounts:default_account_id(id, label, bot_first_name, bot_username), room_chats(id, chat_id, chat_title)",
         )
         .order("created_at", { ascending: false });
       if (error) throw error;
