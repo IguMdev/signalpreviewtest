@@ -33,6 +33,8 @@ import {
   Repeat,
   Link2,
   Lock,
+  ShoppingBag,
+  BarChart2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -67,6 +69,11 @@ const trackingItems = [
 
 const trackingLockedItems = [
   { label: "Mensagens", icon: MessageCircle },
+] as const;
+
+const promoItems = [
+  { to: "/promocoes/contas", label: "Contas de afiliado", icon: ShoppingBag },
+  { to: "/promocoes/estatisticas", label: "Estatísticas", icon: BarChart2 },
 ] as const;
 
 const botItems = [
