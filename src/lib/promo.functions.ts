@@ -2,7 +2,11 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
-const StoreSchema = z.enum(["amazon", "shopee", "aliexpress", "mercadolivre"]);
+const StoreSchema = z.enum([
+  "amazon", "shopee", "aliexpress", "mercadolivre",
+  "privacy", "crakrevenue", "awempire",
+  "bet365", "betano", "blaze", "kto", "sportingbet",
+]);
 
 // ---------- Affiliate accounts CRUD ----------
 
@@ -90,7 +94,7 @@ const PromoSettingsSchema = z.object({
   room_id: z.string().uuid(),
   enabled: z.boolean(),
   interval_hours: z.number().int().min(1).max(168),
-  stores: z.array(StoreSchema).min(0).max(4),
+  stores: z.array(StoreSchema).min(0).max(12),
   min_discount_pct: z.number().int().min(0).max(100),
   min_price: z.number().nullable(),
   max_price: z.number().nullable(),
@@ -144,8 +148,7 @@ export const previewPromoOffers = createServerFn({ method: "POST" })
     const accMap = new Map((accs ?? []).map((a) => [a.store, a.credentials as Record<string, string>]));
     type PreviewItem = { store: string; title?: string; price?: number | null; oldPrice?: number | null; discountPct?: number | null; imageUrl?: string | null; productUrl?: string; error?: string };
     const collected: PreviewItem[] = [];
-    const STORES = ["amazon", "shopee", "aliexpress", "mercadolivre"] as const;
-    type StoreKey = typeof STORES[number];
+    type StoreKey = keyof typeof STORE_CLIENTS;
     for (const storeRaw of settings.stores as string[]) {
       const store = storeRaw as StoreKey;
       const creds = accMap.get(store);

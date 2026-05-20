@@ -17,18 +17,25 @@ import { toast } from "sonner";
 import { Link } from "@tanstack/react-router";
 import { Eye, ShoppingBag, AlertTriangle } from "lucide-react";
 
-const ALL_STORES = [
-  { v: "amazon", l: "Amazon" },
-  { v: "shopee", l: "Shopee" },
-  { v: "aliexpress", l: "AliExpress" },
-  { v: "mercadolivre", l: "Mercado Livre" },
-] as const;
+import { STORE_LABELS, type AffiliateStore } from "@/lib/promo/types";
 
-type Store = (typeof ALL_STORES)[number]["v"];
+const DEFAULT_STORES: AffiliateStore[] = ["amazon", "shopee", "aliexpress", "mercadolivre"];
+
+type Store = AffiliateStore;
 
 const DEFAULT_TEMPLATE = `🔥 <b>{title}</b>\n\n<s>De R$ {old_price}</s> por <b>R$ {price}</b>\n💰 {discount}% OFF\n\n👉 {link}`;
 
-export function PromoBotCard({ roomId }: { roomId: string }) {
+export function PromoBotCard({
+  roomId,
+  allowedStores = DEFAULT_STORES,
+  title = "Bot de Promoções",
+  description = "Envia ofertas automaticamente a partir das APIs oficiais (Amazon, Shopee, AliExpress, Mercado Livre).",
+}: {
+  roomId: string;
+  allowedStores?: AffiliateStore[];
+  title?: string;
+  description?: string;
+}) {
   const qc = useQueryClient();
   const getSettings = useServerFn(getPromoBotSettings);
   const saveSettings = useServerFn(upsertPromoBotSettings);
@@ -110,10 +117,10 @@ export function PromoBotCard({ roomId }: { roomId: string }) {
         <div>
           <h2 className="text-lg font-semibold flex items-center gap-2">
             <ShoppingBag className="size-5 text-primary" />
-            Bot de Promoções
+            {title}
           </h2>
           <p className="text-xs text-muted-foreground mt-1">
-            Envia ofertas automaticamente a partir das APIs oficiais (Amazon, Shopee, AliExpress, Mercado Livre).
+            {description}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -156,18 +163,18 @@ export function PromoBotCard({ roomId }: { roomId: string }) {
       <div className="space-y-2">
         <Label className="text-xs">Lojas habilitadas</Label>
         <div className="flex flex-wrap gap-2">
-          {ALL_STORES.map((s) => {
-            const active = stores.includes(s.v);
+          {allowedStores.map((v) => {
+            const active = stores.includes(v);
             return (
               <button
-                key={s.v}
+                key={v}
                 type="button"
-                onClick={() => toggleStore(s.v)}
+                onClick={() => toggleStore(v)}
                 className={`px-3 py-1.5 rounded-md text-xs border transition ${
                   active ? "bg-primary text-primary-foreground border-primary" : "border-border hover:border-primary"
                 }`}
               >
-                {s.l}
+                {STORE_LABELS[v]}
               </button>
             );
           })}

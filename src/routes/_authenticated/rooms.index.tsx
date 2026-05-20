@@ -28,7 +28,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Plus, Trash2, Users, Pencil, FileText, CalendarClock, Search, RefreshCw, Power, TrendingUp, ShoppingBag } from "lucide-react";
+import { Plus, Trash2, Users, Pencil, FileText, CalendarClock, Search, RefreshCw, Power, TrendingUp, ShoppingBag, Flame, Dice5, GraduationCap } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/rooms/")({
   component: RoomsPage,
@@ -55,7 +55,7 @@ type RoomRow = {
   is_active: boolean;
   expires_at: string | null;
   default_account_id: string | null;
-  niche: "ob" | "promo";
+  niche: "ob" | "promo" | "hot" | "igaming" | "expert";
   telegram_accounts: { id: string; label: string; bot_first_name: string | null; bot_username: string | null } | null;
   room_chats: { id: string; chat_id: number; chat_title: string | null }[];
 };
@@ -69,7 +69,7 @@ function RoomsPage() {
   const [filter, setFilter] = useState<"all" | "active" | "inactive">("all");
 
   // Wizard step 0 — niche selection
-  const [niche, setNiche] = useState<"ob" | "promo" | null>(null);
+  const [niche, setNiche] = useState<"ob" | "promo" | "hot" | "igaming" | "expert" | null>(null);
 
   // Wizard step 1 fields
   const [chatIdInput, setChatIdInput] = useState("");
@@ -224,32 +224,37 @@ function RoomsPage() {
             </DialogHeader>
             {!niche ? (
               <div className="grid grid-cols-2 gap-3 py-2">
-                <button
-                  type="button"
-                  onClick={() => setNiche("ob")}
-                  className="rounded-lg border border-border hover:border-primary hover:bg-accent transition p-4 text-left space-y-2"
-                >
-                  <TrendingUp className="size-6 text-primary" />
-                  <div className="font-semibold">Opções Binárias</div>
-                  <div className="text-xs text-muted-foreground">Sinais, janelas de operação, templates de entrada/resultado, relatórios.</div>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setNiche("promo")}
-                  className="rounded-lg border border-border hover:border-primary hover:bg-accent transition p-4 text-left space-y-2"
-                >
-                  <ShoppingBag className="size-6 text-primary" />
-                  <div className="font-semibold">Promoções</div>
-                  <div className="text-xs text-muted-foreground">Envia ofertas de Amazon, Shopee, AliExpress e Mercado Livre com link de afiliado.</div>
-                </button>
+                {([
+                  { v: "ob", icon: TrendingUp, t: "Opções Binárias", d: "Sinais, janelas de operação, templates de entrada/resultado, relatórios." },
+                  { v: "promo", icon: ShoppingBag, t: "Promoções", d: "Amazon, Shopee, AliExpress e Mercado Livre com link de afiliado." },
+                  { v: "hot", icon: Flame, t: "Hot", d: "Conteúdo adulto: prévias, funil VIP e promoções de redes adultas." },
+                  { v: "igaming", icon: Dice5, t: "iGaming", d: "Sinais de cassino (Tigrinho, Aviator…) + promos de casas de aposta." },
+                  { v: "expert", icon: GraduationCap, t: "Comunidade Expert", d: "Funil de mentoria/curso + engajamento diário + agenda." },
+                ] as const).map((opt) => {
+                  const Icon = opt.icon;
+                  return (
+                    <button
+                      key={opt.v}
+                      type="button"
+                      onClick={() => setNiche(opt.v as any)}
+                      className="rounded-lg border border-border hover:border-primary hover:bg-accent transition p-4 text-left space-y-2"
+                    >
+                      <Icon className="size-6 text-primary" />
+                      <div className="font-semibold">{opt.t}</div>
+                      <div className="text-xs text-muted-foreground">{opt.d}</div>
+                    </button>
+                  );
+                })}
                 <div className="col-span-2 text-[11px] text-muted-foreground">
-                  ⚠️ O nicho é fixo após a criação. Para o outro nicho, crie outra sala.
+                  ⚠️ O nicho é fixo após a criação. Para outro nicho, crie outra sala.
                 </div>
               </div>
             ) : (
             <div className="space-y-4">
               <div className="flex items-center gap-2 text-xs">
-                <Badge variant="secondary">{niche === "ob" ? "Opções Binárias" : "Promoções"}</Badge>
+                <Badge variant="secondary">
+                  {{ ob: "Opções Binárias", promo: "Promoções", hot: "Hot", igaming: "iGaming", expert: "Comunidade Expert" }[niche]}
+                </Badge>
                 <button className="text-muted-foreground hover:text-foreground underline" onClick={() => setNiche(null)}>trocar</button>
               </div>
               <div className="grid grid-cols-2 gap-3">

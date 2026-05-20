@@ -1,172 +1,121 @@
-## Objetivo
-Adicionar **Bot de Promoções com Afiliados** integrando APIs oficiais de Amazon, Shopee, AliExpress e Mercado Livre, com sistema de nicho fixo por sala (OB = sinais ou Promoções).
+## Novos nichos de sala
+
+Expandir o sistema de nichos de **2** (`ob`, `promo`) para **5**: `ob`, `promo`, `hot`, `igaming`, `expert`. Cada nicho exibe apenas seus bots no editor da sala.
 
 ---
 
-## 1. Conceito de Nicho por Sala
+### 1. Banco de dados
 
-Adicionar campo `niche` na tabela `rooms` com valores fixos:
-- `ob` — Opções Binárias (sinais, comportamento atual)
-- `promo` — Promoções com afiliados (novo)
+**Migration única:**
 
-**Regra:** definido no momento da criação da sala, **não pode ser alterado depois** (UI desabilita). Cada sala = 1 nicho.
+- Extender o enum `room_niche`: `+ 'hot' | 'igaming' | 'expert'`.
+- Extender o enum `affiliate_store` para incluir parceiros adultos e casas de aposta:
+  `+ 'privacy' | 'crakrevenue' | 'awempire' | 'bet365' | 'betano' | 'blaze' | 'kto' | 'sportingbet'`.
+  → as tabelas `affiliate_accounts`, `promo_bot_settings`, `promo_offers`, `promo_dispatches`, `promo_conversions` já usam esse enum e passam a aceitar as novas lojas automaticamente.
+- Nova tabela `hot_vip_funnel` (por sala) — funil free→VIP do nicho Hot:
+  campos: `room_id`, `user_id`, `enabled`, `vip_checkout_url`, `vip_price_brl`, `teaser_interval_hours`, `last_teaser_at`, `cta_button_text`.
+- Nova tabela `hot_teasers` (mídia agendada por sala):
+  `room_id`, `user_id`, `image_path` ou `video_id`, `caption`, `sort_order`, `is_active`.
+- Nova tabela `igaming_results` (resultado ao vivo + tracking dos sinais de cassino):
+  `room_id`, `user_id`, `window_id`, `signal_message_id`, `result` (`win`|`loss`|`gale_win`), `confirmed_at`.
+- Nova tabela `expert_funnel` (funil de mentoria/curso por sala):
+  `room_id`, `user_id`, `enabled`, `checkout_url`, `product_name`, `price_brl`, `cta_button_text`.
+- Nova tabela `expert_engagement_prompts` (perguntas/enquetes do dia):
+  `room_id`, `user_id`, `kind` (`question`|`poll`), `content`, `options jsonb`, `send_time`, `weekdays`, `is_active`.
+- RLS `auth.uid() = user_id` em todas (mesmo padrão das demais).
 
-**Fluxo de criação:**
-1. Usuário clica em "Nova Sala" → primeiro passo: escolher nicho (card OB vs card Promoções)
-2. Se OB → fluxo atual (broker, sinais, janelas, etc.)
-3. Se Promo → abre direto as configurações do Bot de Promoções (espelhando UX do bot de sinais)
-
-**Filtragem da UI por nicho:**
-- Sala OB: abas Sinais, Janelas, Encaminhador, Follow-up, Boas-vindas, Recorrentes — **sem** aba Promoções
-- Sala Promo: abas Promoções, Encaminhador, Follow-up, Boas-vindas, Recorrentes — **sem** Sinais/Janelas/Ativos
-- Boas-vindas, Encaminhador, Follow-up e Recorrentes ficam em ambos (são genéricos)
-
----
-
-## 2. Banco de Dados
-
-Novas tabelas (todas com RLS `user_id = auth.uid()`):
-
-**`affiliate_accounts`** — credenciais por usuário/loja
-- `user_id`, `store` (enum: amazon, shopee, aliexpress, mercadolivre)
-- `credentials` jsonb (associate_id, app_id/secret, tracking_id, etc.)
-- `is_active`, `last_check_at`, `last_error`
-
-**`promo_bot_settings`** — config por sala (nicho promo)
-- `room_id`, `user_id`
-- `enabled`, `interval_hours` (intervalo fixo)
-- `stores` text[] — quais lojas usar nessa sala
-- `min_discount_pct`, `min_price`, `max_price`
-- `categories` text[], `keywords` text[], `blacklist_keywords` text[]
-- `message_template` text (com placeholders: {title}, {price}, {old_price}, {discount}, {link})
-- `image_mode` (product_image | none)
-- `parse_mode`, `premium_account_id`, `premium_enabled`
-- `last_fire_at`
-
-**`promo_offers`** — cache de ofertas puxadas das APIs
-- `user_id`, `store`, `external_id` (unique por loja)
-- `title`, `description`, `price`, `old_price`, `discount_pct`
-- `image_url`, `product_url`, `category`
-- `raw` jsonb, `fetched_at`, `expires_at`
-
-**`promo_dispatches`** — log de envios (idempotência + tracking)
-- `id` (usado como token no shortlink)
-- `user_id`, `room_id`, `offer_id`, `chat_id`
-- `affiliate_link` (link com tag/SubID = id do dispatch)
-- `telegram_message_id`, `sent_at`, `error`
-
-**`promo_clicks`** — tracking de cliques no shortlink
-- `dispatch_id`, `clicked_at`, `ip_hash`, `user_agent`, `country`
-
-**`promo_conversions`** — vendas confirmadas (puxadas via API de relatório)
-- `dispatch_id` (nullable, casado via SubID), `store`, `order_id`
-- `commission_value`, `sale_value`, `status`, `confirmed_at`, `raw` jsonb
+> Reaproveita-se 100% das tabelas `room_windows`, `room_assets`, `room_templates`, `room_session_messages`, `engagement_settings`, `followup_*`, `recurring_schedules`, `promo_*` — sem duplicar lógica.
 
 ---
 
-## 3. Integrações Oficiais (server functions)
+### 2. Mapa de bots por nicho
 
-Cada loja em `src/lib/promo/{store}.server.ts`:
-
-- **Amazon PA-API 5.0**: `SearchItems` + `GetItems` com `PartnerTag`. Assinatura AWS Sig v4. Atenção: requer 3 vendas em 180 dias.
-- **Shopee Affiliate Open API**: GraphQL em `https://open-api.affiliate.shopee.com.br/graphql` com HMAC-SHA256 (AppID + secret + timestamp).
-- **AliExpress (Portals/Aliexpress Open Platform)**: `aliexpress.affiliate.product.query` + `aliexpress.affiliate.order.list`. App Key + assinatura MD5/HMAC.
-- **Mercado Livre**: API de busca pública + deep link de afiliado `https://www.mercadolivre.com.br/social/{user}?...&matt_word={SubID}`. Relatório de comissão via API de afiliados.
-
-Padrão comum: `fetchOffers(filters) → Offer[]`, `fetchConversions(since) → Conversion[]`.
-
----
-
-## 4. Server Functions
-
-`src/lib/promo.functions.ts`:
-- `listAffiliateAccounts`, `upsertAffiliateAccount`, `testAffiliateAccount`
-- `getPromoBotSettings(roomId)`, `updatePromoBotSettings`
-- `previewPromoOffers(roomId)` — testa filtros e mostra próximas ofertas
-- `listPromoDispatches(roomId, range)` — histórico
-- `getPromoStats(roomId)` — cliques, conversões, comissão total
+| Nicho | Bots/cards visíveis no editor da sala |
+|---|---|
+| **ob** (Opções Binárias) | Janelas, Ativos, Templates, Stop-Loss, Dicas de Mercado, Engajamento, Follow-up, Recorrentes, Relatórios |
+| **promo** (Promoções) | Promo Bot (Amazon/Shopee/AliExpress/Mercado Livre), Engajamento, Follow-up, Recorrentes |
+| **hot** (Conteúdo adulto) | Promo Bot Adulto (Privacy/CrakRevenue/AWEmpire), Prévias Agendadas, Funil VIP, Engajamento, Follow-up, Recorrentes |
+| **igaming** (Cassino/Apostas) | Janelas + Ativos (engine OB reaproveitada com jogos: Tigrinho, Aviator, Mines, Fortune Ox), Templates, Resultados ao Vivo, Promo Bot Casas (Bet365/Betano/Blaze/KTO/Sportingbet), Engajamento, Follow-up, Recorrentes |
+| **expert** (Comunidade de Expert) | Funil de Venda (mentoria/curso), Aulas/Lives Agendadas (recorrentes), Engajamento Diário (perguntas/enquetes), Welcome, Follow-up |
 
 ---
 
-## 5. Cron e Disparo
+### 3. UI — Wizard de criação de sala
 
-**Novo cron route:** `src/routes/api/public/cron/dispatch-promos.ts` (a cada 5 min)
-- Para cada `promo_bot_settings` com `enabled = true` cuja janela `last_fire_at + interval_hours` venceu:
-  1. Para cada loja em `stores`: chama `fetchOffers` com filtros
-  2. Upsert em `promo_offers`, descarta já enviadas (via `promo_dispatches`)
-  3. Escolhe a melhor (maior desconto não enviado)
-  4. Cria registro `promo_dispatches` com `id = uuid`
-  5. Gera affiliate link com SubID = dispatch_id (ou shortlink `/go/{dispatch_id}`)
-  6. Renderiza template, envia via bot/userbot
-  7. Atualiza `last_fire_at`
+`src/routes/_authenticated/rooms.index.tsx`:
 
-**Cron de conversões:** `src/routes/api/public/cron/sync-promo-conversions.ts` (1x/hora)
-- Para cada `affiliate_accounts` ativa: `fetchConversions(since=last_sync)` e cruza SubID → `dispatch_id` → preenche `promo_conversions`.
+- Substituir as 2 cards atuais (OB/Promo) por **5 cards** com ícone+descrição:
+  - 📈 Opções Binárias
+  - 🛒 Promoções
+  - 🔥 Hot
+  - 🎰 iGaming
+  - 🎓 Comunidade Expert
+- `niche` continua imutável após criação (trigger `prevent_room_niche_change` já existe).
 
----
+### 4. UI — Editor da sala (`rooms.$roomId.edit.tsx`)
 
-## 6. Tracking de Cliques
+- Trocar o `if (niche === 'promo')` por **switch (room.niche)** que renderiza o conjunto de cards do mapa acima.
+- Para `igaming`: reusar `WindowsCard`, `AssetsCard`, `TemplatesCard` do OB + novo `IGamingGamesCard` (substitui "ativos" por jogos de cassino) + novo `IGamingResultsCard` + reusar `PromoBotCard` configurado para lojas iGaming.
+- Para `hot`: novo `HotPromoBotCard` (PromoBotCard restrito às lojas adultas) + `HotTeasersCard` + `HotVipFunnelCard`.
+- Para `expert`: novo `ExpertFunnelCard` + `ExpertEngagementCard` + cards já existentes de welcome/follow-up/recorrentes.
 
-**Rota pública:** `src/routes/api/public/go/$dispatchId.ts`
-- Insere em `promo_clicks` (ip_hash, ua, geo via header)
-- Faz 302 para `affiliate_link` da dispatch
-- Esse é o link que vai na mensagem do Telegram (ex.: `https://signalpreviewtest.lovable.app/go/{id}`)
+### 5. UI — Sidebar (`_authenticated.tsx`)
 
----
+Adicionar dois novos grupos colapsáveis:
+- **Hot**: Contas Afiliadas Adultas, Estatísticas
+- **iGaming**: Contas Casas de Aposta, Estatísticas, Resultados
+- **Promoções** já existe.
+- Itens do nicho expert ficam dentro da própria sala (sem grupo na sidebar).
 
-## 7. UI
+### 6. Server functions e clients de loja
 
-**Nova página:** `src/routes/_authenticated/promocoes.contas.tsx`
-- CRUD de contas de afiliado (Amazon/Shopee/AliExpress/ML), instruções de onde pegar cada credencial, botão "Testar conexão".
+Em `src/lib/promo/`:
+- `privacy.server.ts` — Privacy BR (afiliados.privacy.com.br/api)
+- `crakrevenue.server.ts` — CrakRevenue Affiliate API
+- `awempire.server.ts` — AWEmpire API
+- `bet365.server.ts`, `betano.server.ts`, `blaze.server.ts`, `kto.server.ts`, `sportingbet.server.ts` — via Smartico/Income Access REST onde aplicável; ofertas (bonus, freebet, cashback) + postback de conversão.
+- Atualizar `registry.server.ts` para mapear as novas entradas do enum.
 
-**Configuração do bot na sala (Promo):**
-- `src/routes/_authenticated/rooms.$roomId.promo.tsx` (espelha UX de `rooms.$roomId.edit.tsx` aba sinais)
-- Toggle enabled, intervalo (slider 1-24h), lojas (multi-select das contas ativas), filtros, template editor com preview, botão "Ver próximas ofertas".
+Novas server-fns em:
+- `src/lib/hot.functions.ts` — CRUD `hot_vip_funnel`, `hot_teasers`, preview do teaser.
+- `src/lib/igaming.functions.ts` — CRUD configurações iGaming, registro de resultado ao vivo (win/loss/gale), envio de mensagem de "GREEN/RED" no Telegram.
+- `src/lib/expert.functions.ts` — CRUD funil, prompts de engajamento, agendamento.
 
-**Página de stats:** `src/routes/_authenticated/promocoes.stats.tsx`
-- Por sala/loja/período: ofertas enviadas, cliques, CTR, conversões, comissão total. Tabela de dispatches com drill-down.
+### 7. Cron
 
-**Ajustes em `rooms.index.tsx`:**
-- Modal de criação ganha primeiro passo de seleção de nicho (2 cards visuais)
-- Lista de salas mostra badge do nicho (OB / Promo)
+- Reusar `dispatch-promos` (já roda 5min) — passa a contemplar lojas hot/igaming automaticamente.
+- Reusar `sync-promo-conversions` (já roda 1h) — idem.
+- Novo `/api/public/cron/hot-teasers` (15min): dispara prévias por intervalo.
+- Novo `/api/public/cron/expert-engagement` (1min): envia perguntas/enquetes na hora marcada.
+- `room_windows` + scheduler existente cobrem sinais iGaming sem cron novo.
 
-**Ajustes em `rooms.$roomId.edit.tsx`:**
-- Renderiza abas condicionalmente por `room.niche`
-- Campo nicho exibido como read-only
+### 8. Tracking
 
----
-
-## 8. Sidebar
-
-Novo grupo "Promoções" (visível só se o user tiver ao menos 1 sala promo):
-- Contas de Afiliado
-- Estatísticas
-
----
-
-## 9. Secrets
-
-Nenhum secret global — cada usuário cadastra as próprias credenciais em `affiliate_accounts.credentials` (criptografado em coluna jsonb, acesso só via RLS + server function).
+- Promo (cliques/conversões) já cobre hot e igaming via `/go/$dispatchId` + `promo_conversions`.
+- Para iGaming com postback S2S das casas: novo endpoint `/api/public/postback/$store.ts` (HMAC ou token por casa) que insere em `promo_conversions`.
 
 ---
 
-## 10. Detalhes Técnicos
+### 9. Secrets
 
-- Migration cria enum `room_niche` e default `'ob'` para salas existentes (retrocompatível).
-- Trigger impede `UPDATE` de `rooms.niche` após criação.
-- Dedupe de ofertas por `(store, external_id)` + janela de 30 dias antes de reenviar a mesma.
-- Rate-limit por loja respeitando limites das APIs (Amazon: 1 req/s inicial; Shopee: 100/min).
-- Shortlink `/go/{id}` indexado por `dispatch_id` para latência baixa no clique.
-- Template default: `🔥 *{title}*\n\n~R$ {old_price}~ → *R$ {price}*\n💰 {discount}% OFF\n\n👉 {link}`.
+Nenhum no projeto — todas as credenciais ficam em `affiliate_accounts.credentials` (jsonb por usuário, RLS).
+
+### 10. Ordem de execução
+
+1. Migration (enums + tabelas novas).
+2. Wizard de 5 cards + switch no editor.
+3. Cards hot (Funil VIP, Teasers, Promo Adulto).
+4. Cards iGaming (Jogos + Resultados + Promo Casas).
+5. Cards Expert (Funil + Engagement).
+6. Sidebar (links Hot/iGaming).
+7. Clients de loja novos + atualização do registry.
+8. Crons (hot-teasers, expert-engagement) + postback iGaming.
 
 ---
 
-## Ordem de Implementação
+### Observações técnicas
 
-1. Migration (nicho + tabelas promo)
-2. UI nicho na criação/edição da sala + filtragem de abas
-3. Página de contas de afiliado + integração Amazon (mais comum) como primeira loja
-4. Server functions de settings + UI de config do bot na sala
-5. Cron de disparo + shortlink de tracking
-6. Integrações Shopee, AliExpress, ML
-7. Cron de conversões + página de stats
+- O enum `affiliate_store` precisa ser estendido **antes** das migrations criarem as tabelas (Postgres exige `ALTER TYPE ... ADD VALUE` fora de transação) — vai numa migration própria, executada antes das demais alterações que dependem dela.
+- `niche` permanece imutável após criação (regra existente respeitada).
+- `PromoBotCard` recebe prop `allowedStores: AffiliateStore[]` para limitar as opções por nicho (hot ≠ igaming ≠ promo geral).
+- Todos os botões CTA dos funis (hot VIP, expert) passam pelo redirecionador `/go/$dispatchId` para tracking unificado.
