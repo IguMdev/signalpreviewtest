@@ -161,6 +161,20 @@ function AuthenticatedLayout() {
   });
   const hasPremiumAccount = premiumAccountsQuery.data === true;
 
+  const promoRoomQuery = useQuery({
+    queryKey: ["has-promo-room", user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { count } = await supabase
+        .from("rooms")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", user!.id)
+        .eq("niche", "promo");
+      return (count ?? 0) > 0;
+    },
+  });
+  const hasPromoRoom = promoRoomQuery.data === true;
+
   if (loading || !user) {
     return (
       <div className="min-h-screen grid place-items-center text-muted-foreground text-sm">
