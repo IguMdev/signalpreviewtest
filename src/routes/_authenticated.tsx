@@ -161,6 +161,20 @@ function AuthenticatedLayout() {
   });
   const hasPremiumAccount = premiumAccountsQuery.data === true;
 
+  const promoRoomQuery = useQuery({
+    queryKey: ["has-promo-room", user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { count } = await supabase
+        .from("rooms")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", user!.id)
+        .eq("niche", "promo");
+      return (count ?? 0) > 0;
+    },
+  });
+  const hasPromoRoom = promoRoomQuery.data === true;
+
   if (loading || !user) {
     return (
       <div className="min-h-screen grid place-items-center text-muted-foreground text-sm">
@@ -302,42 +316,44 @@ function AuthenticatedLayout() {
             </CollapsibleContent>
           </Collapsible>
 
-          {/* Promoções dropdown */}
-          <Collapsible defaultOpen={location.pathname.startsWith("/promocoes")}>
-            <CollapsibleTrigger asChild>
-              <button
-                type="button"
-                className="w-full relative flex items-center justify-between rounded-xl px-3 py-2.5 text-sm font-medium transition text-foreground/70 hover:bg-white/5 hover:text-foreground"
-              >
-                <span className="flex items-center gap-3">
-                  <ShoppingBag className="size-4" />
-                  Promoções
-                </span>
-                <ChevronDown className="size-4 transition-transform data-[state=open]:rotate-180" />
-              </button>
-            </CollapsibleTrigger>
-            <CollapsibleContent className="space-y-1 pl-2">
-              {promoItems.map(({ to, label, icon: Icon }) => {
-                const active = location.pathname === to || location.pathname.startsWith(to + "/");
-                return (
-                  <Link
-                    key={to}
-                    to={to}
-                    onClick={() => setSidebarOpen(false)}
-                    className={cn(
-                      "relative flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition",
-                      active
-                        ? "cyber-gradient-soft text-foreground cyber-border"
-                        : "text-foreground/70 hover:bg-white/5 hover:text-foreground",
-                    )}
-                  >
-                    <Icon className={cn("size-4", active && "text-primary")} />
-                    {label}
-                  </Link>
-                );
-              })}
-            </CollapsibleContent>
-          </Collapsible>
+          {/* Promoções dropdown — só aparece se houver sala de nicho promo */}
+          {hasPromoRoom && (
+            <Collapsible defaultOpen={location.pathname.startsWith("/promocoes")}>
+              <CollapsibleTrigger asChild>
+                <button
+                  type="button"
+                  className="w-full relative flex items-center justify-between rounded-xl px-3 py-2.5 text-sm font-medium transition text-foreground/70 hover:bg-white/5 hover:text-foreground"
+                >
+                  <span className="flex items-center gap-3">
+                    <ShoppingBag className="size-4" />
+                    Promoções
+                  </span>
+                  <ChevronDown className="size-4 transition-transform data-[state=open]:rotate-180" />
+                </button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="space-y-1 pl-2">
+                {promoItems.map(({ to, label, icon: Icon }) => {
+                  const active = location.pathname === to || location.pathname.startsWith(to + "/");
+                  return (
+                    <Link
+                      key={to}
+                      to={to}
+                      onClick={() => setSidebarOpen(false)}
+                      className={cn(
+                        "relative flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition",
+                        active
+                          ? "cyber-gradient-soft text-foreground cyber-border"
+                          : "text-foreground/70 hover:bg-white/5 hover:text-foreground",
+                      )}
+                    >
+                      <Icon className={cn("size-4", active && "text-primary")} />
+                      {label}
+                    </Link>
+                  );
+                })}
+              </CollapsibleContent>
+            </Collapsible>
+          )}
 
           {/* Bots dropdown — só aparece se houver assinatura ativa */}
           {visibleBotItems.length > 0 && (
