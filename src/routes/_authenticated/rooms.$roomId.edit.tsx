@@ -31,6 +31,12 @@ import {
 import { sendRoomTest } from "@/lib/accounts.functions";
 import { testWindow } from "@/lib/test-signal.functions";
 import { PromoBotCard } from "@/components/promo/PromoBotCard";
+import { HotVipFunnelCard } from "@/components/hot/HotVipFunnelCard";
+import { HotTeasersCard } from "@/components/hot/HotTeasersCard";
+import { ExpertFunnelCard } from "@/components/expert/ExpertFunnelCard";
+import { ExpertEngagementCard } from "@/components/expert/ExpertEngagementCard";
+import { IGamingResultsCard } from "@/components/igaming/IGamingResultsCard";
+import { STORES_BY_NICHE } from "@/lib/promo/types";
 
 export const Route = createFileRoute("/_authenticated/rooms/$roomId/edit")({
   component: EditRoomPage,
@@ -114,23 +120,68 @@ function EditRoomPage() {
       </div>
 
       <BaseConfigCard room={r} />
-      {r.niche === "promo" ? (
-        <>
-          <TimezoneCard room={r} />
-          <PromoBotCard roomId={roomId} />
-        </>
-      ) : (
-        <>
-          <MessagesInfoCard />
-          <WindowsCard roomId={roomId} />
-          <TemplatesCard roomId={roomId} />
-          <SessionMessagesCard roomId={roomId} />
-          <ReportsCard roomId={roomId} />
-          <TimezoneCard room={r} />
-          <StopLossCard room={r} />
-          <MarketTipsCard room={r} />
-        </>
-      )}
+      {(() => {
+        switch (r.niche) {
+          case "promo":
+            return (
+              <>
+                <TimezoneCard room={r} />
+                <PromoBotCard roomId={roomId} allowedStores={[...STORES_BY_NICHE.promo]} />
+              </>
+            );
+          case "hot":
+            return (
+              <>
+                <TimezoneCard room={r} />
+                <HotVipFunnelCard roomId={roomId} />
+                <HotTeasersCard roomId={roomId} />
+                <PromoBotCard
+                  roomId={roomId}
+                  allowedStores={[...STORES_BY_NICHE.hot]}
+                  title="Promoções Adultas"
+                  description="Envia ofertas de redes adultas (Privacy, CrakRevenue, AWEmpire) com tracking."
+                />
+              </>
+            );
+          case "igaming":
+            return (
+              <>
+                <MessagesInfoCard />
+                <WindowsCard roomId={roomId} />
+                <TemplatesCard roomId={roomId} />
+                <IGamingResultsCard roomId={roomId} />
+                <PromoBotCard
+                  roomId={roomId}
+                  allowedStores={[...STORES_BY_NICHE.igaming]}
+                  title="Promoções de Casas de Aposta"
+                  description="Bônus, freebets e cashback das casas conectadas (Bet365, Betano, Blaze, KTO, Sportingbet)."
+                />
+                <TimezoneCard room={r} />
+              </>
+            );
+          case "expert":
+            return (
+              <>
+                <TimezoneCard room={r} />
+                <ExpertFunnelCard roomId={roomId} />
+                <ExpertEngagementCard roomId={roomId} />
+              </>
+            );
+          default:
+            return (
+              <>
+                <MessagesInfoCard />
+                <WindowsCard roomId={roomId} />
+                <TemplatesCard roomId={roomId} />
+                <SessionMessagesCard roomId={roomId} />
+                <ReportsCard roomId={roomId} />
+                <TimezoneCard room={r} />
+                <StopLossCard room={r} />
+                <MarketTipsCard room={r} />
+              </>
+            );
+        }
+      })()}
 
       {/* Sticky footer */}
       <div className="fixed bottom-0 left-0 right-0 lg:left-[var(--sidebar-width,16rem)] bg-background/95 backdrop-blur border-t border-border p-4 flex justify-end gap-2 z-40">
