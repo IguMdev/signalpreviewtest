@@ -8,8 +8,8 @@ import { callTelegram } from "./telegram.server";
 // JAP fica somente como fallback de leitura para pedidos antigos já criados lá.
 const N1PANEL_URL = "https://n1panel.com/api/v2";
 const LEGACY_JAP_URL = "https://justanotherpanel.com/api/v2";
-const DEFAULT_N1_REACTIONS_SERVICE_ID = 2208;
-const DEFAULT_N1_MEMBERS_SERVICE_ID = 3107;
+const DEFAULT_N1_REACTIONS_SERVICE_ID = 3205;
+const DEFAULT_N1_MEMBERS_SERVICE_ID = 3451;
 
 // =====================================================================
 // Telegram URL normalization
