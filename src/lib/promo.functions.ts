@@ -142,19 +142,33 @@ export const previewPromoOffers = createServerFn({ method: "POST" })
     const { data: accs } = await context.supabase
       .from("affiliate_accounts").select("store, credentials").eq("is_active", true);
     const accMap = new Map((accs ?? []).map((a) => [a.store, a.credentials as Record<string, string>]));
-    const collected: unknown[] = [];
-    for (const store of settings.stores as string[]) {
+    type PreviewItem = { store: string; title?: string; price?: number | null; oldPrice?: number | null; discountPct?: number | null; imageUrl?: string | null; productUrl?: string; error?: string };
+    const collected: PreviewItem[] = [];
+    const STORES = ["amazon", "shopee", "aliexpress", "mercadolivre"] as const;
+    type StoreKey = typeof STORES[number];
+    for (const storeRaw of settings.stores as string[]) {
+      const store = storeRaw as StoreKey;
       const creds = accMap.get(store);
       if (!creds) continue;
       try {
-        const client = STORE_CLIENTS[store as keyof typeof STORE_CLIENTS];
+        const client = STORE_CLIENTS[store];
         const offers = await client.fetchOffers(creds, {
           keywords: settings.keywords ?? [],
           minDiscountPct: settings.min_discount_pct,
           minPrice: settings.min_price ?? undefined,
           maxPrice: settings.max_price ?? undefined,
         });
-        collected.push(...offers.slice(0, 5));
+        collected.push(
+          ...offers.slice(0, 5).map((o) => ({
+            store: o.store,
+            title: o.title,
+            price: o.price ?? null,
+            oldPrice: o.oldPrice ?? null,
+            discountPct: o.discountPct ?? null,
+            imageUrl: o.imageUrl ?? null,
+            productUrl: o.productUrl,
+          }))
+        );
       } catch (e) {
         collected.push({ store, error: e instanceof Error ? e.message : String(e) });
       }
