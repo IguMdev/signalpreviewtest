@@ -280,6 +280,93 @@ export type Database = {
         }
         Relationships: []
       }
+      expert_engagement_prompts: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          is_active: boolean
+          kind: Database["public"]["Enums"]["expert_prompt_kind"]
+          last_sent_at: string | null
+          options: Json
+          room_id: string
+          send_time: string
+          updated_at: string
+          user_id: string
+          weekdays: number[]
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          kind?: Database["public"]["Enums"]["expert_prompt_kind"]
+          last_sent_at?: string | null
+          options?: Json
+          room_id: string
+          send_time?: string
+          updated_at?: string
+          user_id: string
+          weekdays?: number[]
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          kind?: Database["public"]["Enums"]["expert_prompt_kind"]
+          last_sent_at?: string | null
+          options?: Json
+          room_id?: string
+          send_time?: string
+          updated_at?: string
+          user_id?: string
+          weekdays?: number[]
+        }
+        Relationships: []
+      }
+      expert_funnel: {
+        Row: {
+          checkout_url: string | null
+          created_at: string
+          cta_button_text: string
+          enabled: boolean
+          id: string
+          price_brl: number | null
+          product_name: string | null
+          room_id: string
+          updated_at: string
+          user_id: string
+          welcome_message: string | null
+        }
+        Insert: {
+          checkout_url?: string | null
+          created_at?: string
+          cta_button_text?: string
+          enabled?: boolean
+          id?: string
+          price_brl?: number | null
+          product_name?: string | null
+          room_id: string
+          updated_at?: string
+          user_id: string
+          welcome_message?: string | null
+        }
+        Update: {
+          checkout_url?: string | null
+          created_at?: string
+          cta_button_text?: string
+          enabled?: boolean
+          id?: string
+          price_brl?: number | null
+          product_name?: string | null
+          room_id?: string
+          updated_at?: string
+          user_id?: string
+          welcome_message?: string | null
+        }
+        Relationships: []
+      }
       followup_dispatch_log: {
         Row: {
           day_number: number
@@ -469,6 +556,129 @@ export type Database = {
           chat_id?: number
           created_at?: string
           message_id?: number
+        }
+        Relationships: []
+      }
+      hot_teasers: {
+        Row: {
+          caption: string | null
+          created_at: string
+          id: string
+          image_mime: string | null
+          image_path: string | null
+          is_active: boolean
+          room_id: string
+          sort_order: number
+          updated_at: string
+          user_id: string
+          video_id: string | null
+        }
+        Insert: {
+          caption?: string | null
+          created_at?: string
+          id?: string
+          image_mime?: string | null
+          image_path?: string | null
+          is_active?: boolean
+          room_id: string
+          sort_order?: number
+          updated_at?: string
+          user_id: string
+          video_id?: string | null
+        }
+        Update: {
+          caption?: string | null
+          created_at?: string
+          id?: string
+          image_mime?: string | null
+          image_path?: string | null
+          is_active?: boolean
+          room_id?: string
+          sort_order?: number
+          updated_at?: string
+          user_id?: string
+          video_id?: string | null
+        }
+        Relationships: []
+      }
+      hot_vip_funnel: {
+        Row: {
+          created_at: string
+          cta_button_text: string
+          enabled: boolean
+          id: string
+          last_teaser_at: string | null
+          room_id: string
+          teaser_interval_hours: number
+          updated_at: string
+          user_id: string
+          vip_checkout_url: string | null
+          vip_price_brl: number | null
+          welcome_message: string | null
+        }
+        Insert: {
+          created_at?: string
+          cta_button_text?: string
+          enabled?: boolean
+          id?: string
+          last_teaser_at?: string | null
+          room_id: string
+          teaser_interval_hours?: number
+          updated_at?: string
+          user_id: string
+          vip_checkout_url?: string | null
+          vip_price_brl?: number | null
+          welcome_message?: string | null
+        }
+        Update: {
+          created_at?: string
+          cta_button_text?: string
+          enabled?: boolean
+          id?: string
+          last_teaser_at?: string | null
+          room_id?: string
+          teaser_interval_hours?: number
+          updated_at?: string
+          user_id?: string
+          vip_checkout_url?: string | null
+          vip_price_brl?: number | null
+          welcome_message?: string | null
+        }
+        Relationships: []
+      }
+      igaming_results: {
+        Row: {
+          chat_id: number | null
+          confirmed_at: string
+          created_at: string
+          id: string
+          result: Database["public"]["Enums"]["igaming_signal_result"]
+          room_id: string
+          signal_message_id: number | null
+          user_id: string
+          window_id: string | null
+        }
+        Insert: {
+          chat_id?: number | null
+          confirmed_at?: string
+          created_at?: string
+          id?: string
+          result: Database["public"]["Enums"]["igaming_signal_result"]
+          room_id: string
+          signal_message_id?: number | null
+          user_id: string
+          window_id?: string | null
+        }
+        Update: {
+          chat_id?: number | null
+          confirmed_at?: string
+          created_at?: string
+          id?: string
+          result?: Database["public"]["Enums"]["igaming_signal_result"]
+          room_id?: string
+          signal_message_id?: number | null
+          user_id?: string
+          window_id?: string | null
         }
         Relationships: []
       }
@@ -2693,7 +2903,19 @@ export type Database = {
     Enums: {
       account_status: "unknown" | "ok" | "error"
       account_type: "bot" | "premium"
-      affiliate_store: "amazon" | "shopee" | "aliexpress" | "mercadolivre"
+      affiliate_store:
+        | "amazon"
+        | "shopee"
+        | "aliexpress"
+        | "mercadolivre"
+        | "privacy"
+        | "crakrevenue"
+        | "awempire"
+        | "bet365"
+        | "betano"
+        | "blaze"
+        | "kto"
+        | "sportingbet"
       app_role: "admin" | "user"
       engagement_bot_type:
         | "inscritos"
@@ -2711,9 +2933,11 @@ export type Database = {
         | "failed"
       engagement_order_type: "reaction" | "members"
       engagement_sub_status: "pending" | "active" | "canceled" | "expired"
+      expert_prompt_kind: "question" | "poll"
+      igaming_signal_result: "win" | "loss" | "gale_win"
       message_status: "pending" | "sending" | "sent" | "failed" | "cancelled"
       room_image_kind: "gain" | "loss"
-      room_niche: "ob" | "promo"
+      room_niche: "ob" | "promo" | "hot" | "igaming" | "expert"
       session_msg_kind: "open" | "close"
       signal_event_status:
         | "scheduled"
@@ -2863,7 +3087,20 @@ export const Constants = {
     Enums: {
       account_status: ["unknown", "ok", "error"],
       account_type: ["bot", "premium"],
-      affiliate_store: ["amazon", "shopee", "aliexpress", "mercadolivre"],
+      affiliate_store: [
+        "amazon",
+        "shopee",
+        "aliexpress",
+        "mercadolivre",
+        "privacy",
+        "crakrevenue",
+        "awempire",
+        "bet365",
+        "betano",
+        "blaze",
+        "kto",
+        "sportingbet",
+      ],
       app_role: ["admin", "user"],
       engagement_bot_type: [
         "inscritos",
@@ -2883,9 +3120,11 @@ export const Constants = {
       ],
       engagement_order_type: ["reaction", "members"],
       engagement_sub_status: ["pending", "active", "canceled", "expired"],
+      expert_prompt_kind: ["question", "poll"],
+      igaming_signal_result: ["win", "loss", "gale_win"],
       message_status: ["pending", "sending", "sent", "failed", "cancelled"],
       room_image_kind: ["gain", "loss"],
-      room_niche: ["ob", "promo"],
+      room_niche: ["ob", "promo", "hot", "igaming", "expert"],
       session_msg_kind: ["open", "close"],
       signal_event_status: [
         "scheduled",
