@@ -117,10 +117,10 @@ export function PromoBotCard({
         <div>
           <h2 className="text-lg font-semibold flex items-center gap-2">
             <ShoppingBag className="size-5 text-primary" />
-            Bot de Promoções
+            {title}
           </h2>
           <p className="text-xs text-muted-foreground mt-1">
-            Envia ofertas automaticamente a partir das APIs oficiais (Amazon, Shopee, AliExpress, Mercado Livre).
+            {description}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -163,18 +163,18 @@ export function PromoBotCard({
       <div className="space-y-2">
         <Label className="text-xs">Lojas habilitadas</Label>
         <div className="flex flex-wrap gap-2">
-          {ALL_STORES.map((s) => {
-            const active = stores.includes(s.v);
+          {allowedStores.map((v) => {
+            const active = stores.includes(v);
             return (
               <button
-                key={s.v}
+                key={v}
                 type="button"
-                onClick={() => toggleStore(s.v)}
+                onClick={() => toggleStore(v)}
                 className={`px-3 py-1.5 rounded-md text-xs border transition ${
                   active ? "bg-primary text-primary-foreground border-primary" : "border-border hover:border-primary"
                 }`}
               >
-                {s.l}
+                {STORE_LABELS[v]}
               </button>
             );
           })}
