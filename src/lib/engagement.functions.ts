@@ -9,7 +9,7 @@ import { callTelegram } from "./telegram.server";
 const N1PANEL_URL = "https://n1panel.com/api/v2";
 const LEGACY_JAP_URL = "https://justanotherpanel.com/api/v2";
 const DEFAULT_N1_REACTIONS_SERVICE_ID = 3205;
-const DEFAULT_N1_MEMBERS_SERVICE_ID = 3451;
+const DEFAULT_N1_MEMBERS_SERVICE_ID = 3310;
 
 // =====================================================================
 // Telegram URL normalization
