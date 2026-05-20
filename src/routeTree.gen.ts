@@ -31,6 +31,8 @@ import { Route as AuthenticatedTrackeamentoIntegracoesRouteImport } from './rout
 import { Route as AuthenticatedTrackeamentoFunisRouteImport } from './routes/_authenticated/trackeamento.funis'
 import { Route as AuthenticatedTrackeamentoDominiosRouteImport } from './routes/_authenticated/trackeamento.dominios'
 import { Route as AuthenticatedTrackeamentoCanalRouteImport } from './routes/_authenticated/trackeamento.canal'
+import { Route as AuthenticatedPromocoesEstatisticasRouteImport } from './routes/_authenticated/promocoes.estatisticas'
+import { Route as AuthenticatedPromocoesContasRouteImport } from './routes/_authenticated/promocoes.contas'
 import { Route as AuthenticatedIntegracoesMetaRouteImport } from './routes/_authenticated/integracoes.meta'
 import { Route as AuthenticatedBotsLogsRouteImport } from './routes/_authenticated/bots.logs'
 import { Route as AuthenticatedBotsFollowupRouteImport } from './routes/_authenticated/bots.followup'
@@ -170,6 +172,18 @@ const AuthenticatedTrackeamentoCanalRoute =
     path: '/trackeamento/canal',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedPromocoesEstatisticasRoute =
+  AuthenticatedPromocoesEstatisticasRouteImport.update({
+    id: '/promocoes/estatisticas',
+    path: '/promocoes/estatisticas',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedPromocoesContasRoute =
+  AuthenticatedPromocoesContasRouteImport.update({
+    id: '/promocoes/contas',
+    path: '/promocoes/contas',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedIntegracoesMetaRoute =
   AuthenticatedIntegracoesMetaRouteImport.update({
     id: '/integracoes/meta',
@@ -300,6 +314,8 @@ export interface FileRoutesByFullPath {
   '/bots/followup': typeof AuthenticatedBotsFollowupRoute
   '/bots/logs': typeof AuthenticatedBotsLogsRoute
   '/integracoes/meta': typeof AuthenticatedIntegracoesMetaRoute
+  '/promocoes/contas': typeof AuthenticatedPromocoesContasRoute
+  '/promocoes/estatisticas': typeof AuthenticatedPromocoesEstatisticasRoute
   '/trackeamento/canal': typeof AuthenticatedTrackeamentoCanalRoute
   '/trackeamento/dominios': typeof AuthenticatedTrackeamentoDominiosRoute
   '/trackeamento/funis': typeof AuthenticatedTrackeamentoFunisRoute
@@ -342,6 +358,8 @@ export interface FileRoutesByTo {
   '/bots/followup': typeof AuthenticatedBotsFollowupRoute
   '/bots/logs': typeof AuthenticatedBotsLogsRoute
   '/integracoes/meta': typeof AuthenticatedIntegracoesMetaRoute
+  '/promocoes/contas': typeof AuthenticatedPromocoesContasRoute
+  '/promocoes/estatisticas': typeof AuthenticatedPromocoesEstatisticasRoute
   '/trackeamento/canal': typeof AuthenticatedTrackeamentoCanalRoute
   '/trackeamento/dominios': typeof AuthenticatedTrackeamentoDominiosRoute
   '/trackeamento/funis': typeof AuthenticatedTrackeamentoFunisRoute
@@ -386,6 +404,8 @@ export interface FileRoutesById {
   '/_authenticated/bots/followup': typeof AuthenticatedBotsFollowupRoute
   '/_authenticated/bots/logs': typeof AuthenticatedBotsLogsRoute
   '/_authenticated/integracoes/meta': typeof AuthenticatedIntegracoesMetaRoute
+  '/_authenticated/promocoes/contas': typeof AuthenticatedPromocoesContasRoute
+  '/_authenticated/promocoes/estatisticas': typeof AuthenticatedPromocoesEstatisticasRoute
   '/_authenticated/trackeamento/canal': typeof AuthenticatedTrackeamentoCanalRoute
   '/_authenticated/trackeamento/dominios': typeof AuthenticatedTrackeamentoDominiosRoute
   '/_authenticated/trackeamento/funis': typeof AuthenticatedTrackeamentoFunisRoute
@@ -430,6 +450,8 @@ export interface FileRouteTypes {
     | '/bots/followup'
     | '/bots/logs'
     | '/integracoes/meta'
+    | '/promocoes/contas'
+    | '/promocoes/estatisticas'
     | '/trackeamento/canal'
     | '/trackeamento/dominios'
     | '/trackeamento/funis'
@@ -472,6 +494,8 @@ export interface FileRouteTypes {
     | '/bots/followup'
     | '/bots/logs'
     | '/integracoes/meta'
+    | '/promocoes/contas'
+    | '/promocoes/estatisticas'
     | '/trackeamento/canal'
     | '/trackeamento/dominios'
     | '/trackeamento/funis'
@@ -515,6 +539,8 @@ export interface FileRouteTypes {
     | '/_authenticated/bots/followup'
     | '/_authenticated/bots/logs'
     | '/_authenticated/integracoes/meta'
+    | '/_authenticated/promocoes/contas'
+    | '/_authenticated/promocoes/estatisticas'
     | '/_authenticated/trackeamento/canal'
     | '/_authenticated/trackeamento/dominios'
     | '/_authenticated/trackeamento/funis'
@@ -715,6 +741,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedTrackeamentoCanalRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/promocoes/estatisticas': {
+      id: '/_authenticated/promocoes/estatisticas'
+      path: '/promocoes/estatisticas'
+      fullPath: '/promocoes/estatisticas'
+      preLoaderRoute: typeof AuthenticatedPromocoesEstatisticasRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/promocoes/contas': {
+      id: '/_authenticated/promocoes/contas'
+      path: '/promocoes/contas'
+      fullPath: '/promocoes/contas'
+      preLoaderRoute: typeof AuthenticatedPromocoesContasRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/integracoes/meta': {
       id: '/_authenticated/integracoes/meta'
       path: '/integracoes/meta'
@@ -867,6 +907,8 @@ interface AuthenticatedRouteChildren {
   AuthenticatedBotsFollowupRoute: typeof AuthenticatedBotsFollowupRoute
   AuthenticatedBotsLogsRoute: typeof AuthenticatedBotsLogsRoute
   AuthenticatedIntegracoesMetaRoute: typeof AuthenticatedIntegracoesMetaRoute
+  AuthenticatedPromocoesContasRoute: typeof AuthenticatedPromocoesContasRoute
+  AuthenticatedPromocoesEstatisticasRoute: typeof AuthenticatedPromocoesEstatisticasRoute
   AuthenticatedTrackeamentoCanalRoute: typeof AuthenticatedTrackeamentoCanalRoute
   AuthenticatedTrackeamentoDominiosRoute: typeof AuthenticatedTrackeamentoDominiosRoute
   AuthenticatedTrackeamentoFunisRoute: typeof AuthenticatedTrackeamentoFunisRoute
@@ -895,6 +937,9 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedBotsFollowupRoute: AuthenticatedBotsFollowupRoute,
   AuthenticatedBotsLogsRoute: AuthenticatedBotsLogsRoute,
   AuthenticatedIntegracoesMetaRoute: AuthenticatedIntegracoesMetaRoute,
+  AuthenticatedPromocoesContasRoute: AuthenticatedPromocoesContasRoute,
+  AuthenticatedPromocoesEstatisticasRoute:
+    AuthenticatedPromocoesEstatisticasRoute,
   AuthenticatedTrackeamentoCanalRoute: AuthenticatedTrackeamentoCanalRoute,
   AuthenticatedTrackeamentoDominiosRoute:
     AuthenticatedTrackeamentoDominiosRoute,
@@ -940,3 +985,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
