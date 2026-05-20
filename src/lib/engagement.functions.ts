@@ -542,12 +542,9 @@ export const dispatchEngagementBoost = createServerFn({ method: "POST" })
     if (orderErr) throw new Error(orderErr.message);
 
     try {
-      const resp = await callSmmPanel({
-        action: "add",
-        service: serviceId,
-        link: target,
-        quantity: data.quantity,
-      });
+      const resp = await callSmmPanel(
+        buildAddOrderParams({ serviceId, link: target, quantity: data.quantity }),
+      );
       if (resp.error || !resp.order) {
         await supabaseAdmin
           .from("engagement_orders")
@@ -962,12 +959,9 @@ async function placeSmmOrder(opts: {
   if (orderErr) throw new Error(orderErr.message);
 
   try {
-    const resp = await callSmmPanel({
-      action: "add",
-      service: opts.serviceId,
-      link: opts.link,
-      quantity: opts.quantity,
-    });
+    const resp = await callSmmPanel(
+      buildAddOrderParams({ serviceId: opts.serviceId, link: opts.link, quantity: opts.quantity }),
+    );
     if (resp.error || !resp.order) {
       await supabaseAdmin
         .from("engagement_orders")
@@ -1111,12 +1105,9 @@ export const retryEngagementOrder = createServerFn({ method: "POST" })
       .eq("id", order.id);
 
     try {
-      const resp = await callSmmPanel({
-        action: "add",
-        service: serviceId,
-        link: normalized,
-        quantity: order.quantity,
-      });
+      const resp = await callSmmPanel(
+        buildAddOrderParams({ serviceId, link: normalized, quantity: order.quantity }),
+      );
       if (resp.error || !resp.order) {
         await supabaseAdmin
           .from("engagement_orders")
