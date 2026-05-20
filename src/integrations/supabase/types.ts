@@ -14,6 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
+      affiliate_accounts: {
+        Row: {
+          created_at: string
+          credentials: Json
+          id: string
+          is_active: boolean
+          label: string
+          last_check_at: string | null
+          last_error: string | null
+          last_sync_at: string | null
+          store: Database["public"]["Enums"]["affiliate_store"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          credentials?: Json
+          id?: string
+          is_active?: boolean
+          label: string
+          last_check_at?: string | null
+          last_error?: string | null
+          last_sync_at?: string | null
+          store: Database["public"]["Enums"]["affiliate_store"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          credentials?: Json
+          id?: string
+          is_active?: boolean
+          label?: string
+          last_check_at?: string | null
+          last_error?: string | null
+          last_sync_at?: string | null
+          store?: Database["public"]["Enums"]["affiliate_store"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       bot_execution_logs: {
         Row: {
           account_id: string | null
@@ -636,6 +678,258 @@ export type Database = {
           display_name?: string | null
           id?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      promo_bot_settings: {
+        Row: {
+          blacklist_keywords: string[]
+          categories: string[]
+          created_at: string
+          enabled: boolean
+          id: string
+          interval_hours: number
+          keywords: string[]
+          last_fire_at: string | null
+          max_price: number | null
+          message_template: string
+          min_discount_pct: number
+          min_price: number | null
+          parse_mode: string
+          premium_account_id: string | null
+          premium_enabled: boolean
+          room_id: string
+          send_image: boolean
+          stores: Database["public"]["Enums"]["affiliate_store"][]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          blacklist_keywords?: string[]
+          categories?: string[]
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          interval_hours?: number
+          keywords?: string[]
+          last_fire_at?: string | null
+          max_price?: number | null
+          message_template?: string
+          min_discount_pct?: number
+          min_price?: number | null
+          parse_mode?: string
+          premium_account_id?: string | null
+          premium_enabled?: boolean
+          room_id: string
+          send_image?: boolean
+          stores?: Database["public"]["Enums"]["affiliate_store"][]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          blacklist_keywords?: string[]
+          categories?: string[]
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          interval_hours?: number
+          keywords?: string[]
+          last_fire_at?: string | null
+          max_price?: number | null
+          message_template?: string
+          min_discount_pct?: number
+          min_price?: number | null
+          parse_mode?: string
+          premium_account_id?: string | null
+          premium_enabled?: boolean
+          room_id?: string
+          send_image?: boolean
+          stores?: Database["public"]["Enums"]["affiliate_store"][]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      promo_clicks: {
+        Row: {
+          clicked_at: string
+          country: string | null
+          dispatch_id: string
+          id: string
+          ip_hash: string | null
+          referrer: string | null
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          clicked_at?: string
+          country?: string | null
+          dispatch_id: string
+          id?: string
+          ip_hash?: string | null
+          referrer?: string | null
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          clicked_at?: string
+          country?: string | null
+          dispatch_id?: string
+          id?: string
+          ip_hash?: string | null
+          referrer?: string | null
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      promo_conversions: {
+        Row: {
+          commission_value: number
+          confirmed_at: string | null
+          created_at: string
+          currency: string
+          dispatch_id: string | null
+          id: string
+          order_id: string
+          raw: Json
+          sale_value: number
+          status: string
+          store: Database["public"]["Enums"]["affiliate_store"]
+          sub_id: string | null
+          user_id: string
+        }
+        Insert: {
+          commission_value?: number
+          confirmed_at?: string | null
+          created_at?: string
+          currency?: string
+          dispatch_id?: string | null
+          id?: string
+          order_id: string
+          raw?: Json
+          sale_value?: number
+          status?: string
+          store: Database["public"]["Enums"]["affiliate_store"]
+          sub_id?: string | null
+          user_id: string
+        }
+        Update: {
+          commission_value?: number
+          confirmed_at?: string | null
+          created_at?: string
+          currency?: string
+          dispatch_id?: string | null
+          id?: string
+          order_id?: string
+          raw?: Json
+          sale_value?: number
+          status?: string
+          store?: Database["public"]["Enums"]["affiliate_store"]
+          sub_id?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      promo_dispatches: {
+        Row: {
+          affiliate_link: string
+          chat_id: number
+          error: string | null
+          external_id: string
+          id: string
+          offer_id: string | null
+          ok: boolean
+          room_id: string
+          sent_at: string
+          short_url: string | null
+          store: Database["public"]["Enums"]["affiliate_store"]
+          telegram_message_id: number | null
+          user_id: string
+        }
+        Insert: {
+          affiliate_link: string
+          chat_id: number
+          error?: string | null
+          external_id: string
+          id?: string
+          offer_id?: string | null
+          ok?: boolean
+          room_id: string
+          sent_at?: string
+          short_url?: string | null
+          store: Database["public"]["Enums"]["affiliate_store"]
+          telegram_message_id?: number | null
+          user_id: string
+        }
+        Update: {
+          affiliate_link?: string
+          chat_id?: number
+          error?: string | null
+          external_id?: string
+          id?: string
+          offer_id?: string | null
+          ok?: boolean
+          room_id?: string
+          sent_at?: string
+          short_url?: string | null
+          store?: Database["public"]["Enums"]["affiliate_store"]
+          telegram_message_id?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      promo_offers: {
+        Row: {
+          category: string | null
+          description: string | null
+          discount_pct: number | null
+          expires_at: string | null
+          external_id: string
+          fetched_at: string
+          id: string
+          image_url: string | null
+          old_price: number | null
+          price: number | null
+          product_url: string
+          raw: Json
+          store: Database["public"]["Enums"]["affiliate_store"]
+          title: string
+          user_id: string
+        }
+        Insert: {
+          category?: string | null
+          description?: string | null
+          discount_pct?: number | null
+          expires_at?: string | null
+          external_id: string
+          fetched_at?: string
+          id?: string
+          image_url?: string | null
+          old_price?: number | null
+          price?: number | null
+          product_url: string
+          raw?: Json
+          store: Database["public"]["Enums"]["affiliate_store"]
+          title: string
+          user_id: string
+        }
+        Update: {
+          category?: string | null
+          description?: string | null
+          discount_pct?: number | null
+          expires_at?: string | null
+          external_id?: string
+          fetched_at?: string
+          id?: string
+          image_url?: string | null
+          old_price?: number | null
+          price?: number | null
+          product_url?: string
+          raw?: Json
+          store?: Database["public"]["Enums"]["affiliate_store"]
+          title?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -1389,6 +1683,7 @@ export type Database = {
           market_tips_interval_hours: number
           market_tips_last_fire_at: string | null
           name: string
+          niche: Database["public"]["Enums"]["room_niche"]
           photo_updated_at: string | null
           photo_url: string | null
           premium_account_id: string | null
@@ -1413,6 +1708,7 @@ export type Database = {
           market_tips_interval_hours?: number
           market_tips_last_fire_at?: string | null
           name: string
+          niche?: Database["public"]["Enums"]["room_niche"]
           photo_updated_at?: string | null
           photo_url?: string | null
           premium_account_id?: string | null
@@ -1437,6 +1733,7 @@ export type Database = {
           market_tips_interval_hours?: number
           market_tips_last_fire_at?: string | null
           name?: string
+          niche?: Database["public"]["Enums"]["room_niche"]
           photo_updated_at?: string | null
           photo_url?: string | null
           premium_account_id?: string | null
@@ -2396,6 +2693,7 @@ export type Database = {
     Enums: {
       account_status: "unknown" | "ok" | "error"
       account_type: "bot" | "premium"
+      affiliate_store: "amazon" | "shopee" | "aliexpress" | "mercadolivre"
       app_role: "admin" | "user"
       engagement_bot_type:
         | "inscritos"
@@ -2415,6 +2713,7 @@ export type Database = {
       engagement_sub_status: "pending" | "active" | "canceled" | "expired"
       message_status: "pending" | "sending" | "sent" | "failed" | "cancelled"
       room_image_kind: "gain" | "loss"
+      room_niche: "ob" | "promo"
       session_msg_kind: "open" | "close"
       signal_event_status:
         | "scheduled"
@@ -2564,6 +2863,7 @@ export const Constants = {
     Enums: {
       account_status: ["unknown", "ok", "error"],
       account_type: ["bot", "premium"],
+      affiliate_store: ["amazon", "shopee", "aliexpress", "mercadolivre"],
       app_role: ["admin", "user"],
       engagement_bot_type: [
         "inscritos",
@@ -2585,6 +2885,7 @@ export const Constants = {
       engagement_sub_status: ["pending", "active", "canceled", "expired"],
       message_status: ["pending", "sending", "sent", "failed", "cancelled"],
       room_image_kind: ["gain", "loss"],
+      room_niche: ["ob", "promo"],
       session_msg_kind: ["open", "close"],
       signal_event_status: [
         "scheduled",
