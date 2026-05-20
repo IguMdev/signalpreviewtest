@@ -48,18 +48,21 @@ export const Route = createFileRoute("/api/public/cron/expert-engagement")({
             supabaseAdmin.from("rooms").select("default_account_id").eq("id", p.room_id).maybeSingle(),
           ]);
           if (!chats?.length || !room?.default_account_id) continue;
+          const { data: acc } = await supabaseAdmin
+            .from("telegram_accounts").select("bot_token").eq("id", room.default_account_id).maybeSingle();
+          if (!acc?.bot_token) continue;
 
           for (const c of chats) {
             try {
               if (p.kind === "poll" && Array.isArray(p.options) && p.options.length >= 2) {
-                await callTelegram(room.default_account_id, "sendPoll", {
+                await callTelegram(acc.bot_token, "sendPoll", {
                   chat_id: c.chat_id,
                   question: p.content,
                   options: p.options,
                   is_anonymous: true,
                 });
               } else {
-                await callTelegram(room.default_account_id, "sendMessage", {
+                await callTelegram(acc.bot_token, "sendMessage", {
                   chat_id: c.chat_id,
                   text: p.content,
                   parse_mode: "HTML",
