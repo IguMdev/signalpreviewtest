@@ -17,18 +17,25 @@ import { toast } from "sonner";
 import { Link } from "@tanstack/react-router";
 import { Eye, ShoppingBag, AlertTriangle } from "lucide-react";
 
-const ALL_STORES = [
-  { v: "amazon", l: "Amazon" },
-  { v: "shopee", l: "Shopee" },
-  { v: "aliexpress", l: "AliExpress" },
-  { v: "mercadolivre", l: "Mercado Livre" },
-] as const;
+import { STORE_LABELS, type AffiliateStore } from "@/lib/promo/types";
 
-type Store = (typeof ALL_STORES)[number]["v"];
+const DEFAULT_STORES: AffiliateStore[] = ["amazon", "shopee", "aliexpress", "mercadolivre"];
+
+type Store = AffiliateStore;
 
 const DEFAULT_TEMPLATE = `🔥 <b>{title}</b>\n\n<s>De R$ {old_price}</s> por <b>R$ {price}</b>\n💰 {discount}% OFF\n\n👉 {link}`;
 
-export function PromoBotCard({ roomId }: { roomId: string }) {
+export function PromoBotCard({
+  roomId,
+  allowedStores = DEFAULT_STORES,
+  title = "Bot de Promoções",
+  description = "Envia ofertas automaticamente a partir das APIs oficiais (Amazon, Shopee, AliExpress, Mercado Livre).",
+}: {
+  roomId: string;
+  allowedStores?: AffiliateStore[];
+  title?: string;
+  description?: string;
+}) {
   const qc = useQueryClient();
   const getSettings = useServerFn(getPromoBotSettings);
   const saveSettings = useServerFn(upsertPromoBotSettings);
