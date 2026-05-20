@@ -315,9 +315,9 @@ async function scheduleSignals(): Promise<number> {
 /* ============ STEP 2: enviar sinais agendados ============ */
 async function sendScheduled(): Promise<number> {
   const now = new Date();
-  // Dispara apenas quando o horário do sinal já chegou (com tolerância de 5s)
-  // para que o envio aconteça exatamente no minuto configurado.
-  const horizon = new Date(now.getTime() + 5_000).toISOString();
+  // Envia o anúncio ~2 min antes do entry_at: pega tudo cuja entrada
+  // ocorre nos próximos 2 min (+5s de tolerância para o tick do cron).
+  const horizon = new Date(now.getTime() + 125_000).toISOString();
   const { data: list } = await supabaseAdmin
     .from("signal_events")
     .select("*")
