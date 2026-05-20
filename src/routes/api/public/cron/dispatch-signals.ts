@@ -239,9 +239,13 @@ async function scheduleSignals(): Promise<number> {
     .eq("is_active", true);
   if (!windows?.length) return 0;
 
-  // entrada será no PRÓXIMO minuto cheio
+  // O sinal é ANUNCIADO 2 min antes da entrada: a entrada cai no minuto
+  // do slot (próximo minuto cheio + 2 min), e o envio ocorre na próxima
+  // execução do cron (≈1 min depois), garantindo ~2 min de antecedência.
   const now = new Date();
-  const nextMinute = new Date(Math.ceil((now.getTime() + 1) / 60000) * 60000);
+  const nextMinute = new Date(
+    Math.ceil((now.getTime() + 1) / 60000) * 60000 + 120_000,
+  );
   let scheduled = 0;
 
   for (const w of windows as Window[]) {
