@@ -28,7 +28,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Plus, Trash2, Users, Pencil, FileText, CalendarClock, Search, RefreshCw, Power } from "lucide-react";
+import { Plus, Trash2, Users, Pencil, FileText, CalendarClock, Search, RefreshCw, Power, TrendingUp, ShoppingBag } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/rooms/")({
   component: RoomsPage,
@@ -55,6 +55,7 @@ type RoomRow = {
   is_active: boolean;
   expires_at: string | null;
   default_account_id: string | null;
+  niche: "ob" | "promo";
   telegram_accounts: { id: string; label: string; bot_first_name: string | null; bot_username: string | null } | null;
   room_chats: { id: string; chat_id: number; chat_title: string | null }[];
 };
@@ -66,6 +67,9 @@ function RoomsPage() {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<"all" | "active" | "inactive">("all");
+
+  // Wizard step 0 — niche selection
+  const [niche, setNiche] = useState<"ob" | "promo" | null>(null);
 
   // Wizard step 1 fields
   const [chatIdInput, setChatIdInput] = useState("");
@@ -91,7 +95,7 @@ function RoomsPage() {
       const { data, error } = await supabase
         .from("rooms")
         .select(
-          "id, name, description, photo_url, broker, is_active, expires_at, default_account_id, telegram_accounts:default_account_id(id, label, bot_first_name, bot_username), room_chats(id, chat_id, chat_title)",
+          "id, name, description, photo_url, broker, is_active, expires_at, default_account_id, niche, telegram_accounts:default_account_id(id, label, bot_first_name, bot_username), room_chats(id, chat_id, chat_title)",
         )
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -100,7 +104,7 @@ function RoomsPage() {
   });
 
   function resetWizard() {
-    setChatIdInput(""); setChatTitleInput(""); setName(""); setBroker(""); setAccountId(""); setWelcome("");
+    setChatIdInput(""); setChatTitleInput(""); setName(""); setBroker(""); setAccountId(""); setWelcome(""); setNiche(null);
   }
 
   const createMut = useMutation({
@@ -113,6 +117,7 @@ function RoomsPage() {
           broker: broker || null,
           welcome_message: welcome || null,
           default_account_id: accountId || null,
+          niche: niche ?? "ob",
         })
         .select("id")
         .single();
@@ -215,9 +220,38 @@ function RoomsPage() {
           </DialogTrigger>
           <DialogContent className="max-w-lg">
             <DialogHeader>
-              <DialogTitle>Nova sala — informações básicas</DialogTitle>
+              <DialogTitle>{niche ? "Nova sala — informações básicas" : "Nova sala — escolha o nicho"}</DialogTitle>
             </DialogHeader>
+            {!niche ? (
+              <div className="grid grid-cols-2 gap-3 py-2">
+                <button
+                  type="button"
+                  onClick={() => setNiche("ob")}
+                  className="rounded-lg border border-border hover:border-primary hover:bg-accent transition p-4 text-left space-y-2"
+                >
+                  <TrendingUp className="size-6 text-primary" />
+                  <div className="font-semibold">Opções Binárias</div>
+                  <div className="text-xs text-muted-foreground">Sinais, janelas de operação, templates de entrada/resultado, relatórios.</div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setNiche("promo")}
+                  className="rounded-lg border border-border hover:border-primary hover:bg-accent transition p-4 text-left space-y-2"
+                >
+                  <ShoppingBag className="size-6 text-primary" />
+                  <div className="font-semibold">Promoções</div>
+                  <div className="text-xs text-muted-foreground">Envia ofertas de Amazon, Shopee, AliExpress e Mercado Livre com link de afiliado.</div>
+                </button>
+                <div className="col-span-2 text-[11px] text-muted-foreground">
+                  ⚠️ O nicho é fixo após a criação. Para o outro nicho, crie outra sala.
+                </div>
+              </div>
+            ) : (
             <div className="space-y-4">
+              <div className="flex items-center gap-2 text-xs">
+                <Badge variant="secondary">{niche === "ob" ? "Opções Binárias" : "Promoções"}</Badge>
+                <button className="text-muted-foreground hover:text-foreground underline" onClick={() => setNiche(null)}>trocar</button>
+              </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
                   <Label>ID do grupo / canal</Label>
@@ -230,13 +264,15 @@ function RoomsPage() {
               </div>
               <div className="space-y-2">
                 <Label>Título da sala</Label>
-                <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex: Sinais VIP — Manhã" />
+                <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={niche === "ob" ? "Ex: Sinais VIP — Manhã" : "Ex: Ofertas Relâmpago"} />
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2">
-                  <Label>Corretora</Label>
-                  <Input value={broker} onChange={(e) => setBroker(e.target.value)} placeholder="Ex: Quotex" />
-                </div>
+                {niche === "ob" && (
+                  <div className="space-y-2">
+                    <Label>Corretora</Label>
+                    <Input value={broker} onChange={(e) => setBroker(e.target.value)} placeholder="Ex: Quotex" />
+                  </div>
+                )}
                 <div className="space-y-2">
                   <Label>Conta Telegram</Label>
                   <Select value={accountId} onValueChange={setAccountId}>
@@ -257,9 +293,10 @@ function RoomsPage() {
                 <Textarea value={welcome} onChange={(e) => setWelcome(e.target.value)} rows={3} placeholder="Mensagem enviada ao iniciar a sessão" />
               </div>
             </div>
+            )}
             <DialogFooter>
               <Button variant="ghost" onClick={() => setOpen(false)}>Cancelar</Button>
-              <Button onClick={() => createMut.mutate()} disabled={!name || createMut.isPending}>
+              <Button onClick={() => createMut.mutate()} disabled={!niche || !name || createMut.isPending}>
                 {createMut.isPending ? "Criando..." : "Próximo"}
               </Button>
             </DialogFooter>

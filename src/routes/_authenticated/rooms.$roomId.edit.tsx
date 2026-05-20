@@ -30,6 +30,7 @@ import {
 } from "@/lib/engagement.functions";
 import { sendRoomTest } from "@/lib/accounts.functions";
 import { testWindow } from "@/lib/test-signal.functions";
+import { PromoBotCard } from "@/components/promo/PromoBotCard";
 
 export const Route = createFileRoute("/_authenticated/rooms/$roomId/edit")({
   component: EditRoomPage,
@@ -113,14 +114,23 @@ function EditRoomPage() {
       </div>
 
       <BaseConfigCard room={r} />
-      <MessagesInfoCard />
-      <WindowsCard roomId={roomId} />
-      <TemplatesCard roomId={roomId} />
-      <SessionMessagesCard roomId={roomId} />
-      <ReportsCard roomId={roomId} />
-      <TimezoneCard room={r} />
-      <StopLossCard room={r} />
-      <MarketTipsCard room={r} />
+      {r.niche === "promo" ? (
+        <>
+          <TimezoneCard room={r} />
+          <PromoBotCard roomId={roomId} />
+        </>
+      ) : (
+        <>
+          <MessagesInfoCard />
+          <WindowsCard roomId={roomId} />
+          <TemplatesCard roomId={roomId} />
+          <SessionMessagesCard roomId={roomId} />
+          <ReportsCard roomId={roomId} />
+          <TimezoneCard room={r} />
+          <StopLossCard room={r} />
+          <MarketTipsCard room={r} />
+        </>
+      )}
 
       {/* Sticky footer */}
       <div className="fixed bottom-0 left-0 right-0 lg:left-[var(--sidebar-width,16rem)] bg-background/95 backdrop-blur border-t border-border p-4 flex justify-end gap-2 z-40">

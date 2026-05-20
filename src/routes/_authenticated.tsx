@@ -33,6 +33,8 @@ import {
   Repeat,
   Link2,
   Lock,
+  ShoppingBag,
+  BarChart2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -67,6 +69,11 @@ const trackingItems = [
 
 const trackingLockedItems = [
   { label: "Mensagens", icon: MessageCircle },
+] as const;
+
+const promoItems = [
+  { to: "/promocoes/contas", label: "Contas de afiliado", icon: ShoppingBag },
+  { to: "/promocoes/estatisticas", label: "Estatísticas", icon: BarChart2 },
 ] as const;
 
 const botItems = [
@@ -292,6 +299,43 @@ function AuthenticatedLayout() {
                   <Lock className="size-3" />
                 </div>
               ))}
+            </CollapsibleContent>
+          </Collapsible>
+
+          {/* Promoções dropdown */}
+          <Collapsible defaultOpen={location.pathname.startsWith("/promocoes")}>
+            <CollapsibleTrigger asChild>
+              <button
+                type="button"
+                className="w-full relative flex items-center justify-between rounded-xl px-3 py-2.5 text-sm font-medium transition text-foreground/70 hover:bg-white/5 hover:text-foreground"
+              >
+                <span className="flex items-center gap-3">
+                  <ShoppingBag className="size-4" />
+                  Promoções
+                </span>
+                <ChevronDown className="size-4 transition-transform data-[state=open]:rotate-180" />
+              </button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="space-y-1 pl-2">
+              {promoItems.map(({ to, label, icon: Icon }) => {
+                const active = location.pathname === to || location.pathname.startsWith(to + "/");
+                return (
+                  <Link
+                    key={to}
+                    to={to}
+                    onClick={() => setSidebarOpen(false)}
+                    className={cn(
+                      "relative flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition",
+                      active
+                        ? "cyber-gradient-soft text-foreground cyber-border"
+                        : "text-foreground/70 hover:bg-white/5 hover:text-foreground",
+                    )}
+                  >
+                    <Icon className={cn("size-4", active && "text-primary")} />
+                    {label}
+                  </Link>
+                );
+              })}
             </CollapsibleContent>
           </Collapsible>
 
