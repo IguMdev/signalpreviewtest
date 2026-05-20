@@ -43,6 +43,8 @@ import { Route as ApiPublicKirvanoWebhookRouteImport } from './routes/api/public
 import { Route as ApiPublicGoDispatchIdRouteImport } from './routes/api/public/go.$dispatchId'
 import { Route as ApiPublicCronSyncPromoConversionsRouteImport } from './routes/api/public/cron/sync-promo-conversions'
 import { Route as ApiPublicCronSyncEngagementOrdersRouteImport } from './routes/api/public/cron/sync-engagement-orders'
+import { Route as ApiPublicCronHotTeasersRouteImport } from './routes/api/public/cron/hot-teasers'
+import { Route as ApiPublicCronExpertEngagementRouteImport } from './routes/api/public/cron/expert-engagement'
 import { Route as ApiPublicCronDispatchSignalsRouteImport } from './routes/api/public/cron/dispatch-signals'
 import { Route as ApiPublicCronDispatchSessionsRouteImport } from './routes/api/public/cron/dispatch-sessions'
 import { Route as ApiPublicCronDispatchRecurringRouteImport } from './routes/api/public/cron/dispatch-recurring'
@@ -243,6 +245,17 @@ const ApiPublicCronSyncEngagementOrdersRoute =
     path: '/api/public/cron/sync-engagement-orders',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicCronHotTeasersRoute = ApiPublicCronHotTeasersRouteImport.update({
+  id: '/api/public/cron/hot-teasers',
+  path: '/api/public/cron/hot-teasers',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicCronExpertEngagementRoute =
+  ApiPublicCronExpertEngagementRouteImport.update({
+    id: '/api/public/cron/expert-engagement',
+    path: '/api/public/cron/expert-engagement',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicCronDispatchSignalsRoute =
   ApiPublicCronDispatchSignalsRouteImport.update({
     id: '/api/public/cron/dispatch-signals',
@@ -354,6 +367,8 @@ export interface FileRoutesByFullPath {
   '/api/public/cron/dispatch-recurring': typeof ApiPublicCronDispatchRecurringRoute
   '/api/public/cron/dispatch-sessions': typeof ApiPublicCronDispatchSessionsRoute
   '/api/public/cron/dispatch-signals': typeof ApiPublicCronDispatchSignalsRoute
+  '/api/public/cron/expert-engagement': typeof ApiPublicCronExpertEngagementRoute
+  '/api/public/cron/hot-teasers': typeof ApiPublicCronHotTeasersRoute
   '/api/public/cron/sync-engagement-orders': typeof ApiPublicCronSyncEngagementOrdersRoute
   '/api/public/cron/sync-promo-conversions': typeof ApiPublicCronSyncPromoConversionsRoute
   '/api/public/go/$dispatchId': typeof ApiPublicGoDispatchIdRoute
@@ -401,6 +416,8 @@ export interface FileRoutesByTo {
   '/api/public/cron/dispatch-recurring': typeof ApiPublicCronDispatchRecurringRoute
   '/api/public/cron/dispatch-sessions': typeof ApiPublicCronDispatchSessionsRoute
   '/api/public/cron/dispatch-signals': typeof ApiPublicCronDispatchSignalsRoute
+  '/api/public/cron/expert-engagement': typeof ApiPublicCronExpertEngagementRoute
+  '/api/public/cron/hot-teasers': typeof ApiPublicCronHotTeasersRoute
   '/api/public/cron/sync-engagement-orders': typeof ApiPublicCronSyncEngagementOrdersRoute
   '/api/public/cron/sync-promo-conversions': typeof ApiPublicCronSyncPromoConversionsRoute
   '/api/public/go/$dispatchId': typeof ApiPublicGoDispatchIdRoute
@@ -450,6 +467,8 @@ export interface FileRoutesById {
   '/api/public/cron/dispatch-recurring': typeof ApiPublicCronDispatchRecurringRoute
   '/api/public/cron/dispatch-sessions': typeof ApiPublicCronDispatchSessionsRoute
   '/api/public/cron/dispatch-signals': typeof ApiPublicCronDispatchSignalsRoute
+  '/api/public/cron/expert-engagement': typeof ApiPublicCronExpertEngagementRoute
+  '/api/public/cron/hot-teasers': typeof ApiPublicCronHotTeasersRoute
   '/api/public/cron/sync-engagement-orders': typeof ApiPublicCronSyncEngagementOrdersRoute
   '/api/public/cron/sync-promo-conversions': typeof ApiPublicCronSyncPromoConversionsRoute
   '/api/public/go/$dispatchId': typeof ApiPublicGoDispatchIdRoute
@@ -499,6 +518,8 @@ export interface FileRouteTypes {
     | '/api/public/cron/dispatch-recurring'
     | '/api/public/cron/dispatch-sessions'
     | '/api/public/cron/dispatch-signals'
+    | '/api/public/cron/expert-engagement'
+    | '/api/public/cron/hot-teasers'
     | '/api/public/cron/sync-engagement-orders'
     | '/api/public/cron/sync-promo-conversions'
     | '/api/public/go/$dispatchId'
@@ -546,6 +567,8 @@ export interface FileRouteTypes {
     | '/api/public/cron/dispatch-recurring'
     | '/api/public/cron/dispatch-sessions'
     | '/api/public/cron/dispatch-signals'
+    | '/api/public/cron/expert-engagement'
+    | '/api/public/cron/hot-teasers'
     | '/api/public/cron/sync-engagement-orders'
     | '/api/public/cron/sync-promo-conversions'
     | '/api/public/go/$dispatchId'
@@ -594,6 +617,8 @@ export interface FileRouteTypes {
     | '/api/public/cron/dispatch-recurring'
     | '/api/public/cron/dispatch-sessions'
     | '/api/public/cron/dispatch-signals'
+    | '/api/public/cron/expert-engagement'
+    | '/api/public/cron/hot-teasers'
     | '/api/public/cron/sync-engagement-orders'
     | '/api/public/cron/sync-promo-conversions'
     | '/api/public/go/$dispatchId'
@@ -616,6 +641,8 @@ export interface RootRouteChildren {
   ApiPublicCronDispatchRecurringRoute: typeof ApiPublicCronDispatchRecurringRoute
   ApiPublicCronDispatchSessionsRoute: typeof ApiPublicCronDispatchSessionsRoute
   ApiPublicCronDispatchSignalsRoute: typeof ApiPublicCronDispatchSignalsRoute
+  ApiPublicCronExpertEngagementRoute: typeof ApiPublicCronExpertEngagementRoute
+  ApiPublicCronHotTeasersRoute: typeof ApiPublicCronHotTeasersRoute
   ApiPublicCronSyncEngagementOrdersRoute: typeof ApiPublicCronSyncEngagementOrdersRoute
   ApiPublicCronSyncPromoConversionsRoute: typeof ApiPublicCronSyncPromoConversionsRoute
   ApiPublicGoDispatchIdRoute: typeof ApiPublicGoDispatchIdRoute
@@ -866,6 +893,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicCronSyncEngagementOrdersRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/cron/hot-teasers': {
+      id: '/api/public/cron/hot-teasers'
+      path: '/api/public/cron/hot-teasers'
+      fullPath: '/api/public/cron/hot-teasers'
+      preLoaderRoute: typeof ApiPublicCronHotTeasersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/cron/expert-engagement': {
+      id: '/api/public/cron/expert-engagement'
+      path: '/api/public/cron/expert-engagement'
+      fullPath: '/api/public/cron/expert-engagement'
+      preLoaderRoute: typeof ApiPublicCronExpertEngagementRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/cron/dispatch-signals': {
       id: '/api/public/cron/dispatch-signals'
       path: '/api/public/cron/dispatch-signals'
@@ -1036,6 +1077,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicCronDispatchRecurringRoute: ApiPublicCronDispatchRecurringRoute,
   ApiPublicCronDispatchSessionsRoute: ApiPublicCronDispatchSessionsRoute,
   ApiPublicCronDispatchSignalsRoute: ApiPublicCronDispatchSignalsRoute,
+  ApiPublicCronExpertEngagementRoute: ApiPublicCronExpertEngagementRoute,
+  ApiPublicCronHotTeasersRoute: ApiPublicCronHotTeasersRoute,
   ApiPublicCronSyncEngagementOrdersRoute:
     ApiPublicCronSyncEngagementOrdersRoute,
   ApiPublicCronSyncPromoConversionsRoute:
@@ -1051,3 +1094,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
