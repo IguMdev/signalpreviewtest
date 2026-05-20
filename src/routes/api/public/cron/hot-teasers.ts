@@ -28,9 +28,11 @@ export const Route = createFileRoute("/api/public/cron/hot-teasers")({
             supabaseAdmin.from("room_chats").select("chat_id").eq("room_id", f.room_id),
             supabaseAdmin.from("rooms").select("default_account_id").eq("id", f.room_id).maybeSingle(),
           ]);
-
           const list = (teasers as any[]) ?? [];
           if (!list.length || !chats?.length || !room?.default_account_id) continue;
+          const { data: acc } = await supabaseAdmin
+            .from("telegram_accounts").select("bot_token").eq("id", room.default_account_id).maybeSingle();
+          if (!acc?.bot_token) continue;
 
           // rotaciona por sort_order, escolhe o próximo após last_teaser_at
           const idx = (Math.floor(now / intervalMs)) % list.length;
@@ -43,7 +45,7 @@ export const Route = createFileRoute("/api/public/cron/hot-teasers")({
           for (const c of chats) {
             try {
               if (teaser.image_path) {
-                await callTelegram(room.default_account_id, "sendPhoto", {
+                await callTelegram(acc.bot_token, "sendPhoto", {
                   chat_id: c.chat_id,
                   photo: teaser.image_path,
                   caption: teaser.caption ?? "",
@@ -51,7 +53,7 @@ export const Route = createFileRoute("/api/public/cron/hot-teasers")({
                   reply_markup: inlineKb,
                 });
               } else {
-                await callTelegram(room.default_account_id, "sendMessage", {
+                await callTelegram(acc.bot_token, "sendMessage", {
                   chat_id: c.chat_id,
                   text: teaser.caption ?? "",
                   parse_mode: "HTML",
