@@ -383,6 +383,32 @@ async function callSmmPanel(params: Record<string, string | number>) {
 // 2637 é o serviço padrão atual (mínimo real = 10, link = canal apenas).
 const SUBSCRIPTION_REACTION_SERVICE_IDS = new Set<number>([2637, 3205, 3206, 3233, 3513, 3514, 2635, 2636, 2638]);
 
+// Serviços que entregam MEMBROS de canal/grupo. Para esses o link deve ser
+// SEMPRE o canal (sem post id) — se o usuário colar https://t.me/canal/123,
+// strip-amos o "/123" antes de enviar pro painel.
+const MEMBERS_SERVICE_IDS = new Set<number>([3310, 3440, 7102]);
+
+// Mínimo aceito por cada serviço conhecido do painel SMM. Usado para
+// validar (em runtime) que a quantidade do plano selecionado é compatível
+// com o serviço configurado — evita o erro "Quantity less than minimal X"
+// causado por trocar o smm_service_id pra um serviço com mínimo maior do
+// que a quota do plano (ex.: plano de 50 interações apontando pra um
+// serviço com mínimo 100).
+const SERVICE_MIN_QUANTITY: Record<number, number> = {
+  2637: 10,   // AUTO reactions (subscription)
+  3205: 700,  // AUTO reactions premium (subscription) — min alto
+  3206: 700,
+  3310: 10,   // Members
+  3440: 100,  // Members (legado)
+  3494: 100,  // Reactions per-post
+  7102: 100,  // JAP members (legado)
+  8485: 10,   // JAP reactions (legado)
+};
+
+export function getServiceMinQuantity(serviceId: number): number | null {
+  return SERVICE_MIN_QUANTITY[serviceId] ?? null;
+}
+
 function extractTelegramUsername(link: string): string | null {
   const m = link.match(/t\.me\/([^/?#]+)/i);
   if (!m) return null;
@@ -392,6 +418,17 @@ function extractTelegramUsername(link: string): string | null {
 }
 
 function buildAddOrderParams(args: { serviceId: number; link: string; quantity: number }): Record<string, string | number> {
+  // Validação de mínimo: bloqueia disparo se a quantidade for menor do que
+  // o que o serviço aceita. Mensagem clara pra o operador ajustar o plano
+  // (ou trocar pro serviço correto).
+  const min = SERVICE_MIN_QUANTITY[args.serviceId];
+  if (min != null && args.quantity < min) {
+    throw new Error(
+      `Quantidade ${args.quantity} é menor que o mínimo do serviço ${args.serviceId} (mín. ${min}). ` +
+      `Selecione um plano com quota >= ${min} ou troque o serviço SMM do plano para um que aceite ${args.quantity}.`,
+    );
+  }
+
   if (SUBSCRIPTION_REACTION_SERVICE_IDS.has(args.serviceId)) {
     const username = extractTelegramUsername(args.link);
     if (!username) {
@@ -406,10 +443,21 @@ function buildAddOrderParams(args: { serviceId: number; link: string; quantity: 
       posts: 1,
     };
   }
+
+  // Serviços de MEMBROS exigem link de canal puro (sem /postId).
+  let link = args.link;
+  if (MEMBERS_SERVICE_IDS.has(args.serviceId)) {
+    const username = extractTelegramUsername(link);
+    if (!username) {
+      throw new Error(`Link inválido para serviço de membros ${args.serviceId}: ${args.link}`);
+    }
+    link = `https://t.me/${username}`;
+  }
+
   return {
     action: "add",
     service: args.serviceId,
-    link: args.link,
+    link,
     quantity: args.quantity,
   };
 }
