@@ -148,8 +148,7 @@ export const previewPromoOffers = createServerFn({ method: "POST" })
     const accMap = new Map((accs ?? []).map((a) => [a.store, a.credentials as Record<string, string>]));
     type PreviewItem = { store: string; title?: string; price?: number | null; oldPrice?: number | null; discountPct?: number | null; imageUrl?: string | null; productUrl?: string; error?: string };
     const collected: PreviewItem[] = [];
-    const STORES = ["amazon", "shopee", "aliexpress", "mercadolivre"] as const;
-    type StoreKey = typeof STORES[number];
+    type StoreKey = keyof typeof STORE_CLIENTS;
     for (const storeRaw of settings.stores as string[]) {
       const store = storeRaw as StoreKey;
       const creds = accMap.get(store);
