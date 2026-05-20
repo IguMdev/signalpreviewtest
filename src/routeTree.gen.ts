@@ -41,6 +41,7 @@ import { Route as AuthenticatedBotsBoasvindasRouteImport } from './routes/_authe
 import { Route as ApiPublicTrackClickRouteImport } from './routes/api/public/track/click'
 import { Route as ApiPublicKirvanoWebhookRouteImport } from './routes/api/public/kirvano/webhook'
 import { Route as ApiPublicGoDispatchIdRouteImport } from './routes/api/public/go.$dispatchId'
+import { Route as ApiPublicCronSyncPromoConversionsRouteImport } from './routes/api/public/cron/sync-promo-conversions'
 import { Route as ApiPublicCronSyncEngagementOrdersRouteImport } from './routes/api/public/cron/sync-engagement-orders'
 import { Route as ApiPublicCronDispatchSignalsRouteImport } from './routes/api/public/cron/dispatch-signals'
 import { Route as ApiPublicCronDispatchSessionsRouteImport } from './routes/api/public/cron/dispatch-sessions'
@@ -230,6 +231,12 @@ const ApiPublicGoDispatchIdRoute = ApiPublicGoDispatchIdRouteImport.update({
   path: '/api/public/go/$dispatchId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicCronSyncPromoConversionsRoute =
+  ApiPublicCronSyncPromoConversionsRouteImport.update({
+    id: '/api/public/cron/sync-promo-conversions',
+    path: '/api/public/cron/sync-promo-conversions',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicCronSyncEngagementOrdersRoute =
   ApiPublicCronSyncEngagementOrdersRouteImport.update({
     id: '/api/public/cron/sync-engagement-orders',
@@ -348,6 +355,7 @@ export interface FileRoutesByFullPath {
   '/api/public/cron/dispatch-sessions': typeof ApiPublicCronDispatchSessionsRoute
   '/api/public/cron/dispatch-signals': typeof ApiPublicCronDispatchSignalsRoute
   '/api/public/cron/sync-engagement-orders': typeof ApiPublicCronSyncEngagementOrdersRoute
+  '/api/public/cron/sync-promo-conversions': typeof ApiPublicCronSyncPromoConversionsRoute
   '/api/public/go/$dispatchId': typeof ApiPublicGoDispatchIdRoute
   '/api/public/kirvano/webhook': typeof ApiPublicKirvanoWebhookRoute
   '/api/public/track/click': typeof ApiPublicTrackClickRoute
@@ -394,6 +402,7 @@ export interface FileRoutesByTo {
   '/api/public/cron/dispatch-sessions': typeof ApiPublicCronDispatchSessionsRoute
   '/api/public/cron/dispatch-signals': typeof ApiPublicCronDispatchSignalsRoute
   '/api/public/cron/sync-engagement-orders': typeof ApiPublicCronSyncEngagementOrdersRoute
+  '/api/public/cron/sync-promo-conversions': typeof ApiPublicCronSyncPromoConversionsRoute
   '/api/public/go/$dispatchId': typeof ApiPublicGoDispatchIdRoute
   '/api/public/kirvano/webhook': typeof ApiPublicKirvanoWebhookRoute
   '/api/public/track/click': typeof ApiPublicTrackClickRoute
@@ -442,6 +451,7 @@ export interface FileRoutesById {
   '/api/public/cron/dispatch-sessions': typeof ApiPublicCronDispatchSessionsRoute
   '/api/public/cron/dispatch-signals': typeof ApiPublicCronDispatchSignalsRoute
   '/api/public/cron/sync-engagement-orders': typeof ApiPublicCronSyncEngagementOrdersRoute
+  '/api/public/cron/sync-promo-conversions': typeof ApiPublicCronSyncPromoConversionsRoute
   '/api/public/go/$dispatchId': typeof ApiPublicGoDispatchIdRoute
   '/api/public/kirvano/webhook': typeof ApiPublicKirvanoWebhookRoute
   '/api/public/track/click': typeof ApiPublicTrackClickRoute
@@ -490,6 +500,7 @@ export interface FileRouteTypes {
     | '/api/public/cron/dispatch-sessions'
     | '/api/public/cron/dispatch-signals'
     | '/api/public/cron/sync-engagement-orders'
+    | '/api/public/cron/sync-promo-conversions'
     | '/api/public/go/$dispatchId'
     | '/api/public/kirvano/webhook'
     | '/api/public/track/click'
@@ -536,6 +547,7 @@ export interface FileRouteTypes {
     | '/api/public/cron/dispatch-sessions'
     | '/api/public/cron/dispatch-signals'
     | '/api/public/cron/sync-engagement-orders'
+    | '/api/public/cron/sync-promo-conversions'
     | '/api/public/go/$dispatchId'
     | '/api/public/kirvano/webhook'
     | '/api/public/track/click'
@@ -583,6 +595,7 @@ export interface FileRouteTypes {
     | '/api/public/cron/dispatch-sessions'
     | '/api/public/cron/dispatch-signals'
     | '/api/public/cron/sync-engagement-orders'
+    | '/api/public/cron/sync-promo-conversions'
     | '/api/public/go/$dispatchId'
     | '/api/public/kirvano/webhook'
     | '/api/public/track/click'
@@ -604,6 +617,7 @@ export interface RootRouteChildren {
   ApiPublicCronDispatchSessionsRoute: typeof ApiPublicCronDispatchSessionsRoute
   ApiPublicCronDispatchSignalsRoute: typeof ApiPublicCronDispatchSignalsRoute
   ApiPublicCronSyncEngagementOrdersRoute: typeof ApiPublicCronSyncEngagementOrdersRoute
+  ApiPublicCronSyncPromoConversionsRoute: typeof ApiPublicCronSyncPromoConversionsRoute
   ApiPublicGoDispatchIdRoute: typeof ApiPublicGoDispatchIdRoute
   ApiPublicKirvanoWebhookRoute: typeof ApiPublicKirvanoWebhookRoute
   ApiPublicTrackClickRoute: typeof ApiPublicTrackClickRoute
@@ -838,6 +852,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicGoDispatchIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/cron/sync-promo-conversions': {
+      id: '/api/public/cron/sync-promo-conversions'
+      path: '/api/public/cron/sync-promo-conversions'
+      fullPath: '/api/public/cron/sync-promo-conversions'
+      preLoaderRoute: typeof ApiPublicCronSyncPromoConversionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/cron/sync-engagement-orders': {
       id: '/api/public/cron/sync-engagement-orders'
       path: '/api/public/cron/sync-engagement-orders'
@@ -1017,6 +1038,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicCronDispatchSignalsRoute: ApiPublicCronDispatchSignalsRoute,
   ApiPublicCronSyncEngagementOrdersRoute:
     ApiPublicCronSyncEngagementOrdersRoute,
+  ApiPublicCronSyncPromoConversionsRoute:
+    ApiPublicCronSyncPromoConversionsRoute,
   ApiPublicGoDispatchIdRoute: ApiPublicGoDispatchIdRoute,
   ApiPublicKirvanoWebhookRoute: ApiPublicKirvanoWebhookRoute,
   ApiPublicTrackClickRoute: ApiPublicTrackClickRoute,
