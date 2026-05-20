@@ -377,10 +377,11 @@ async function callSmmPanel(params: Record<string, string | number>) {
   return json as { order?: number; error?: string; status?: string; charge?: string; remains?: string; start_count?: string; currency?: string };
 }
 
-// Serviços do tipo "Subscriptions" no n1panel (ex.: 3205 - AUTO reactions)
-// recebem parâmetros diferentes: username + min/max/posts, em vez de
-// link + quantity. Mantemos um conjunto explícito para roteamento seguro.
-const SUBSCRIPTION_REACTION_SERVICE_IDS = new Set<number>([3205]);
+// Serviços do tipo "Subscriptions" no n1panel (AUTO reactions) recebem
+// parâmetros diferentes: username + min/max/posts, em vez de link + quantity.
+// Mantemos um conjunto explícito para roteamento seguro.
+// 2637 é o serviço padrão atual (mínimo real = 10, link = canal apenas).
+const SUBSCRIPTION_REACTION_SERVICE_IDS = new Set<number>([2637, 3205, 3206, 3233, 3513, 3514, 2635, 2636, 2638]);
 
 function extractTelegramUsername(link: string): string | null {
   const m = link.match(/t\.me\/([^/?#]+)/i);
