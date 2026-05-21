@@ -250,6 +250,7 @@ function QuickTemplateDialog({
     defaultAccountId: string | null;
     sortOrder: number;
     isPremium: boolean;
+    isMeetButton: boolean;
   }) => Promise<void>;
 }) {
   const [name, setName] = useState(initial?.name ?? "");
@@ -260,6 +261,7 @@ function QuickTemplateDialog({
   const [imageMime, setImageMime] = useState<string | null>(initial?.image_mime ?? null);
   const [uploading, setUploading] = useState(false);
   const [isPremium, setIsPremium] = useState<boolean>(initial?.is_premium ?? false);
+  const [isMeetButton, setIsMeetButton] = useState<boolean>(initial?.is_meet_button ?? false);
 
   // Auto-pick the room's default bot when room changes and no bot chosen yet.
   useEffect(() => {
