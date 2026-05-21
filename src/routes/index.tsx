@@ -72,7 +72,7 @@ const features = [
 
 const niches = [
   { icon: Trophy, title: "iGaming", desc: "Sinais de cassino, odds esportivas e afiliados de casas de aposta." },
-  { icon: LineChart, title: "OB (Opportunity Bets)", desc: "Sinais de valor em apostas esportivas com tracking de ROI e gestão de banca." },
+  { icon: LineChart, title: "OB (Opportunity Bets)", desc: "Sinais de operações binárias com martingale, soros e gestão de banca automatizada." },
   { icon: Flame, title: "Hot", desc: "Funis VIP, prévias agendadas e promoções de redes adultas." },
   { icon: GraduationCap, title: "Experts", desc: "Aulas, lembretes e funis de venda de mentoria/curso." },
   { icon: ShoppingBag, title: "Promoções", desc: "Amazon, Shopee, Mercado Livre e AliExpress com link de afiliado." },
