@@ -80,7 +80,6 @@ const niches = [
 
 function LandingPage() {
   const { user } = useAuth();
-  const { theme, toggleTheme, mounted } = useTheme();
   return (
     <div className="min-h-screen relative overflow-hidden bg-background text-foreground">
       <div className="absolute inset-0 grid-bg opacity-40 pointer-events-none" />
