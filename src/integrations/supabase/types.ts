@@ -1153,6 +1153,7 @@ export type Database = {
           image_ext: string | null
           image_mime: string | null
           image_path: string | null
+          is_meet_button: boolean
           is_premium: boolean
           name: string
           parse_mode: string
@@ -1169,6 +1170,7 @@ export type Database = {
           image_ext?: string | null
           image_mime?: string | null
           image_path?: string | null
+          is_meet_button?: boolean
           is_premium?: boolean
           name: string
           parse_mode?: string
@@ -1185,6 +1187,7 @@ export type Database = {
           image_ext?: string | null
           image_mime?: string | null
           image_path?: string | null
+          is_meet_button?: boolean
           is_premium?: boolean
           name?: string
           parse_mode?: string

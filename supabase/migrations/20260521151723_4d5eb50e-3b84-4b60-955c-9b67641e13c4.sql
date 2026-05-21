@@ -1,0 +1,1 @@
+ALTER TABLE public.quick_send_templates ADD COLUMN IF NOT EXISTS is_meet_button boolean NOT NULL DEFAULT false;

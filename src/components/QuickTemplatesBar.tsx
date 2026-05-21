@@ -37,6 +37,7 @@ import {
   ImageIcon,
   X,
   Sparkles,
+  Video,
 } from "lucide-react";
 import { PremiumEmojiPicker } from "@/components/PremiumEmojiPicker";
 import { Switch } from "@/components/ui/switch";
@@ -52,6 +53,7 @@ export type QuickTemplate = {
   default_account_id: string | null;
   sort_order: number;
   is_premium: boolean;
+  is_meet_button: boolean;
 };
 
 type Room = { id: string; name: string; default_account_id: string | null };
@@ -72,6 +74,7 @@ export function QuickTemplatesBar({
   const [editing, setEditing] = useState<QuickTemplate | null>(null);
   const [creating, setCreating] = useState(false);
   const [sending, setSending] = useState<QuickTemplate | null>(null);
+  const [meetSending, setMeetSending] = useState<QuickTemplate | null>(null);
 
   const list = useQuery({
     queryKey: ["quick-send-templates"],
@@ -79,7 +82,7 @@ export function QuickTemplatesBar({
       const { data } = await supabase
         .from("quick_send_templates")
         .select(
-          "id, name, content, parse_mode, image_path, image_mime, default_room_id, default_account_id, sort_order, is_premium",
+          "id, name, content, parse_mode, image_path, image_mime, default_room_id, default_account_id, sort_order, is_premium, is_meet_button",
         )
         .order("sort_order", { ascending: true })
         .order("created_at", { ascending: true });
@@ -115,9 +118,10 @@ export function QuickTemplatesBar({
             <button
               type="button"
               className="font-medium pr-1 text-foreground/90 hover:text-foreground"
-              onClick={() => setSending(t)}
-              title="Abrir modelo para envio rápido"
+              onClick={() => (t.is_meet_button ? setMeetSending(t) : setSending(t))}
+              title={t.is_meet_button ? "Enviar com link do Meet" : "Abrir modelo para envio rápido"}
             >
+              {t.is_meet_button && <Video className="inline size-3.5 mr-1 text-primary" />}
               {t.name}
             </button>
             <button
@@ -198,6 +202,28 @@ export function QuickTemplatesBar({
           }}
         />
       )}
+
+      {meetSending && (
+        <MeetSendDialog
+          tpl={meetSending}
+          rooms={rooms}
+          accounts={accounts}
+          onClose={() => setMeetSending(null)}
+          onSend={async (payload) => {
+            try {
+              const r = await sendFn({ data: payload });
+              if (r.ok) {
+                toast.success(`Enviado (${r.sent} grupo${r.sent === 1 ? "" : "s"})`);
+                setMeetSending(null);
+              } else {
+                toast.error(r.error ?? "Falha ao enviar");
+              }
+            } catch (e) {
+              toast.error((e as Error).message);
+            }
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -224,6 +250,7 @@ function QuickTemplateDialog({
     defaultAccountId: string | null;
     sortOrder: number;
     isPremium: boolean;
+    isMeetButton: boolean;
   }) => Promise<void>;
 }) {
   const [name, setName] = useState(initial?.name ?? "");
@@ -234,6 +261,7 @@ function QuickTemplateDialog({
   const [imageMime, setImageMime] = useState<string | null>(initial?.image_mime ?? null);
   const [uploading, setUploading] = useState(false);
   const [isPremium, setIsPremium] = useState<boolean>(initial?.is_premium ?? false);
+  const [isMeetButton, setIsMeetButton] = useState<boolean>(initial?.is_meet_button ?? false);
 
   // Auto-pick the room's default bot when room changes and no bot chosen yet.
   useEffect(() => {
@@ -388,6 +416,20 @@ function QuickTemplateDialog({
             </div>
             <Switch checked={isPremium} onCheckedChange={setIsPremium} />
           </div>
+
+          <div className="flex items-center justify-between rounded-md border border-border/60 px-3 py-2">
+            <div className="flex items-center gap-2 text-sm">
+              <Video className="size-4 text-primary" />
+              <div>
+                <div className="font-medium">Botão MEET</div>
+                <div className="text-xs text-muted-foreground">
+                  Ao clicar no modelo, abre um modal pedindo o link do Meet e envia automaticamente. Use{" "}
+                  <code>{"{MEET_LINK}"}</code> no conteúdo onde o link deve aparecer.
+                </div>
+              </div>
+            </div>
+            <Switch checked={isMeetButton} onCheckedChange={setIsMeetButton} />
+          </div>
         </div>
 
         <DialogFooter>
@@ -408,10 +450,155 @@ function QuickTemplateDialog({
                 defaultAccountId: accountId || null,
                 sortOrder: initial?.sort_order ?? 0,
                 isPremium,
+                isMeetButton,
               });
             }}
           >
             Salvar modelo
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function MeetSendDialog({
+  tpl,
+  rooms,
+  accounts,
+  onClose,
+  onSend,
+}: {
+  tpl: QuickTemplate;
+  rooms: Room[];
+  accounts: Account[];
+  onClose: () => void;
+  onSend: (p: {
+    id: string;
+    roomId: string;
+    accountId: string;
+    content: string;
+    parseMode: "HTML" | "Markdown" | "MarkdownV2";
+    premium: boolean;
+    imagePathOverride?: string | null;
+    removeImage?: boolean;
+  }) => Promise<void>;
+}) {
+  const [meetUrl, setMeetUrl] = useState("");
+  const [roomId, setRoomId] = useState<string>(tpl.default_room_id ?? "");
+  const [accountId, setAccountId] = useState<string>(tpl.default_account_id ?? "");
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (!roomId) return;
+    const r = rooms.find((x) => x.id === roomId);
+    if (r?.default_account_id && !accountId) setAccountId(r.default_account_id);
+  }, [roomId, rooms, accountId]);
+
+  const hasToken = tpl.content.includes("{MEET_LINK}");
+  const preview = hasToken
+    ? tpl.content.replaceAll("{MEET_LINK}", meetUrl || "{MEET_LINK}")
+    : `${tpl.content}\n${meetUrl}`.trim();
+
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Video className="size-4 text-primary" />
+            {tpl.name} — Link do Meet
+          </DialogTitle>
+          <DialogDescription>
+            Cole o link do Google Meet abaixo. O modelo será enviado automaticamente com o link
+            substituído.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          <div>
+            <Label>Link do Meet</Label>
+            <Input
+              autoFocus
+              value={meetUrl}
+              onChange={(e) => setMeetUrl(e.target.value)}
+              placeholder="https://meet.google.com/xxx-xxxx-xxx"
+            />
+            {!hasToken && (
+              <p className="text-xs text-muted-foreground mt-1">
+                Dica: inclua <code>{"{MEET_LINK}"}</code> no modelo para escolher onde o link
+                aparece. Por enquanto ele será adicionado ao final.
+              </p>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <Label>Sala</Label>
+              <Select value={roomId || undefined} onValueChange={setRoomId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {rooms.map((r) => (
+                    <SelectItem key={r.id} value={r.id}>
+                      {r.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Bot</Label>
+              <Select value={accountId || undefined} onValueChange={setAccountId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {accounts.map((a) => (
+                    <SelectItem key={a.id} value={a.id}>
+                      {a.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div>
+            <Label>Pré-visualização</Label>
+            <div className="rounded-md border border-border/60 bg-secondary/30 p-3 text-sm whitespace-pre-wrap max-h-48 overflow-auto">
+              {preview}
+            </div>
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose} disabled={submitting}>
+            Cancelar
+          </Button>
+          <Button
+            disabled={submitting || !roomId || !accountId || !meetUrl.trim()}
+            onClick={async () => {
+              if (!meetUrl.trim()) return toast.error("Cole o link do Meet");
+              setSubmitting(true);
+              try {
+                await onSend({
+                  id: tpl.id,
+                  roomId,
+                  accountId,
+                  content: preview,
+                  parseMode: (tpl.parse_mode as "HTML" | "Markdown" | "MarkdownV2") || "HTML",
+                  premium: Boolean(tpl.is_premium),
+                  imagePathOverride: tpl.image_path,
+                  removeImage: false,
+                });
+              } finally {
+                setSubmitting(false);
+              }
+            }}
+          >
+            {submitting ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
+            Enviar agora
           </Button>
         </DialogFooter>
       </DialogContent>
