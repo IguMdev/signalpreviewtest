@@ -98,20 +98,6 @@ function LandingPage() {
           <a href="#comecar" className="hover:text-foreground transition-colors">Começar</a>
         </nav>
         <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={toggleTheme}
-            aria-label="Alternar tema"
-            title="Alternar tema"
-            suppressHydrationWarning
-          >
-            {mounted ? (
-              theme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />
-            ) : (
-              <Sun className="size-4 opacity-0" />
-            )}
-          </Button>
           {user ? (
             <Button asChild className="cyber-gradient text-primary-foreground border-0 hover:opacity-90 neon-glow">
               <Link to="/dashboard">Ir para o painel</Link>
