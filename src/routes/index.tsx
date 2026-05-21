@@ -83,7 +83,7 @@ const niches = [
 
 function LandingPage() {
   const { user } = useAuth();
-  const { theme, toggleTheme } = useTheme();
+  const { theme, toggleTheme, mounted } = useTheme();
   return (
     <div className="min-h-screen relative overflow-hidden bg-background text-foreground">
       <div className="absolute inset-0 grid-bg opacity-40 pointer-events-none" />
@@ -106,10 +106,15 @@ function LandingPage() {
             variant="ghost"
             size="icon"
             onClick={toggleTheme}
-            aria-label={theme === "dark" ? "Ativar modo claro" : "Ativar modo escuro"}
-            title={theme === "dark" ? "Modo claro" : "Modo escuro"}
+            aria-label="Alternar tema"
+            title="Alternar tema"
+            suppressHydrationWarning
           >
-            {theme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
+            {mounted ? (
+              theme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />
+            ) : (
+              <Sun className="size-4 opacity-0" />
+            )}
           </Button>
           {user ? (
             <Button asChild className="cyber-gradient text-primary-foreground border-0 hover:opacity-90 neon-glow">

@@ -6,6 +6,7 @@ interface ThemeContextValue {
   theme: Theme;
   toggleTheme: () => void;
   setTheme: (t: Theme) => void;
+  mounted: boolean;
 }
 
 const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
@@ -14,6 +15,7 @@ const STORAGE_KEY = "telesinais-theme";
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<Theme>("dark");
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     const stored = typeof window !== "undefined" ? (localStorage.getItem(STORAGE_KEY) as Theme | null) : null;
@@ -21,22 +23,24 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       typeof window !== "undefined" && window.matchMedia?.("(prefers-color-scheme: dark)").matches;
     const initial: Theme = stored ?? (prefersDark ? "dark" : "light");
     setThemeState(initial);
+    setMounted(true);
   }, []);
 
   useEffect(() => {
+    if (!mounted) return;
     const root = document.documentElement;
     if (theme === "dark") root.classList.add("dark");
     else root.classList.remove("dark");
     try {
       localStorage.setItem(STORAGE_KEY, theme);
     } catch {}
-  }, [theme]);
+  }, [theme, mounted]);
 
   const setTheme = (t: Theme) => setThemeState(t);
   const toggleTheme = () => setThemeState((p) => (p === "dark" ? "light" : "dark"));
 
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme, setTheme }}>{children}</ThemeContext.Provider>
+    <ThemeContext.Provider value={{ theme, toggleTheme, setTheme, mounted }}>{children}</ThemeContext.Provider>
   );
 }
 
