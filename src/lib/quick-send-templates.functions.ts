@@ -24,6 +24,7 @@ const UpsertInput = z.object({
   defaultAccountId: z.string().uuid().nullable().optional(),
   sortOrder: z.number().int().min(0).max(9999).default(0),
   isPremium: z.boolean().default(false),
+  isMeetButton: z.boolean().default(false),
 });
 
 export const upsertQuickTemplate = createServerFn({ method: "POST" })
@@ -43,6 +44,7 @@ export const upsertQuickTemplate = createServerFn({ method: "POST" })
       default_account_id: data.defaultAccountId ?? null,
       sort_order: data.sortOrder,
       is_premium: data.isPremium,
+      is_meet_button: data.isMeetButton,
     };
     if (data.id) {
       const { error } = await supabase
