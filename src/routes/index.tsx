@@ -14,6 +14,7 @@ import {
   Trophy,
   GraduationCap,
   ShoppingBag,
+  LineChart,
 } from "lucide-react";
 
 export const Route = createFileRoute("/")({
@@ -71,6 +72,7 @@ const features = [
 
 const niches = [
   { icon: Trophy, title: "iGaming", desc: "Sinais de cassino, odds esportivas e afiliados de casas de aposta." },
+  { icon: LineChart, title: "OB (Opportunity Bets)", desc: "Sinais de valor em apostas esportivas com tracking de ROI e gestão de banca." },
   { icon: Flame, title: "Hot", desc: "Funis VIP, prévias agendadas e promoções de redes adultas." },
   { icon: GraduationCap, title: "Experts", desc: "Aulas, lembretes e funis de venda de mentoria/curso." },
   { icon: ShoppingBag, title: "Promoções", desc: "Amazon, Shopee, Mercado Livre e AliExpress com link de afiliado." },
@@ -90,7 +92,12 @@ function LandingPage() {
           <img src="/favicon.png" alt="TelesinAIs" className="size-9 rounded-xl neon-glow" />
           <span className="font-bold tracking-tight cyber-text">TelesinAIs</span>
         </div>
-        <nav className="flex items-center gap-2">
+        <nav className="hidden md:flex items-center gap-6 text-sm text-muted-foreground">
+          <a href="#recursos" className="hover:text-foreground transition-colors">Recursos</a>
+          <a href="#nichos" className="hover:text-foreground transition-colors">Nichos</a>
+          <a href="#comecar" className="hover:text-foreground transition-colors">Começar</a>
+        </nav>
+        <div className="flex items-center gap-2">
           {user ? (
             <Button asChild className="cyber-gradient text-primary-foreground border-0 hover:opacity-90 neon-glow">
               <Link to="/dashboard">Ir para o painel</Link>
@@ -105,7 +112,7 @@ function LandingPage() {
               </Button>
             </>
           )}
-        </nav>
+        </div>
       </header>
 
       {/* Hero */}
@@ -134,7 +141,7 @@ function LandingPage() {
       </section>
 
       {/* Features */}
-      <section className="relative z-10 mx-auto max-w-6xl px-6 pb-24">
+      <section id="recursos" className="relative z-10 mx-auto max-w-6xl px-6 pb-24 scroll-mt-24">
         <div className="mb-12 text-center">
           <h2 className="text-3xl md:text-4xl font-bold tracking-tight">Tudo que você precisa em um lugar</h2>
           <p className="mt-3 text-muted-foreground">Pare de juntar 5 ferramentas. O TelesinAIs faz o trabalho pesado.</p>
@@ -153,12 +160,12 @@ function LandingPage() {
       </section>
 
       {/* Niches */}
-      <section className="relative z-10 mx-auto max-w-6xl px-6 pb-24">
+      <section id="nichos" className="relative z-10 mx-auto max-w-6xl px-6 pb-24 scroll-mt-24">
         <div className="mb-12 text-center">
           <h2 className="text-3xl md:text-4xl font-bold tracking-tight">Feito para o seu nicho</h2>
           <p className="mt-3 text-muted-foreground">Templates e automações prontas para cada tipo de operação.</p>
         </div>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
           {niches.map((n) => (
             <Card key={n.title} className="p-6 glass-strong cyber-border rounded-2xl border-0">
               <n.icon className="size-7 text-primary" />
@@ -170,7 +177,7 @@ function LandingPage() {
       </section>
 
       {/* CTA */}
-      <section className="relative z-10 mx-auto max-w-4xl px-6 pb-24">
+      <section id="comecar" className="relative z-10 mx-auto max-w-4xl px-6 pb-24 scroll-mt-24">
         <Card className="p-10 md:p-14 text-center glass-strong cyber-border neon-glow rounded-3xl border-0">
           <h2 className="text-3xl md:text-4xl font-bold tracking-tight">
             Comece em <span className="cyber-text">minutos</span>
