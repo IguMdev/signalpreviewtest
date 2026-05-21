@@ -416,6 +416,20 @@ function QuickTemplateDialog({
             </div>
             <Switch checked={isPremium} onCheckedChange={setIsPremium} />
           </div>
+
+          <div className="flex items-center justify-between rounded-md border border-border/60 px-3 py-2">
+            <div className="flex items-center gap-2 text-sm">
+              <Video className="size-4 text-primary" />
+              <div>
+                <div className="font-medium">Botão MEET</div>
+                <div className="text-xs text-muted-foreground">
+                  Ao clicar no modelo, abre um modal pedindo o link do Meet e envia automaticamente. Use{" "}
+                  <code>{"{MEET_LINK}"}</code> no conteúdo onde o link deve aparecer.
+                </div>
+              </div>
+            </div>
+            <Switch checked={isMeetButton} onCheckedChange={setIsMeetButton} />
+          </div>
         </div>
 
         <DialogFooter>
@@ -436,6 +450,7 @@ function QuickTemplateDialog({
                 defaultAccountId: accountId || null,
                 sortOrder: initial?.sort_order ?? 0,
                 isPremium,
+                isMeetButton,
               });
             }}
           >
