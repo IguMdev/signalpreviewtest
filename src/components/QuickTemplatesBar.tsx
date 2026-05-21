@@ -202,6 +202,28 @@ export function QuickTemplatesBar({
           }}
         />
       )}
+
+      {meetSending && (
+        <MeetSendDialog
+          tpl={meetSending}
+          rooms={rooms}
+          accounts={accounts}
+          onClose={() => setMeetSending(null)}
+          onSend={async (payload) => {
+            try {
+              const r = await sendFn({ data: payload });
+              if (r.ok) {
+                toast.success(`Enviado (${r.sent} grupo${r.sent === 1 ? "" : "s"})`);
+                setMeetSending(null);
+              } else {
+                toast.error(r.error ?? "Falha ao enviar");
+              }
+            } catch (e) {
+              toast.error((e as Error).message);
+            }
+          }}
+        />
+      )}
     </div>
   );
 }
