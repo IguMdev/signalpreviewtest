@@ -37,6 +37,7 @@ import {
   ImageIcon,
   X,
   Sparkles,
+  Video,
 } from "lucide-react";
 import { PremiumEmojiPicker } from "@/components/PremiumEmojiPicker";
 import { Switch } from "@/components/ui/switch";
@@ -52,6 +53,7 @@ export type QuickTemplate = {
   default_account_id: string | null;
   sort_order: number;
   is_premium: boolean;
+  is_meet_button: boolean;
 };
 
 type Room = { id: string; name: string; default_account_id: string | null };
@@ -72,6 +74,7 @@ export function QuickTemplatesBar({
   const [editing, setEditing] = useState<QuickTemplate | null>(null);
   const [creating, setCreating] = useState(false);
   const [sending, setSending] = useState<QuickTemplate | null>(null);
+  const [meetSending, setMeetSending] = useState<QuickTemplate | null>(null);
 
   const list = useQuery({
     queryKey: ["quick-send-templates"],
@@ -79,7 +82,7 @@ export function QuickTemplatesBar({
       const { data } = await supabase
         .from("quick_send_templates")
         .select(
-          "id, name, content, parse_mode, image_path, image_mime, default_room_id, default_account_id, sort_order, is_premium",
+          "id, name, content, parse_mode, image_path, image_mime, default_room_id, default_account_id, sort_order, is_premium, is_meet_button",
         )
         .order("sort_order", { ascending: true })
         .order("created_at", { ascending: true });
