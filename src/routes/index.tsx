@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { useAuth } from "@/lib/auth-context";
 import {
   Send,
   Zap,
@@ -76,6 +77,7 @@ const niches = [
 ];
 
 function LandingPage() {
+  const { user } = useAuth();
   return (
     <div className="min-h-screen relative overflow-hidden bg-background text-foreground">
       <div className="absolute inset-0 grid-bg opacity-40 pointer-events-none" />
@@ -84,17 +86,25 @@ function LandingPage() {
 
       {/* Nav */}
       <header className="relative z-10 mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
-        <Link to="/" className="flex items-center gap-2">
+        <div className="flex items-center gap-2">
           <img src="/favicon.png" alt="TelesinAIs" className="size-9 rounded-xl neon-glow" />
           <span className="font-bold tracking-tight cyber-text">TelesinAIs</span>
-        </Link>
+        </div>
         <nav className="flex items-center gap-2">
-          <Button asChild variant="ghost">
-            <Link to="/login">Entrar</Link>
-          </Button>
-          <Button asChild className="cyber-gradient text-primary-foreground border-0 hover:opacity-90 neon-glow">
-            <Link to="/signup">Cadastrar-se</Link>
-          </Button>
+          {user ? (
+            <Button asChild className="cyber-gradient text-primary-foreground border-0 hover:opacity-90 neon-glow">
+              <Link to="/dashboard">Ir para o painel</Link>
+            </Button>
+          ) : (
+            <>
+              <Button asChild variant="ghost">
+                <Link to="/login">Entrar</Link>
+              </Button>
+              <Button asChild className="cyber-gradient text-primary-foreground border-0 hover:opacity-90 neon-glow">
+                <Link to="/signup">Cadastrar-se</Link>
+              </Button>
+            </>
+          )}
         </nav>
       </header>
 

@@ -12,7 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
-import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
+import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedVideosRouteImport } from './routes/_authenticated/videos'
 import { Route as AuthenticatedTutorialRouteImport } from './routes/_authenticated/tutorial'
 import { Route as AuthenticatedTelegramAccountsRouteImport } from './routes/_authenticated/telegram-accounts'
@@ -72,10 +72,10 @@ const AuthenticatedRoute = AuthenticatedRouteImport.update({
   id: '/_authenticated',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
+const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => AuthenticatedRoute,
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedVideosRoute = AuthenticatedVideosRouteImport.update({
   id: '/videos',
@@ -330,7 +330,7 @@ const ApiPublicTrackGClickIdOfferSlugRoute =
   } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof AuthenticatedIndexRoute
+  '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
@@ -379,6 +379,7 @@ export interface FileRoutesByFullPath {
   '/api/public/track/g/$clickId/$offerSlug': typeof ApiPublicTrackGClickIdOfferSlugRoute
 }
 export interface FileRoutesByTo {
+  '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
@@ -390,7 +391,6 @@ export interface FileRoutesByTo {
   '/telegram-accounts': typeof AuthenticatedTelegramAccountsRoute
   '/tutorial': typeof AuthenticatedTutorialRoute
   '/videos': typeof AuthenticatedVideosRoute
-  '/': typeof AuthenticatedIndexRoute
   '/bots/boasvindas': typeof AuthenticatedBotsBoasvindasRoute
   '/bots/encaminhador': typeof AuthenticatedBotsEncaminhadorRoute
   '/bots/followup': typeof AuthenticatedBotsFollowupRoute
@@ -429,6 +429,7 @@ export interface FileRoutesByTo {
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
+  '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
@@ -441,7 +442,6 @@ export interface FileRoutesById {
   '/_authenticated/telegram-accounts': typeof AuthenticatedTelegramAccountsRoute
   '/_authenticated/tutorial': typeof AuthenticatedTutorialRoute
   '/_authenticated/videos': typeof AuthenticatedVideosRoute
-  '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/bots/boasvindas': typeof AuthenticatedBotsBoasvindasRoute
   '/_authenticated/bots/encaminhador': typeof AuthenticatedBotsEncaminhadorRoute
   '/_authenticated/bots/followup': typeof AuthenticatedBotsFollowupRoute
@@ -530,6 +530,7 @@ export interface FileRouteTypes {
     | '/api/public/track/g/$clickId/$offerSlug'
   fileRoutesByTo: FileRoutesByTo
   to:
+    | '/'
     | '/login'
     | '/signup'
     | '/dashboard'
@@ -541,7 +542,6 @@ export interface FileRouteTypes {
     | '/telegram-accounts'
     | '/tutorial'
     | '/videos'
-    | '/'
     | '/bots/boasvindas'
     | '/bots/encaminhador'
     | '/bots/followup'
@@ -579,6 +579,7 @@ export interface FileRouteTypes {
     | '/api/public/track/g/$clickId/$offerSlug'
   id:
     | '__root__'
+    | '/'
     | '/_authenticated'
     | '/login'
     | '/signup'
@@ -591,7 +592,6 @@ export interface FileRouteTypes {
     | '/_authenticated/telegram-accounts'
     | '/_authenticated/tutorial'
     | '/_authenticated/videos'
-    | '/_authenticated/'
     | '/_authenticated/bots/boasvindas'
     | '/_authenticated/bots/encaminhador'
     | '/_authenticated/bots/followup'
@@ -630,6 +630,7 @@ export interface FileRouteTypes {
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
+  IndexRoute: typeof IndexRoute
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   LoginRoute: typeof LoginRoute
   SignupRoute: typeof SignupRoute
@@ -676,12 +677,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_authenticated/': {
-      id: '/_authenticated/'
+    '/': {
+      id: '/'
       path: '/'
       fullPath: '/'
-      preLoaderRoute: typeof AuthenticatedIndexRouteImport
-      parentRoute: typeof AuthenticatedRoute
+      preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_authenticated/videos': {
       id: '/_authenticated/videos'
@@ -1004,7 +1005,6 @@ interface AuthenticatedRouteChildren {
   AuthenticatedTelegramAccountsRoute: typeof AuthenticatedTelegramAccountsRoute
   AuthenticatedTutorialRoute: typeof AuthenticatedTutorialRoute
   AuthenticatedVideosRoute: typeof AuthenticatedVideosRoute
-  AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedBotsBoasvindasRoute: typeof AuthenticatedBotsBoasvindasRoute
   AuthenticatedBotsEncaminhadorRoute: typeof AuthenticatedBotsEncaminhadorRoute
   AuthenticatedBotsFollowupRoute: typeof AuthenticatedBotsFollowupRoute
@@ -1034,7 +1034,6 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedTelegramAccountsRoute: AuthenticatedTelegramAccountsRoute,
   AuthenticatedTutorialRoute: AuthenticatedTutorialRoute,
   AuthenticatedVideosRoute: AuthenticatedVideosRoute,
-  AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedBotsBoasvindasRoute: AuthenticatedBotsBoasvindasRoute,
   AuthenticatedBotsEncaminhadorRoute: AuthenticatedBotsEncaminhadorRoute,
   AuthenticatedBotsFollowupRoute: AuthenticatedBotsFollowupRoute,
@@ -1064,6 +1063,7 @@ const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
 )
 
 const rootRouteChildren: RootRouteChildren = {
+  IndexRoute: IndexRoute,
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
   LoginRoute: LoginRoute,
   SignupRoute: SignupRoute,
