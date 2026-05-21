@@ -2,7 +2,6 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useAuth } from "@/lib/auth-context";
-import { useTheme } from "@/lib/theme-context";
 import {
   Send,
   Zap,
@@ -16,8 +15,6 @@ import {
   GraduationCap,
   ShoppingBag,
   LineChart,
-  Sun,
-  Moon,
 } from "lucide-react";
 
 export const Route = createFileRoute("/")({
