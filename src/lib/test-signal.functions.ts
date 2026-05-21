@@ -81,7 +81,8 @@ export const testWindow = createServerFn({ method: "POST" })
     const tz = room.timezone ?? "America/Sao_Paulo";
 
     const now = new Date();
-    const entry = new Date(Math.ceil((now.getTime() + 1) / 60000) * 60000);
+    // Mesma antecedência da produção: entrada cai no próximo minuto cheio + 2 min.
+    const entry = new Date(Math.ceil((now.getTime() + 1) / 60000) * 60000 + 120_000);
     const expires = new Date(entry.getTime() + 60_000);
 
     const { data: tpls } = await supabaseAdmin
