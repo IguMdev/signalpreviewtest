@@ -118,9 +118,10 @@ export function QuickTemplatesBar({
             <button
               type="button"
               className="font-medium pr-1 text-foreground/90 hover:text-foreground"
-              onClick={() => setSending(t)}
-              title="Abrir modelo para envio rápido"
+              onClick={() => (t.is_meet_button ? setMeetSending(t) : setSending(t))}
+              title={t.is_meet_button ? "Enviar com link do Meet" : "Abrir modelo para envio rápido"}
             >
+              {t.is_meet_button && <Video className="inline size-3.5 mr-1 text-primary" />}
               {t.name}
             </button>
             <button
