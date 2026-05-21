@@ -2,7 +2,6 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useAuth } from "@/lib/auth-context";
-import { useTheme } from "@/lib/theme-context";
 import {
   Send,
   Zap,
@@ -16,8 +15,6 @@ import {
   GraduationCap,
   ShoppingBag,
   LineChart,
-  Sun,
-  Moon,
 } from "lucide-react";
 
 export const Route = createFileRoute("/")({
@@ -83,7 +80,6 @@ const niches = [
 
 function LandingPage() {
   const { user } = useAuth();
-  const { theme, toggleTheme, mounted } = useTheme();
   return (
     <div className="min-h-screen relative overflow-hidden bg-background text-foreground">
       <div className="absolute inset-0 grid-bg opacity-40 pointer-events-none" />
@@ -102,20 +98,6 @@ function LandingPage() {
           <a href="#comecar" className="hover:text-foreground transition-colors">Começar</a>
         </nav>
         <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={toggleTheme}
-            aria-label="Alternar tema"
-            title="Alternar tema"
-            suppressHydrationWarning
-          >
-            {mounted ? (
-              theme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />
-            ) : (
-              <Sun className="size-4 opacity-0" />
-            )}
-          </Button>
           {user ? (
             <Button asChild className="cyber-gradient text-primary-foreground border-0 hover:opacity-90 neon-glow">
               <Link to="/dashboard">Ir para o painel</Link>
