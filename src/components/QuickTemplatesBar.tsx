@@ -462,6 +462,150 @@ function QuickTemplateDialog({
   );
 }
 
+function MeetSendDialog({
+  tpl,
+  rooms,
+  accounts,
+  onClose,
+  onSend,
+}: {
+  tpl: QuickTemplate;
+  rooms: Room[];
+  accounts: Account[];
+  onClose: () => void;
+  onSend: (p: {
+    id: string;
+    roomId: string;
+    accountId: string;
+    content: string;
+    parseMode: "HTML" | "Markdown" | "MarkdownV2";
+    premium: boolean;
+    imagePathOverride?: string | null;
+    removeImage?: boolean;
+  }) => Promise<void>;
+}) {
+  const [meetUrl, setMeetUrl] = useState("");
+  const [roomId, setRoomId] = useState<string>(tpl.default_room_id ?? "");
+  const [accountId, setAccountId] = useState<string>(tpl.default_account_id ?? "");
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (!roomId) return;
+    const r = rooms.find((x) => x.id === roomId);
+    if (r?.default_account_id && !accountId) setAccountId(r.default_account_id);
+  }, [roomId, rooms, accountId]);
+
+  const hasToken = tpl.content.includes("{MEET_LINK}");
+  const preview = hasToken
+    ? tpl.content.replaceAll("{MEET_LINK}", meetUrl || "{MEET_LINK}")
+    : `${tpl.content}\n${meetUrl}`.trim();
+
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Video className="size-4 text-primary" />
+            {tpl.name} — Link do Meet
+          </DialogTitle>
+          <DialogDescription>
+            Cole o link do Google Meet abaixo. O modelo será enviado automaticamente com o link
+            substituído.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          <div>
+            <Label>Link do Meet</Label>
+            <Input
+              autoFocus
+              value={meetUrl}
+              onChange={(e) => setMeetUrl(e.target.value)}
+              placeholder="https://meet.google.com/xxx-xxxx-xxx"
+            />
+            {!hasToken && (
+              <p className="text-xs text-muted-foreground mt-1">
+                Dica: inclua <code>{"{MEET_LINK}"}</code> no modelo para escolher onde o link
+                aparece. Por enquanto ele será adicionado ao final.
+              </p>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <Label>Sala</Label>
+              <Select value={roomId || undefined} onValueChange={setRoomId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {rooms.map((r) => (
+                    <SelectItem key={r.id} value={r.id}>
+                      {r.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Bot</Label>
+              <Select value={accountId || undefined} onValueChange={setAccountId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {accounts.map((a) => (
+                    <SelectItem key={a.id} value={a.id}>
+                      {a.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div>
+            <Label>Pré-visualização</Label>
+            <div className="rounded-md border border-border/60 bg-secondary/30 p-3 text-sm whitespace-pre-wrap max-h-48 overflow-auto">
+              {preview}
+            </div>
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose} disabled={submitting}>
+            Cancelar
+          </Button>
+          <Button
+            disabled={submitting || !roomId || !accountId || !meetUrl.trim()}
+            onClick={async () => {
+              if (!meetUrl.trim()) return toast.error("Cole o link do Meet");
+              setSubmitting(true);
+              try {
+                await onSend({
+                  id: tpl.id,
+                  roomId,
+                  accountId,
+                  content: preview,
+                  parseMode: (tpl.parse_mode as "HTML" | "Markdown" | "MarkdownV2") || "HTML",
+                  premium: Boolean(tpl.is_premium),
+                  imagePathOverride: tpl.image_path,
+                  removeImage: false,
+                });
+              } finally {
+                setSubmitting(false);
+              }
+            }}
+          >
+            {submitting ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
+            Enviar agora
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function QuickSendDialog({
   tpl,
   rooms,
