@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Repeat, Plus, Trash2, FileText, MousePointer, Megaphone, DoorOpen } from "lucide-react";
+import { Repeat, Plus, Trash2, FileText, MousePointer, Megaphone, DoorOpen, UserPlus, ShoppingCart, CreditCard, BadgeDollarSign } from "lucide-react";
 import { PixelFilterBar, usePixelFilter } from "@/components/tracking/PixelFilter";
 
 export const Route = createFileRoute("/_authenticated/trackeamento/postbacks")({
@@ -25,6 +25,10 @@ const EVENT_META: Record<typeof POSTBACK_EVENTS[number], { label: string; icon: 
   click_button:    { label: "Clique no Botão", icon: <MousePointer className="size-6" />, color: "text-slate-300" },
   channel_enter:   { label: "Entrada no Canal", icon: <Megaphone className="size-6" />,  color: "text-pink-500" },
   channel_leave:   { label: "Saída do Canal",  icon: <DoorOpen className="size-6" />,    color: "text-amber-500" },
+  lead:            { label: "Lead",             icon: <UserPlus className="size-6" />,    color: "text-blue-400" },
+  checkout_started:{ label: "Iniciou Checkout", icon: <ShoppingCart className="size-6" />,color: "text-cyan-400" },
+  payment_info:    { label: "Dados Pagamento",  icon: <CreditCard className="size-6" />,  color: "text-violet-400" },
+  purchase:        { label: "Compra",           icon: <BadgeDollarSign className="size-6" />, color: "text-emerald-500" },
 };
 
 function PostbacksPage() {
