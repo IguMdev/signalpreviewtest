@@ -217,6 +217,14 @@ export const Route = createFileRoute("/api/public/cron/dispatch-recurring")({
   server: {
     handlers: {
       POST: async () => {
+        // Recover orphan follow-ups stuck in "sending" (worker crash, timeout, etc.)
+        // Anything claimed mais de 5 minutos atrás e ainda em "sending" volta para "pending".
+        await supabaseAdmin
+          .from("recurring_pending_followups")
+          .update({ status: "pending" })
+          .eq("status", "sending")
+          .lt("scheduled_at", new Date(Date.now() - 5 * 60 * 1000).toISOString());
+
         const { data: schedules, error } = await supabaseAdmin
           .from("recurring_schedules")
           .select(
