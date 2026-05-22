@@ -2305,6 +2305,7 @@ export type Database = {
       }
       tracking_clicks: {
         Row: {
+          checkout_at: string | null
           click_id: string
           clicked_offer_at: string | null
           created_at: string
@@ -2320,8 +2321,11 @@ export type Database = {
           joined_at: string | null
           kwai_click_id: string | null
           landing_url: string | null
+          lead_at: string | null
           meta_events_sent: Json
+          payment_info_at: string | null
           pixel_id: string
+          purchased_at: string | null
           referrer: string | null
           registered_at: string | null
           sale_currency: string | null
@@ -2336,8 +2340,10 @@ export type Database = {
           utm_medium: string | null
           utm_source: string | null
           utm_term: string | null
+          viewed_at: string | null
         }
         Insert: {
+          checkout_at?: string | null
           click_id: string
           clicked_offer_at?: string | null
           created_at?: string
@@ -2353,8 +2359,11 @@ export type Database = {
           joined_at?: string | null
           kwai_click_id?: string | null
           landing_url?: string | null
+          lead_at?: string | null
           meta_events_sent?: Json
+          payment_info_at?: string | null
           pixel_id: string
+          purchased_at?: string | null
           referrer?: string | null
           registered_at?: string | null
           sale_currency?: string | null
@@ -2369,8 +2378,10 @@ export type Database = {
           utm_medium?: string | null
           utm_source?: string | null
           utm_term?: string | null
+          viewed_at?: string | null
         }
         Update: {
+          checkout_at?: string | null
           click_id?: string
           clicked_offer_at?: string | null
           created_at?: string
@@ -2386,8 +2397,11 @@ export type Database = {
           joined_at?: string | null
           kwai_click_id?: string | null
           landing_url?: string | null
+          lead_at?: string | null
           meta_events_sent?: Json
+          payment_info_at?: string | null
           pixel_id?: string
+          purchased_at?: string | null
           referrer?: string | null
           registered_at?: string | null
           sale_currency?: string | null
@@ -2402,6 +2416,7 @@ export type Database = {
           utm_medium?: string | null
           utm_source?: string | null
           utm_term?: string | null
+          viewed_at?: string | null
         }
         Relationships: [
           {
@@ -2560,10 +2575,15 @@ export type Database = {
           account_id: string | null
           bot_username: string | null
           created_at: string
+          event_on_checkout: string
           event_on_deposit: string
           event_on_join: string
+          event_on_lead: string
           event_on_offer_click: string
+          event_on_payment_info: string
+          event_on_purchase: string
           event_on_register: string
+          event_on_view: string
           id: string
           is_active: boolean
           meta_access_token: string | null
@@ -2573,6 +2593,8 @@ export type Database = {
           name: string
           postback_secret: string
           room_id: string | null
+          sales_page_url: string | null
+          tracking_mode: string
           updated_at: string
           user_id: string
           vertical: string
@@ -2581,10 +2603,15 @@ export type Database = {
           account_id?: string | null
           bot_username?: string | null
           created_at?: string
+          event_on_checkout?: string
           event_on_deposit?: string
           event_on_join?: string
+          event_on_lead?: string
           event_on_offer_click?: string
+          event_on_payment_info?: string
+          event_on_purchase?: string
           event_on_register?: string
+          event_on_view?: string
           id?: string
           is_active?: boolean
           meta_access_token?: string | null
@@ -2594,6 +2621,8 @@ export type Database = {
           name: string
           postback_secret?: string
           room_id?: string | null
+          sales_page_url?: string | null
+          tracking_mode?: string
           updated_at?: string
           user_id: string
           vertical?: string
@@ -2602,10 +2631,15 @@ export type Database = {
           account_id?: string | null
           bot_username?: string | null
           created_at?: string
+          event_on_checkout?: string
           event_on_deposit?: string
           event_on_join?: string
+          event_on_lead?: string
           event_on_offer_click?: string
+          event_on_payment_info?: string
+          event_on_purchase?: string
           event_on_register?: string
+          event_on_view?: string
           id?: string
           is_active?: boolean
           meta_access_token?: string | null
@@ -2615,6 +2649,8 @@ export type Database = {
           name?: string
           postback_secret?: string
           room_id?: string | null
+          sales_page_url?: string | null
+          tracking_mode?: string
           updated_at?: string
           user_id?: string
           vertical?: string
