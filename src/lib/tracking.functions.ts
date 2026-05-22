@@ -462,7 +462,17 @@ export const getMyRedirectBase = createServerFn({ method: "GET" })
   });
 
 // ============ POSTBACKS ============
-export const POSTBACK_EVENTS = ["viewpage", "click_button", "channel_enter", "channel_leave"] as const;
+export const POSTBACK_EVENTS = [
+  // Telegram
+  "viewpage", "click_button", "channel_enter", "channel_leave",
+  // Direct Response
+  "lead", "checkout_started", "payment_info", "purchase",
+] as const;
+
+export const POSTBACK_EVENTS_BY_MODE = {
+  telegram: ["viewpage", "click_button", "channel_enter", "channel_leave"],
+  direct_response: ["viewpage", "lead", "checkout_started", "payment_info", "purchase"],
+} as const;
 
 const postbackSchema = z.object({
   pixel_id: z.string().uuid(),
