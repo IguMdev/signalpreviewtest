@@ -427,10 +427,17 @@ function EditPixelForm({ pixel, onClose }: { pixel: any; onClose: () => void }) 
   const [name, setName] = useState<string>(pixel.name);
   const [vertical, setVertical] = useState<string>(pixel.vertical);
   const [isActive, setIsActive] = useState<boolean>(pixel.is_active);
+  const [trackingMode, setTrackingMode] = useState<"telegram" | "direct_response">(pixel.tracking_mode ?? "telegram");
+  const [salesPageUrl, setSalesPageUrl] = useState<string>(pixel.sales_page_url ?? "");
   const [evJoin, setEvJoin] = useState<string>(pixel.event_on_join);
   const [evOffer, setEvOffer] = useState<string>(pixel.event_on_offer_click);
   const [evReg, setEvReg] = useState<string>(pixel.event_on_register);
   const [evDep, setEvDep] = useState<string>(pixel.event_on_deposit);
+  const [evView, setEvView] = useState<string>(pixel.event_on_view ?? "ViewContent");
+  const [evLead, setEvLead] = useState<string>(pixel.event_on_lead ?? "Lead");
+  const [evCheckout, setEvCheckout] = useState<string>(pixel.event_on_checkout ?? "InitiateCheckout");
+  const [evPayInfo, setEvPayInfo] = useState<string>(pixel.event_on_payment_info ?? "AddPaymentInfo");
+  const [evPurchase, setEvPurchase] = useState<string>(pixel.event_on_purchase ?? "Purchase");
   const [metaPixelId, setMetaPixelId] = useState<string>(pixel.meta_pixel_id ?? "");
   const [accessToken, setAccessToken] = useState<string>(pixel.meta_access_token ?? "");
   const [testEventCode, setTestEventCode] = useState<string>(pixel.meta_test_event_code ?? "");
@@ -438,8 +445,13 @@ function EditPixelForm({ pixel, onClose }: { pixel: any; onClose: () => void }) 
   const save = useMutation({
     mutationFn: () => updFn({ data: {
       id: pixel.id, name, vertical: vertical as never, is_active: isActive,
+      tracking_mode: trackingMode,
+      sales_page_url: trackingMode === "direct_response" ? (salesPageUrl || null) : null,
       event_on_join: evJoin as never, event_on_offer_click: evOffer as never,
       event_on_register: evReg as never, event_on_deposit: evDep as never,
+      event_on_view: evView as never, event_on_lead: evLead as never,
+      event_on_checkout: evCheckout as never, event_on_payment_info: evPayInfo as never,
+      event_on_purchase: evPurchase as never,
       meta_pixel_id: metaPixelId || null,
       meta_access_token: accessToken || null,
       meta_test_event_code: testEventCode || null,
@@ -456,6 +468,23 @@ function EditPixelForm({ pixel, onClose }: { pixel: any; onClose: () => void }) 
       <div className="space-y-4">
         <div className="space-y-2"><Label>Nome</Label><Input value={name} onChange={(e) => setName(e.target.value)} /></div>
         <div className="space-y-2">
+          <Label>Modo de trackeamento</Label>
+          <Select value={trackingMode} onValueChange={(v) => setTrackingMode(v as never)}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="telegram">{MODE_PRESETS.telegram.label}</SelectItem>
+              <SelectItem value="direct_response">{MODE_PRESETS.direct_response.label}</SelectItem>
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">{MODE_PRESETS[trackingMode].description}</p>
+        </div>
+        {trackingMode === "direct_response" && (
+          <div className="space-y-2">
+            <Label>URL da página de vendas</Label>
+            <Input value={salesPageUrl} onChange={(e) => setSalesPageUrl(e.target.value)} placeholder="https://seusite.com/oferta" />
+          </div>
+        )}
+        <div className="space-y-2">
           <Label>Vertical</Label>
           <Select value={vertical} onValueChange={setVertical}>
             <SelectTrigger><SelectValue /></SelectTrigger>
@@ -468,10 +497,22 @@ function EditPixelForm({ pixel, onClose }: { pixel: any; onClose: () => void }) 
         </div>
         <div className="space-y-3 pt-2 border-t">
           <p className="text-sm font-semibold">Eventos Meta por etapa</p>
-          <EventRow label="Entrada no bot" value={evJoin} onChange={setEvJoin} />
-          <EventRow label="Clique na oferta" value={evOffer} onChange={setEvOffer} />
-          <EventRow label="Cadastro" value={evReg} onChange={setEvReg} />
-          <EventRow label="Depósito" value={evDep} onChange={setEvDep} />
+          {trackingMode === "telegram" ? (
+            <>
+              <EventRow label="Entrada no bot" value={evJoin} onChange={setEvJoin} />
+              <EventRow label="Clique na oferta" value={evOffer} onChange={setEvOffer} />
+              <EventRow label="Cadastro" value={evReg} onChange={setEvReg} />
+              <EventRow label="Depósito" value={evDep} onChange={setEvDep} />
+            </>
+          ) : (
+            <>
+              <EventRow label="Visualização da página" value={evView} onChange={setEvView} />
+              <EventRow label="Lead qualificado" value={evLead} onChange={setEvLead} />
+              <EventRow label="Iniciou checkout" value={evCheckout} onChange={setEvCheckout} />
+              <EventRow label="Dados de pagamento" value={evPayInfo} onChange={setEvPayInfo} />
+              <EventRow label="Compra confirmada" value={evPurchase} onChange={setEvPurchase} />
+            </>
+          )}
         </div>
         <div className="space-y-3 pt-2 border-t">
           <p className="text-sm font-semibold">Credenciais Meta (CAPI)</p>
