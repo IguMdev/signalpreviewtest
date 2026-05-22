@@ -283,7 +283,7 @@ export const getPixelStats = createServerFn({ method: "GET" })
     const from = new Date(Date.now() - data.days * 86400000).toISOString();
     const { data: rows, error } = await supabaseAdmin
       .from("tracking_clicks" as never)
-      .select("created_at, joined_at, clicked_offer_at, registered_at, deposited_at, sale_value")
+      .select("created_at, joined_at, clicked_offer_at, registered_at, deposited_at, viewed_at, lead_at, checkout_at, payment_info_at, purchased_at, sale_value")
       .eq("pixel_id", data.pixel_id)
       .eq("user_id", userId)
       .gte("created_at", from);
@@ -291,11 +291,17 @@ export const getPixelStats = createServerFn({ method: "GET" })
 
     const clicks = rows?.length ?? 0;
     let joins = 0, offerClicks = 0, registers = 0, deposits = 0, revenue = 0;
+    let views = 0, leads = 0, checkouts = 0, paymentInfos = 0, purchases = 0;
     for (const r of (rows ?? []) as any[]) {
       if (r.joined_at) joins++;
       if (r.clicked_offer_at) offerClicks++;
       if (r.registered_at) registers++;
       if (r.deposited_at) deposits++;
+      if (r.viewed_at) views++;
+      if (r.lead_at) leads++;
+      if (r.checkout_at) checkouts++;
+      if (r.payment_info_at) paymentInfos++;
+      if (r.purchased_at) purchases++;
       if (r.sale_value) revenue += Number(r.sale_value);
     }
 
@@ -314,7 +320,7 @@ export const getPixelStats = createServerFn({ method: "GET" })
       .sort((a, b) => a[0].localeCompare(b[0]))
       .map(([day, v]) => ({ day, ...v }));
 
-    return { clicks, joins, offerClicks, registers, deposits, revenue, series };
+    return { clicks, joins, offerClicks, registers, deposits, views, leads, checkouts, paymentInfos, purchases, revenue, series };
   });
 
 export const getAttribution = createServerFn({ method: "GET" })
