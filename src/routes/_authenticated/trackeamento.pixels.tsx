@@ -136,18 +136,27 @@ function NewPixelWizard({
 }: { accounts: any[]; onDone: () => void }) {
   const createFn = useServerFn(createPixel);
   const [step, setStep] = useState<1 | 2>(1);
+  const [trackingMode, setTrackingMode] = useState<"telegram" | "direct_response">("telegram");
   const [name, setName] = useState("");
   const [metaPixelId, setMetaPixelId] = useState("");
   const [accessToken, setAccessToken] = useState("");
   const [testEventCode, setTestEventCode] = useState("");
   const [vertical, setVertical] = useState<(typeof VERTICALS)[number]>("bet");
   const [accountId, setAccountId] = useState<string>("");
+  const [salesPageUrl, setSalesPageUrl] = useState<string>("");
 
   const create = useMutation({
     mutationFn: () => createFn({ data: {
-      name, vertical, account_id: accountId || null, is_active: true,
+      name, vertical,
+      tracking_mode: trackingMode,
+      account_id: trackingMode === "telegram" ? (accountId || null) : null,
+      sales_page_url: trackingMode === "direct_response" ? (salesPageUrl || null) : null,
+      is_active: true,
       event_on_join: "Lead", event_on_offer_click: "InitiateCheckout",
       event_on_register: "CompleteRegistration", event_on_deposit: "Purchase",
+      event_on_view: "ViewContent", event_on_lead: "Lead",
+      event_on_checkout: "InitiateCheckout", event_on_payment_info: "AddPaymentInfo",
+      event_on_purchase: "Purchase",
       meta_pixel_id: metaPixelId || null,
       meta_access_token: accessToken || null,
       meta_test_event_code: testEventCode || null,
@@ -169,6 +178,40 @@ function NewPixelWizard({
       {step === 1 ? (
         <TooltipProvider delayDuration={150}>
           <div className="space-y-5">
+            <div className="space-y-2">
+              <Label>Modo de trackeamento</Label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {(TRACKING_MODES as readonly ("telegram" | "direct_response")[]).map((m) => {
+                  const preset = MODE_PRESETS[m];
+                  const active = trackingMode === m;
+                  const Icon = m === "telegram" ? Bot : Send;
+                  return (
+                    <button
+                      type="button"
+                      key={m}
+                      onClick={() => setTrackingMode(m)}
+                      className={`text-left rounded-xl border p-3 transition ${active ? "border-primary bg-primary/5 ring-1 ring-primary/30" : "border-border hover:bg-muted/30"}`}
+                    >
+                      <div className="flex items-center gap-2 mb-1">
+                        <Icon className="size-4 text-primary" />
+                        <p className="text-sm font-semibold">{preset.label}</p>
+                      </div>
+                      <p className="text-xs text-muted-foreground">{preset.description}</p>
+                      <ul className="mt-2 space-y-0.5">
+                        {preset.stages.map((s) => (
+                          <li key={s.key} className="text-[11px] text-muted-foreground flex items-center gap-1.5">
+                            <span className="inline-block size-1 rounded-full bg-primary/60" />
+                            <span>{s.label}</span>
+                            <code className="ml-1 text-[10px] rounded bg-background border px-1">{s.defaultEvent}</code>
+                          </li>
+                        ))}
+                      </ul>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
             <div className="rounded-xl border bg-muted/30 p-4 space-y-3">
               <InstructionRow
                 index={1}
@@ -214,16 +257,23 @@ function NewPixelWizard({
                   <SelectContent>{VERTICALS.map(v => <SelectItem key={v} value={v}>{VERTICAL_LABEL[v]}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
-                <Label>Bot do Telegram <span className="text-muted-foreground text-xs">(opcional)</span></Label>
-                <Select value={accountId || "none"} onValueChange={(v) => setAccountId(v === "none" ? "" : v)}>
-                  <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Nenhum (escolher depois)</SelectItem>
-                    {accounts.map(a => <SelectItem key={a.id} value={a.id}>@{a.bot_username ?? "(sem username)"}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
+              {trackingMode === "telegram" ? (
+                <div className="space-y-2">
+                  <Label>Bot do Telegram <span className="text-muted-foreground text-xs">(opcional)</span></Label>
+                  <Select value={accountId || "none"} onValueChange={(v) => setAccountId(v === "none" ? "" : v)}>
+                    <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Nenhum (escolher depois)</SelectItem>
+                      {accounts.map(a => <SelectItem key={a.id} value={a.id}>@{a.bot_username ?? "(sem username)"}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-1"><Globe className="size-3.5" /> URL da página de vendas <span className="text-muted-foreground text-xs">(opcional)</span></Label>
+                  <Input value={salesPageUrl} onChange={(e) => setSalesPageUrl(e.target.value)} placeholder="https://seusite.com/oferta" />
+                </div>
+              )}
             </div>
 
             <div className="flex items-start gap-3 rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-sm">
