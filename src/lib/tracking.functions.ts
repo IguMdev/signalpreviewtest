@@ -4,6 +4,34 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 export const VERTICALS = ["bet", "igaming", "hot", "promo", "outro"] as const;
+export const TRACKING_MODES = ["telegram", "direct_response"] as const;
+export type TrackingMode = (typeof TRACKING_MODES)[number];
+
+/** Presets de defaults por modo de trackeamento. UI usa para pré-preencher. */
+export const MODE_PRESETS = {
+  telegram: {
+    label: "Telegram (bot + canal)",
+    description: "Anúncio Meta → bot do Telegram → oferta → cadastro/depósito. Ideal para bet, iGaming, +18 e promoções.",
+    stages: [
+      { key: "join", label: "Entrada no bot", defaultEvent: "Lead" },
+      { key: "offer_click", label: "Clique na oferta", defaultEvent: "InitiateCheckout" },
+      { key: "register", label: "Cadastro", defaultEvent: "CompleteRegistration" },
+      { key: "deposit", label: "Depósito", defaultEvent: "Purchase" },
+    ],
+  },
+  direct_response: {
+    label: "Direct Response (Meta → página → checkout)",
+    description: "Anúncio Meta → página de vendas/VSL → checkout → compra. Ideal para infoprodutos, mentorias e e-commerce direto.",
+    stages: [
+      { key: "view", label: "Visualização da página", defaultEvent: "ViewContent" },
+      { key: "lead", label: "Lead qualificado (opt-in)", defaultEvent: "Lead" },
+      { key: "checkout", label: "Iniciou checkout", defaultEvent: "InitiateCheckout" },
+      { key: "payment_info", label: "Escolheu pagamento", defaultEvent: "AddPaymentInfo" },
+      { key: "purchase", label: "Compra confirmada", defaultEvent: "Purchase" },
+    ],
+  },
+} as const;
+
 export const EVENT_OPTIONS = [
   "off", "Lead", "CompleteRegistration", "Subscribe", "ViewContent", "Contact",
   "InitiateCheckout", "AddPaymentInfo", "AddToCart", "Purchase", "StartTrial",
@@ -12,6 +40,8 @@ export const EVENT_OPTIONS = [
 const pixelSchema = z.object({
   name: z.string().min(1).max(120),
   vertical: z.enum(VERTICALS).default("outro"),
+  tracking_mode: z.enum(TRACKING_MODES).default("telegram"),
+  sales_page_url: z.string().url().nullable().optional(),
   is_active: z.boolean().default(true),
   meta_integration_id: z.string().uuid().nullable().optional(),
   account_id: z.string().uuid().nullable().optional(),
@@ -20,6 +50,11 @@ const pixelSchema = z.object({
   event_on_offer_click: z.enum(EVENT_OPTIONS).default("InitiateCheckout"),
   event_on_register: z.enum(EVENT_OPTIONS).default("CompleteRegistration"),
   event_on_deposit: z.enum(EVENT_OPTIONS).default("Purchase"),
+  event_on_view: z.enum(EVENT_OPTIONS).default("ViewContent"),
+  event_on_lead: z.enum(EVENT_OPTIONS).default("Lead"),
+  event_on_checkout: z.enum(EVENT_OPTIONS).default("InitiateCheckout"),
+  event_on_payment_info: z.enum(EVENT_OPTIONS).default("AddPaymentInfo"),
+  event_on_purchase: z.enum(EVENT_OPTIONS).default("Purchase"),
   meta_pixel_id: z.string().trim().max(64).nullable().optional(),
   meta_access_token: z.string().trim().max(1024).nullable().optional(),
   meta_test_event_code: z.string().trim().max(64).nullable().optional(),
@@ -427,7 +462,17 @@ export const getMyRedirectBase = createServerFn({ method: "GET" })
   });
 
 // ============ POSTBACKS ============
-export const POSTBACK_EVENTS = ["viewpage", "click_button", "channel_enter", "channel_leave"] as const;
+export const POSTBACK_EVENTS = [
+  // Telegram
+  "viewpage", "click_button", "channel_enter", "channel_leave",
+  // Direct Response
+  "lead", "checkout_started", "payment_info", "purchase",
+] as const;
+
+export const POSTBACK_EVENTS_BY_MODE = {
+  telegram: ["viewpage", "click_button", "channel_enter", "channel_leave"],
+  direct_response: ["viewpage", "lead", "checkout_started", "payment_info", "purchase"],
+} as const;
 
 const postbackSchema = z.object({
   pixel_id: z.string().uuid(),

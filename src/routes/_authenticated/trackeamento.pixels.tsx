@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import {
   listPixels, createPixel, deletePixel, updatePixel,
-  VERTICALS, EVENT_OPTIONS,
+  VERTICALS, EVENT_OPTIONS, TRACKING_MODES, MODE_PRESETS,
 } from "@/lib/tracking.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,7 +18,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Textarea } from "@/components/ui/textarea";
-import { Code2, Plus, Trash2, Settings2, HelpCircle, AlertTriangle, ExternalLink, Check } from "lucide-react";
+import { Code2, Plus, Trash2, Settings2, HelpCircle, AlertTriangle, ExternalLink, Check, Send, Globe, Bot } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/trackeamento/pixels")({
   component: PixelsPage,
@@ -27,6 +27,11 @@ export const Route = createFileRoute("/_authenticated/trackeamento/pixels")({
 const VERTICAL_LABEL: Record<string, string> = {
   bet: "Apostas / Bet", igaming: "iGaming / Cassino",
   hot: "Nicho Hot / +18", promo: "Promoções e descontos", outro: "Outro",
+};
+
+const MODE_LABEL: Record<string, string> = {
+  telegram: "Telegram",
+  direct_response: "Direct Response",
 };
 
 function PixelsPage() {
@@ -88,6 +93,7 @@ function PixelsPage() {
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold truncate">{p.name}</p>
                   <div className="flex items-center gap-2 mt-1 flex-wrap">
+                    <Badge variant="secondary">{MODE_LABEL[p.tracking_mode ?? "telegram"]}</Badge>
                     <Badge variant="secondary">{VERTICAL_LABEL[p.vertical] ?? p.vertical}</Badge>
                     {p.is_active ? <Badge>Ativo</Badge> : <Badge variant="outline">Inativo</Badge>}
                     {p.bot_username && <Badge variant="outline">@{p.bot_username}</Badge>}
@@ -130,18 +136,27 @@ function NewPixelWizard({
 }: { accounts: any[]; onDone: () => void }) {
   const createFn = useServerFn(createPixel);
   const [step, setStep] = useState<1 | 2>(1);
+  const [trackingMode, setTrackingMode] = useState<"telegram" | "direct_response">("telegram");
   const [name, setName] = useState("");
   const [metaPixelId, setMetaPixelId] = useState("");
   const [accessToken, setAccessToken] = useState("");
   const [testEventCode, setTestEventCode] = useState("");
   const [vertical, setVertical] = useState<(typeof VERTICALS)[number]>("bet");
   const [accountId, setAccountId] = useState<string>("");
+  const [salesPageUrl, setSalesPageUrl] = useState<string>("");
 
   const create = useMutation({
     mutationFn: () => createFn({ data: {
-      name, vertical, account_id: accountId || null, is_active: true,
+      name, vertical,
+      tracking_mode: trackingMode,
+      account_id: trackingMode === "telegram" ? (accountId || null) : null,
+      sales_page_url: trackingMode === "direct_response" ? (salesPageUrl || null) : null,
+      is_active: true,
       event_on_join: "Lead", event_on_offer_click: "InitiateCheckout",
       event_on_register: "CompleteRegistration", event_on_deposit: "Purchase",
+      event_on_view: "ViewContent", event_on_lead: "Lead",
+      event_on_checkout: "InitiateCheckout", event_on_payment_info: "AddPaymentInfo",
+      event_on_purchase: "Purchase",
       meta_pixel_id: metaPixelId || null,
       meta_access_token: accessToken || null,
       meta_test_event_code: testEventCode || null,
@@ -163,6 +178,40 @@ function NewPixelWizard({
       {step === 1 ? (
         <TooltipProvider delayDuration={150}>
           <div className="space-y-5">
+            <div className="space-y-2">
+              <Label>Modo de trackeamento</Label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {(TRACKING_MODES as readonly ("telegram" | "direct_response")[]).map((m) => {
+                  const preset = MODE_PRESETS[m];
+                  const active = trackingMode === m;
+                  const Icon = m === "telegram" ? Bot : Send;
+                  return (
+                    <button
+                      type="button"
+                      key={m}
+                      onClick={() => setTrackingMode(m)}
+                      className={`text-left rounded-xl border p-3 transition ${active ? "border-primary bg-primary/5 ring-1 ring-primary/30" : "border-border hover:bg-muted/30"}`}
+                    >
+                      <div className="flex items-center gap-2 mb-1">
+                        <Icon className="size-4 text-primary" />
+                        <p className="text-sm font-semibold">{preset.label}</p>
+                      </div>
+                      <p className="text-xs text-muted-foreground">{preset.description}</p>
+                      <ul className="mt-2 space-y-0.5">
+                        {preset.stages.map((s) => (
+                          <li key={s.key} className="text-[11px] text-muted-foreground flex items-center gap-1.5">
+                            <span className="inline-block size-1 rounded-full bg-primary/60" />
+                            <span>{s.label}</span>
+                            <code className="ml-1 text-[10px] rounded bg-background border px-1">{s.defaultEvent}</code>
+                          </li>
+                        ))}
+                      </ul>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
             <div className="rounded-xl border bg-muted/30 p-4 space-y-3">
               <InstructionRow
                 index={1}
@@ -208,16 +257,23 @@ function NewPixelWizard({
                   <SelectContent>{VERTICALS.map(v => <SelectItem key={v} value={v}>{VERTICAL_LABEL[v]}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
-                <Label>Bot do Telegram <span className="text-muted-foreground text-xs">(opcional)</span></Label>
-                <Select value={accountId || "none"} onValueChange={(v) => setAccountId(v === "none" ? "" : v)}>
-                  <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Nenhum (escolher depois)</SelectItem>
-                    {accounts.map(a => <SelectItem key={a.id} value={a.id}>@{a.bot_username ?? "(sem username)"}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
+              {trackingMode === "telegram" ? (
+                <div className="space-y-2">
+                  <Label>Bot do Telegram <span className="text-muted-foreground text-xs">(opcional)</span></Label>
+                  <Select value={accountId || "none"} onValueChange={(v) => setAccountId(v === "none" ? "" : v)}>
+                    <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Nenhum (escolher depois)</SelectItem>
+                      {accounts.map(a => <SelectItem key={a.id} value={a.id}>@{a.bot_username ?? "(sem username)"}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-1"><Globe className="size-3.5" /> URL da página de vendas <span className="text-muted-foreground text-xs">(opcional)</span></Label>
+                  <Input value={salesPageUrl} onChange={(e) => setSalesPageUrl(e.target.value)} placeholder="https://seusite.com/oferta" />
+                </div>
+              )}
             </div>
 
             <div className="flex items-start gap-3 rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-sm">
@@ -371,10 +427,17 @@ function EditPixelForm({ pixel, onClose }: { pixel: any; onClose: () => void }) 
   const [name, setName] = useState<string>(pixel.name);
   const [vertical, setVertical] = useState<string>(pixel.vertical);
   const [isActive, setIsActive] = useState<boolean>(pixel.is_active);
+  const [trackingMode, setTrackingMode] = useState<"telegram" | "direct_response">(pixel.tracking_mode ?? "telegram");
+  const [salesPageUrl, setSalesPageUrl] = useState<string>(pixel.sales_page_url ?? "");
   const [evJoin, setEvJoin] = useState<string>(pixel.event_on_join);
   const [evOffer, setEvOffer] = useState<string>(pixel.event_on_offer_click);
   const [evReg, setEvReg] = useState<string>(pixel.event_on_register);
   const [evDep, setEvDep] = useState<string>(pixel.event_on_deposit);
+  const [evView, setEvView] = useState<string>(pixel.event_on_view ?? "ViewContent");
+  const [evLead, setEvLead] = useState<string>(pixel.event_on_lead ?? "Lead");
+  const [evCheckout, setEvCheckout] = useState<string>(pixel.event_on_checkout ?? "InitiateCheckout");
+  const [evPayInfo, setEvPayInfo] = useState<string>(pixel.event_on_payment_info ?? "AddPaymentInfo");
+  const [evPurchase, setEvPurchase] = useState<string>(pixel.event_on_purchase ?? "Purchase");
   const [metaPixelId, setMetaPixelId] = useState<string>(pixel.meta_pixel_id ?? "");
   const [accessToken, setAccessToken] = useState<string>(pixel.meta_access_token ?? "");
   const [testEventCode, setTestEventCode] = useState<string>(pixel.meta_test_event_code ?? "");
@@ -382,8 +445,13 @@ function EditPixelForm({ pixel, onClose }: { pixel: any; onClose: () => void }) 
   const save = useMutation({
     mutationFn: () => updFn({ data: {
       id: pixel.id, name, vertical: vertical as never, is_active: isActive,
+      tracking_mode: trackingMode,
+      sales_page_url: trackingMode === "direct_response" ? (salesPageUrl || null) : null,
       event_on_join: evJoin as never, event_on_offer_click: evOffer as never,
       event_on_register: evReg as never, event_on_deposit: evDep as never,
+      event_on_view: evView as never, event_on_lead: evLead as never,
+      event_on_checkout: evCheckout as never, event_on_payment_info: evPayInfo as never,
+      event_on_purchase: evPurchase as never,
       meta_pixel_id: metaPixelId || null,
       meta_access_token: accessToken || null,
       meta_test_event_code: testEventCode || null,
@@ -400,6 +468,23 @@ function EditPixelForm({ pixel, onClose }: { pixel: any; onClose: () => void }) 
       <div className="space-y-4">
         <div className="space-y-2"><Label>Nome</Label><Input value={name} onChange={(e) => setName(e.target.value)} /></div>
         <div className="space-y-2">
+          <Label>Modo de trackeamento</Label>
+          <Select value={trackingMode} onValueChange={(v) => setTrackingMode(v as never)}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="telegram">{MODE_PRESETS.telegram.label}</SelectItem>
+              <SelectItem value="direct_response">{MODE_PRESETS.direct_response.label}</SelectItem>
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">{MODE_PRESETS[trackingMode].description}</p>
+        </div>
+        {trackingMode === "direct_response" && (
+          <div className="space-y-2">
+            <Label>URL da página de vendas</Label>
+            <Input value={salesPageUrl} onChange={(e) => setSalesPageUrl(e.target.value)} placeholder="https://seusite.com/oferta" />
+          </div>
+        )}
+        <div className="space-y-2">
           <Label>Vertical</Label>
           <Select value={vertical} onValueChange={setVertical}>
             <SelectTrigger><SelectValue /></SelectTrigger>
@@ -412,10 +497,22 @@ function EditPixelForm({ pixel, onClose }: { pixel: any; onClose: () => void }) 
         </div>
         <div className="space-y-3 pt-2 border-t">
           <p className="text-sm font-semibold">Eventos Meta por etapa</p>
-          <EventRow label="Entrada no bot" value={evJoin} onChange={setEvJoin} />
-          <EventRow label="Clique na oferta" value={evOffer} onChange={setEvOffer} />
-          <EventRow label="Cadastro" value={evReg} onChange={setEvReg} />
-          <EventRow label="Depósito" value={evDep} onChange={setEvDep} />
+          {trackingMode === "telegram" ? (
+            <>
+              <EventRow label="Entrada no bot" value={evJoin} onChange={setEvJoin} />
+              <EventRow label="Clique na oferta" value={evOffer} onChange={setEvOffer} />
+              <EventRow label="Cadastro" value={evReg} onChange={setEvReg} />
+              <EventRow label="Depósito" value={evDep} onChange={setEvDep} />
+            </>
+          ) : (
+            <>
+              <EventRow label="Visualização da página" value={evView} onChange={setEvView} />
+              <EventRow label="Lead qualificado" value={evLead} onChange={setEvLead} />
+              <EventRow label="Iniciou checkout" value={evCheckout} onChange={setEvCheckout} />
+              <EventRow label="Dados de pagamento" value={evPayInfo} onChange={setEvPayInfo} />
+              <EventRow label="Compra confirmada" value={evPurchase} onChange={setEvPurchase} />
+            </>
+          )}
         </div>
         <div className="space-y-3 pt-2 border-t">
           <p className="text-sm font-semibold">Credenciais Meta (CAPI)</p>

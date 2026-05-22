@@ -26,7 +26,21 @@ export function deriveFbc(fbc: string | null | undefined, fbclid: string | null 
   return `fb.1.${Date.now()}.${fbclid}`;
 }
 
-export type TrackingStage = "join" | "offer_click" | "register" | "deposit";
+export type TrackingStage =
+  | "join" | "offer_click" | "register" | "deposit"            // telegram
+  | "view" | "lead" | "checkout" | "payment_info" | "purchase"; // direct response
+
+const STAGE_TO_COLUMN: Record<TrackingStage, string> = {
+  join: "joined_at",
+  offer_click: "clicked_offer_at",
+  register: "registered_at",
+  deposit: "deposited_at",
+  view: "viewed_at",
+  lead: "lead_at",
+  checkout: "checkout_at",
+  payment_info: "payment_info_at",
+  purchase: "purchased_at",
+};
 
 /**
  * Dispara evento Meta CAPI usando os dados ORIGINAIS do clique na landing.
@@ -62,7 +76,12 @@ export async function fireTrackingEvent(opts: {
     opts.stage === "join" ? pixel.event_on_join :
     opts.stage === "offer_click" ? pixel.event_on_offer_click :
     opts.stage === "register" ? pixel.event_on_register :
-    pixel.event_on_deposit;
+    opts.stage === "deposit" ? pixel.event_on_deposit :
+    opts.stage === "view" ? pixel.event_on_view :
+    opts.stage === "lead" ? pixel.event_on_lead :
+    opts.stage === "checkout" ? pixel.event_on_checkout :
+    opts.stage === "payment_info" ? pixel.event_on_payment_info :
+    pixel.event_on_purchase;
 
   if (!eventName || eventName === "off") {
     return { ok: false, error: "event disabled for stage" };
@@ -100,7 +119,7 @@ export async function fireTrackingEvent(opts: {
     const nextSent = { ...sent, [opts.stage]: eventId };
     await supabaseAdmin
       .from("tracking_clicks")
-      .update({ meta_events_sent: nextSent as never })
+      .update({ meta_events_sent: nextSent as never, [STAGE_TO_COLUMN[opts.stage]]: new Date().toISOString() } as never)
       .eq("click_id", opts.clickId);
   }
 

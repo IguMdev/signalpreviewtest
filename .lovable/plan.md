@@ -1,121 +1,65 @@
-## Novos nichos de sala
+## Objetivo
 
-Expandir o sistema de nichos de **2** (`ob`, `promo`) para **5**: `ob`, `promo`, `hot`, `igaming`, `expert`. Cada nicho exibe apenas seus bots no editor da sala.
+Permitir que cada Pixel funcione em um de dois **modos de trackeamento**, com presets diferentes de eventos Meta, etapas do funil, UTMs sugeridas e postbacks — refletindo que cada nicho rastreia coisas diferentes.
 
----
+## Modos
 
-### 1. Banco de dados
+**1. Telegram (bet, igaming, hot, promo)** — fluxo atual
+Funil: clique no anúncio → entra no bot → clica oferta → cadastro → depósito
+Eventos padrão: `Lead` / `InitiateCheckout` / `CompleteRegistration` / `Purchase`
 
-**Migration única:**
+**2. Direct Response / Infoprodutos** (novo)
+Sem bot do Telegram. Fluxo: anúncio Meta → página de vendas → checkout → compra
+Etapas rastreadas:
+- `ViewContent` (pageview da VSL/landing)
+- `Lead` (opt-in / lead qualificado — email/whatsapp capturado)
+- `InitiateCheckout` (entrou no checkout)
+- `AddPaymentInfo` (escolheu método: pix/boleto/cartão)
+- `Purchase` (compra confirmada, com `value` e `currency`)
 
-- Extender o enum `room_niche`: `+ 'hot' | 'igaming' | 'expert'`.
-- Extender o enum `affiliate_store` para incluir parceiros adultos e casas de aposta:
-  `+ 'privacy' | 'crakrevenue' | 'awempire' | 'bet365' | 'betano' | 'blaze' | 'kto' | 'sportingbet'`.
-  → as tabelas `affiliate_accounts`, `promo_bot_settings`, `promo_offers`, `promo_dispatches`, `promo_conversions` já usam esse enum e passam a aceitar as novas lojas automaticamente.
-- Nova tabela `hot_vip_funnel` (por sala) — funil free→VIP do nicho Hot:
-  campos: `room_id`, `user_id`, `enabled`, `vip_checkout_url`, `vip_price_brl`, `teaser_interval_hours`, `last_teaser_at`, `cta_button_text`.
-- Nova tabela `hot_teasers` (mídia agendada por sala):
-  `room_id`, `user_id`, `image_path` ou `video_id`, `caption`, `sort_order`, `is_active`.
-- Nova tabela `igaming_results` (resultado ao vivo + tracking dos sinais de cassino):
-  `room_id`, `user_id`, `window_id`, `signal_message_id`, `result` (`win`|`loss`|`gale_win`), `confirmed_at`.
-- Nova tabela `expert_funnel` (funil de mentoria/curso por sala):
-  `room_id`, `user_id`, `enabled`, `checkout_url`, `product_name`, `price_brl`, `cta_button_text`.
-- Nova tabela `expert_engagement_prompts` (perguntas/enquetes do dia):
-  `room_id`, `user_id`, `kind` (`question`|`poll`), `content`, `options jsonb`, `send_time`, `weekdays`, `is_active`.
-- RLS `auth.uid() = user_id` em todas (mesmo padrão das demais).
+Identificação do comprador: `external_id` (hash do email/CPF), `fbp`, `fbc`, `em`, `ph` enviados via CAPI; valor da compra e qual campanha (UTM source/campaign/content/term + fbclid) vinculados ao `click_id`.
 
-> Reaproveita-se 100% das tabelas `room_windows`, `room_assets`, `room_templates`, `room_session_messages`, `engagement_settings`, `followup_*`, `recurring_schedules`, `promo_*` — sem duplicar lógica.
+## Mudanças
 
----
+### 1. Schema (migration)
 
-### 2. Mapa de bots por nicho
+Tabela `tracking_pixels`:
+- Adicionar coluna `tracking_mode text not null default 'telegram'` com check `('telegram','direct_response')`
+- Adicionar 4 colunas de evento para o modo DR:
+  `event_on_view text`, `event_on_lead text`, `event_on_checkout text`, `event_on_payment_info text`, `event_on_purchase text`
+- Backfill: pixels existentes → `tracking_mode = 'telegram'`
 
-| Nicho | Bots/cards visíveis no editor da sala |
-|---|---|
-| **ob** (Opções Binárias) | Janelas, Ativos, Templates, Stop-Loss, Dicas de Mercado, Engajamento, Follow-up, Recorrentes, Relatórios |
-| **promo** (Promoções) | Promo Bot (Amazon/Shopee/AliExpress/Mercado Livre), Engajamento, Follow-up, Recorrentes |
-| **hot** (Conteúdo adulto) | Promo Bot Adulto (Privacy/CrakRevenue/AWEmpire), Prévias Agendadas, Funil VIP, Engajamento, Follow-up, Recorrentes |
-| **igaming** (Cassino/Apostas) | Janelas + Ativos (engine OB reaproveitada com jogos: Tigrinho, Aviator, Mines, Fortune Ox), Templates, Resultados ao Vivo, Promo Bot Casas (Bet365/Betano/Blaze/KTO/Sportingbet), Engajamento, Follow-up, Recorrentes |
-| **expert** (Comunidade de Expert) | Funil de Venda (mentoria/curso), Aulas/Lives Agendadas (recorrentes), Engajamento Diário (perguntas/enquetes), Welcome, Follow-up |
+Tabela `tracking_clicks`:
+- Adicionar `viewed_at`, `lead_at`, `checkout_at`, `payment_info_at` (timestamptz nullable) — espelham os existentes `joined_at`/`registered_at`/`deposited_at` mas para o fluxo DR
 
----
+### 2. Server (`src/lib/tracking.functions.ts`)
+- Estender `pixelSchema` com `tracking_mode` e novos campos de evento
+- Adicionar helper `MODE_PRESETS` exportado com defaults de cada modo
+- `getPixelStats` e `getAttribution`: retornar contadores adequados ao modo (DR: views/leads/checkouts/purchases; Telegram: mantém)
 
-### 3. UI — Wizard de criação de sala
+### 3. UI (`trackeamento.pixels.tsx`)
+- Wizard passo 1: seletor **Modo de trackeamento** com 2 cards (Telegram com bot / Direct Response Meta→Checkout). Cada modo mostra explicação curta e bullets do que será rastreado.
+- O campo "Bot do Telegram" e "Vertical" só aparecem no modo Telegram. No DR, mostrar campo "URL da página de vendas" (informativo).
+- Edit dialog: seção "Eventos Meta por etapa" renderiza linhas diferentes conforme o modo.
 
-`src/routes/_authenticated/rooms.index.tsx`:
+### 4. Endpoint de tracking p/ Direct Response
+- Novo route `src/routes/api/public/track/dr/$pixelId.ts` (POST, com CORS) que recebe `{ stage, click_id, value?, currency?, em?, ph?, external_id? }` do site/checkout e dispara CAPI com os campos de identificação.
+- Documentar no UI o snippet JS para colar na página de vendas/obrigado.
 
-- Substituir as 2 cards atuais (OB/Promo) por **5 cards** com ícone+descrição:
-  - 📈 Opções Binárias
-  - 🛒 Promoções
-  - 🔥 Hot
-  - 🎰 iGaming
-  - 🎓 Comunidade Expert
-- `niche` continua imutável após criação (trigger `prevent_room_niche_change` já existe).
+### 5. Postbacks por nicho
+- `POSTBACK_EVENTS` expandido com `lead`, `checkout_started`, `payment_info`, `purchase` (DR). Os existentes (`viewpage`, `click_button`, `channel_enter`, `channel_leave`) permanecem para Telegram.
+- UI de postbacks filtra eventos disponíveis pelo `tracking_mode` do pixel.
 
-### 4. UI — Editor da sala (`rooms.$roomId.edit.tsx`)
+### 6. Tour/copy
+- Atualizar copy da página Pixels explicando os dois modos.
 
-- Trocar o `if (niche === 'promo')` por **switch (room.niche)** que renderiza o conjunto de cards do mapa acima.
-- Para `igaming`: reusar `WindowsCard`, `AssetsCard`, `TemplatesCard` do OB + novo `IGamingGamesCard` (substitui "ativos" por jogos de cassino) + novo `IGamingResultsCard` + reusar `PromoBotCard` configurado para lojas iGaming.
-- Para `hot`: novo `HotPromoBotCard` (PromoBotCard restrito às lojas adultas) + `HotTeasersCard` + `HotVipFunnelCard`.
-- Para `expert`: novo `ExpertFunnelCard` + `ExpertEngagementCard` + cards já existentes de welcome/follow-up/recorrentes.
+## Técnico
 
-### 5. UI — Sidebar (`_authenticated.tsx`)
+- Mantém retrocompatibilidade total: pixels antigos = modo telegram, defaults inalterados.
+- Sem mudança em `track/click` e `track/g` (continuam servindo Telegram). DR usa endpoint próprio porque o gatilho vem do site/checkout, não do bot.
+- `fireTrackingEvent` em `tracking.server.ts` ganha cases para `view`/`lead`/`checkout`/`payment_info`/`purchase` mapeando para o evento Meta configurado no pixel.
 
-Adicionar dois novos grupos colapsáveis:
-- **Hot**: Contas Afiliadas Adultas, Estatísticas
-- **iGaming**: Contas Casas de Aposta, Estatísticas, Resultados
-- **Promoções** já existe.
-- Itens do nicho expert ficam dentro da própria sala (sem grupo na sidebar).
+## Fora do escopo (perguntar antes se quiser)
 
-### 6. Server functions e clients de loja
-
-Em `src/lib/promo/`:
-- `privacy.server.ts` — Privacy BR (afiliados.privacy.com.br/api)
-- `crakrevenue.server.ts` — CrakRevenue Affiliate API
-- `awempire.server.ts` — AWEmpire API
-- `bet365.server.ts`, `betano.server.ts`, `blaze.server.ts`, `kto.server.ts`, `sportingbet.server.ts` — via Smartico/Income Access REST onde aplicável; ofertas (bonus, freebet, cashback) + postback de conversão.
-- Atualizar `registry.server.ts` para mapear as novas entradas do enum.
-
-Novas server-fns em:
-- `src/lib/hot.functions.ts` — CRUD `hot_vip_funnel`, `hot_teasers`, preview do teaser.
-- `src/lib/igaming.functions.ts` — CRUD configurações iGaming, registro de resultado ao vivo (win/loss/gale), envio de mensagem de "GREEN/RED" no Telegram.
-- `src/lib/expert.functions.ts` — CRUD funil, prompts de engajamento, agendamento.
-
-### 7. Cron
-
-- Reusar `dispatch-promos` (já roda 5min) — passa a contemplar lojas hot/igaming automaticamente.
-- Reusar `sync-promo-conversions` (já roda 1h) — idem.
-- Novo `/api/public/cron/hot-teasers` (15min): dispara prévias por intervalo.
-- Novo `/api/public/cron/expert-engagement` (1min): envia perguntas/enquetes na hora marcada.
-- `room_windows` + scheduler existente cobrem sinais iGaming sem cron novo.
-
-### 8. Tracking
-
-- Promo (cliques/conversões) já cobre hot e igaming via `/go/$dispatchId` + `promo_conversions`.
-- Para iGaming com postback S2S das casas: novo endpoint `/api/public/postback/$store.ts` (HMAC ou token por casa) que insere em `promo_conversions`.
-
----
-
-### 9. Secrets
-
-Nenhum no projeto — todas as credenciais ficam em `affiliate_accounts.credentials` (jsonb por usuário, RLS).
-
-### 10. Ordem de execução
-
-1. Migration (enums + tabelas novas).
-2. Wizard de 5 cards + switch no editor.
-3. Cards hot (Funil VIP, Teasers, Promo Adulto).
-4. Cards iGaming (Jogos + Resultados + Promo Casas).
-5. Cards Expert (Funil + Engagement).
-6. Sidebar (links Hot/iGaming).
-7. Clients de loja novos + atualização do registry.
-8. Crons (hot-teasers, expert-engagement) + postback iGaming.
-
----
-
-### Observações técnicas
-
-- O enum `affiliate_store` precisa ser estendido **antes** das migrations criarem as tabelas (Postgres exige `ALTER TYPE ... ADD VALUE` fora de transação) — vai numa migration própria, executada antes das demais alterações que dependem dela.
-- `niche` permanece imutável após criação (regra existente respeitada).
-- `PromoBotCard` recebe prop `allowedStores: AffiliateStore[]` para limitar as opções por nicho (hot ≠ igaming ≠ promo geral).
-- Todos os botões CTA dos funis (hot VIP, expert) passam pelo redirecionador `/go/$dispatchId` para tracking unificado.
+- Integração automática com Hotmart/Kirvano/Eduzz (webhooks dedicados por plataforma) — pode ser próximo passo
+- Server-side conversion API direta com hash automático de email/CPF no front (hoje passa cru, hash no server)
