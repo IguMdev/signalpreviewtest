@@ -31,6 +31,8 @@ const DONUT_COLORS = ["hsl(263 70% 60%)","hsl(330 75% 60%)","hsl(150 60% 50%)","
 function MetricasPage() {
   const { pixelId, pixels, setPixel } = usePixelFilter();
   const effectiveId = pixelId ?? pixels[0]?.id ?? null;
+  const currentPixel = pixels.find((p: any) => p.id === effectiveId);
+  const mode = (currentPixel?.tracking_mode ?? "telegram") as "telegram" | "direct_response";
   return (
     <div className="space-y-4">
       <PixelFilterBar pixelId={effectiveId} pixels={pixels} setPixel={setPixel} />
@@ -42,7 +44,7 @@ function MetricasPage() {
           </CardContent>
         </Card>
       )}
-      <MetricsView pixelId={effectiveId} />
+      <MetricsView pixelId={effectiveId} mode={mode} />
     </div>
   );
 }
@@ -64,7 +66,7 @@ function detectDevice(ua: string | null | undefined): string {
   return "Outros";
 }
 
-function MetricsView({ pixelId }: { pixelId: string | null }) {
+function MetricsView({ pixelId, mode }: { pixelId: string | null; mode: "telegram" | "direct_response" }) {
   const [range, setRange] = useState<DateRange | undefined>(undefined);
   const [filters, setFilters] = useState<ActiveFilter[]>([]);
   const days = rangeToDays(range);
@@ -106,12 +108,15 @@ function MetricsView({ pixelId }: { pixelId: string | null }) {
     );
   }, [rows, filters]);
 
-  const entradas = stats.data?.joins ?? 0;
-  const saidas = 0; // não rastreado no schema atual
   const clicksTotal = stats.data?.clicks ?? 0;
   const trackeadas = filtered.filter((r) => r.utm_source || r.fbclid).length || clicksTotal;
+  const isDR = mode === "direct_response";
+  const entradas = isDR ? (stats.data?.views ?? 0) : (stats.data?.joins ?? 0);
+  const saidas = isDR ? (stats.data?.purchases ?? 0) : 0;
+  const leadsCount = isDR ? (stats.data?.leads ?? 0) : 0;
+  const revenue = stats.data?.revenue ?? 0;
   const taxaEntrada = entradas > 0 ? 100 : 0;
-  const taxaSaida = saidas > 0 && entradas > 0 ? Math.round((saidas / entradas) * 100) : 0;
+  const taxaConv = isDR && entradas > 0 ? Math.round((saidas / entradas) * 100) : 0;
 
   const byDevice = aggregate(filtered, (r) => detectDevice(r.user_agent));
   const bySource = aggregate(filtered, (r) => r.utm_source ?? "(sem)");
@@ -175,9 +180,35 @@ function MetricsView({ pixelId }: { pixelId: string | null }) {
 
       {/* Big stat cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <BigStatCard label="Entradas" value={entradas} subA={{ label: "Trackeadas", value: trackeadas }} subB={{ label: "Taxa de trackeamento", value: `${taxaEntrada}%`, percent: taxaEntrada }} />
-        <BigStatCard label="Saidas" value={saidas} subA={{ label: "Trackeadas", value: 0 }} subB={{ label: "Taxa de trackeamento", value: `${taxaSaida}%`, percent: taxaSaida }} />
-        <BigStatCard label="Tempo Medio de Permanencia" value={"—"} valueSuffix="" subB={{ label: "Bounce rate (1d-)", value: "0%", percent: 0 }} />
+        {isDR ? (
+          <>
+            <BigStatCard
+              label="Visualizações"
+              value={entradas}
+              subA={{ label: "Leads", value: leadsCount }}
+              subB={{ label: "Lead rate", value: `${entradas > 0 ? Math.round((leadsCount/entradas)*100) : 0}%`, percent: entradas > 0 ? Math.round((leadsCount/entradas)*100) : 0 }}
+            />
+            <BigStatCard
+              label="Compras"
+              value={saidas}
+              subA={{ label: "Checkouts", value: stats.data?.checkouts ?? 0 }}
+              subB={{ label: "Conversão", value: `${taxaConv}%`, percent: taxaConv }}
+            />
+            <BigStatCard
+              label="Receita"
+              value={`R$ ${revenue.toFixed(2)}`}
+              valueSuffix=""
+              subA={{ label: "Ticket médio", value: saidas > 0 ? `R$ ${(revenue/saidas).toFixed(2)}` : "—" }}
+              subB={{ label: "Dados pgto", value: String(stats.data?.paymentInfos ?? 0), percent: entradas > 0 ? Math.round(((stats.data?.paymentInfos ?? 0)/entradas)*100) : 0 }}
+            />
+          </>
+        ) : (
+          <>
+            <BigStatCard label="Entradas" value={entradas} subA={{ label: "Trackeadas", value: trackeadas }} subB={{ label: "Taxa de trackeamento", value: `${taxaEntrada}%`, percent: taxaEntrada }} />
+            <BigStatCard label="Saidas" value={saidas} subA={{ label: "Trackeadas", value: 0 }} subB={{ label: "Taxa de trackeamento", value: `${taxaConv}%`, percent: taxaConv }} />
+            <BigStatCard label="Tempo Medio de Permanencia" value={"—"} valueSuffix="" subB={{ label: "Bounce rate (1d-)", value: "0%", percent: 0 }} />
+          </>
+        )}
       </div>
 
       {/* Visao Geral */}
@@ -206,19 +237,40 @@ function MetricsView({ pixelId }: { pixelId: string | null }) {
             <table className="w-full text-xs">
               <thead className="text-muted-foreground bg-muted/30">
                 <tr>
-                  {["Data","Horario","Trackeado","ID Telegram","Nome","Status","Funil","URL","utm_source","utm_medium","utm_campaign","utm_content","Dispositivo","Pais","Estado","Cidade","Data Saída","Hora Saída","Permanência"].map((h) => (
+                  {(isDR
+                    ? ["Data","Horario","Trackeado","Email/ID","Status","Valor","URL","utm_source","utm_medium","utm_campaign","utm_content","Dispositivo"]
+                    : ["Data","Horario","Trackeado","ID Telegram","Nome","Status","Funil","URL","utm_source","utm_medium","utm_campaign","utm_content","Dispositivo","Pais","Estado","Cidade","Data Saída","Hora Saída","Permanência"]
+                  ).map((h) => (
                     <th key={h} className="text-left p-3 font-medium uppercase tracking-wider whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {filtered.length === 0 && (
-                  <tr><td colSpan={19} className="p-6 text-center text-muted-foreground">Sem leads no período.</td></tr>
+                  <tr><td colSpan={isDR ? 12 : 19} className="p-6 text-center text-muted-foreground">Sem leads no período.</td></tr>
                 )}
                 {filtered.map((c) => {
                   const d = new Date(c.created_at);
-                  const status = c.deposited_at ? "Depósito" : c.registered_at ? "Cadastro" : c.joined_at ? "Entrou" : "Clique";
+                  const status = isDR
+                    ? (c.purchased_at ? "Compra" : c.payment_info_at ? "Pgto" : c.checkout_at ? "Checkout" : c.lead_at ? "Lead" : c.viewed_at ? "View" : "Clique")
+                    : (c.deposited_at ? "Depósito" : c.registered_at ? "Cadastro" : c.joined_at ? "Entrou" : "Clique");
                   const tracked = !!(c.utm_source || c.fbclid);
+                  if (isDR) return (
+                    <tr key={c.click_id} className="border-t hover:bg-muted/30">
+                      <td className="p-3 whitespace-nowrap">{format(d, "dd/MM/yyyy")}</td>
+                      <td className="p-3 whitespace-nowrap">{format(d, "HH:mm")}</td>
+                      <td className="p-3">{tracked ? <Check className="size-4 text-emerald-500" /> : <X className="size-4 text-muted-foreground" />}</td>
+                      <td className="p-3 whitespace-nowrap">{c.external_id ? `${String(c.external_id).slice(0,10)}…` : "-"}</td>
+                      <td className="p-3 text-emerald-500 whitespace-nowrap">{status}</td>
+                      <td className="p-3 whitespace-nowrap">{c.sale_value ? `R$ ${Number(c.sale_value).toFixed(2)}` : "-"}</td>
+                      <td className="p-3 max-w-[180px] truncate text-primary">{c.landing_url ?? "-"}</td>
+                      <td className="p-3 whitespace-nowrap">{c.utm_source ?? "-"}</td>
+                      <td className="p-3 whitespace-nowrap">{c.utm_medium ?? "-"}</td>
+                      <td className="p-3 whitespace-nowrap">{c.utm_campaign ?? "-"}</td>
+                      <td className="p-3 whitespace-nowrap">{c.utm_content ?? "-"}</td>
+                      <td className="p-3 max-w-[160px] truncate">{detectDevice(c.user_agent)}</td>
+                    </tr>
+                  );
                   return (
                     <tr key={c.click_id} className="border-t hover:bg-muted/30">
                       <td className="p-3 whitespace-nowrap">{format(d, "dd/MM/yyyy")}</td>
