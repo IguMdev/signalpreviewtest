@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import {
-  listPostbacks, createPostback, deletePostback, testPostback, POSTBACK_EVENTS,
+  listPostbacks, createPostback, deletePostback, testPostback, POSTBACK_EVENTS, POSTBACK_EVENTS_BY_MODE,
 } from "@/lib/tracking.functions";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -34,14 +34,19 @@ const EVENT_META: Record<typeof POSTBACK_EVENTS[number], { label: string; icon: 
 function PostbacksPage() {
   const { pixelId, pixels, setPixel } = usePixelFilter();
   const effectiveId = pixelId ?? pixels[0]?.id ?? null;
+  const currentPixel = pixels.find((p: any) => p.id === effectiveId);
+  const mode = (currentPixel?.tracking_mode ?? "telegram") as "telegram" | "direct_response";
   return (
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2"><Repeat className="size-6" /> Postbacks</h1>
-          <p className="text-sm text-muted-foreground mt-1">Dispare webhooks customizados nos eventos do seu funil.</p>
+          <p className="text-sm text-muted-foreground mt-1">
+            Dispare webhooks customizados nos eventos do seu funil
+            {currentPixel ? ` · modo ${mode === "direct_response" ? "Direct Response" : "Telegram"}` : ""}.
+          </p>
         </div>
-        {effectiveId && <NewPostbackDialog pixelId={effectiveId} />}
+        {effectiveId && <NewPostbackDialog pixelId={effectiveId} mode={mode} />}
       </div>
       <PixelFilterBar pixelId={effectiveId} pixels={pixels} setPixel={setPixel} />
       {effectiveId ? <PostbacksList pixelId={effectiveId} /> : (
@@ -94,9 +99,10 @@ function PostbacksList({ pixelId }: { pixelId: string }) {
   );
 }
 
-function NewPostbackDialog({ pixelId }: { pixelId: string }) {
+function NewPostbackDialog({ pixelId, mode }: { pixelId: string; mode: "telegram" | "direct_response" }) {
   const [open, setOpen] = useState(false);
   const [event, setEvent] = useState<typeof POSTBACK_EVENTS[number] | null>(null);
+  const allowedEvents = POSTBACK_EVENTS_BY_MODE[mode] as readonly (typeof POSTBACK_EVENTS[number])[];
   const [name, setName] = useState("");
   const [url, setUrl] = useState("");
 
@@ -138,7 +144,7 @@ function NewPostbackDialog({ pixelId }: { pixelId: string }) {
           <div className="rounded-lg border p-4 space-y-3">
             <p className="text-sm font-medium">Escolha o evento do Postback</p>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              {POSTBACK_EVENTS.map((ev) => {
+              {allowedEvents.map((ev) => {
                 const m = EVENT_META[ev];
                 const active = event === ev;
                 return (

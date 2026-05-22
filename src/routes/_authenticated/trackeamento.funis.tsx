@@ -27,16 +27,30 @@ export const Route = createFileRoute("/_authenticated/trackeamento/funis")({
 function FunisPage() {
   const { pixelId, pixels, setPixel } = usePixelFilter();
   const effectiveId = pixelId ?? pixels[0]?.id ?? null;
+  const currentPixel = pixels.find((p: any) => p.id === effectiveId);
+  const mode = (currentPixel?.tracking_mode ?? "telegram") as "telegram" | "direct_response";
   return (
     <div className="space-y-6 max-w-5xl">
       <div>
         <h1 className="text-2xl font-bold flex items-center gap-2"><Funnel className="size-6" /> Funis</h1>
         <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
-          Cadastre as ofertas (links de afiliado) de cada pixel. Geramos um redirector único por clique para injetar o <code>subid</code> e disparar eventos Meta.
+          {mode === "direct_response"
+            ? "Para pixels Direct Response, o funil é a sua própria página de vendas → checkout. Configure a URL e o snippet em Trackeamento → Canal."
+            : <>Cadastre as ofertas (links de afiliado) de cada pixel. Geramos um redirector único por clique para injetar o <code>subid</code> e disparar eventos Meta.</>}
         </p>
       </div>
       <PixelFilterBar pixelId={effectiveId} pixels={pixels} setPixel={setPixel} />
-      {effectiveId && <OffersList pixelId={effectiveId} />}
+      {effectiveId && mode === "telegram" && <OffersList pixelId={effectiveId} />}
+      {effectiveId && mode === "direct_response" && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Modo Direct Response</CardTitle>
+            <CardDescription>
+              Esse pixel rastreia o fluxo Meta → página de vendas → checkout → compra. Não há ofertas/redirect a cadastrar aqui — basta colar o snippet JS na sua página (aba <strong>Canal</strong>) e disparar <code>lvTrack('purchase', {`{ value, email }`})</code> na página de obrigado.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      )}
     </div>
   );
 }
