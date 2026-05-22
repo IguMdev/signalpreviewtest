@@ -12,7 +12,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { Send, Copy } from "lucide-react";
 import { PixelFilterBar, usePixelFilter } from "@/components/tracking/PixelFilter";
-import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/trackeamento/canal")({
   validateSearch: (s: Record<string, unknown>) => ({ pixel: typeof s.pixel === "string" ? s.pixel : undefined }),
