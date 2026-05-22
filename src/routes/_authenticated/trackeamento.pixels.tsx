@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import {
   listPixels, createPixel, deletePixel, updatePixel,
-  VERTICALS, EVENT_OPTIONS,
+  VERTICALS, EVENT_OPTIONS, TRACKING_MODES, MODE_PRESETS,
 } from "@/lib/tracking.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,7 +18,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Textarea } from "@/components/ui/textarea";
-import { Code2, Plus, Trash2, Settings2, HelpCircle, AlertTriangle, ExternalLink, Check } from "lucide-react";
+import { Code2, Plus, Trash2, Settings2, HelpCircle, AlertTriangle, ExternalLink, Check, Send, Globe, Bot } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/trackeamento/pixels")({
   component: PixelsPage,
@@ -27,6 +27,11 @@ export const Route = createFileRoute("/_authenticated/trackeamento/pixels")({
 const VERTICAL_LABEL: Record<string, string> = {
   bet: "Apostas / Bet", igaming: "iGaming / Cassino",
   hot: "Nicho Hot / +18", promo: "Promoções e descontos", outro: "Outro",
+};
+
+const MODE_LABEL: Record<string, string> = {
+  telegram: "Telegram",
+  direct_response: "Direct Response",
 };
 
 function PixelsPage() {
@@ -88,6 +93,7 @@ function PixelsPage() {
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold truncate">{p.name}</p>
                   <div className="flex items-center gap-2 mt-1 flex-wrap">
+                    <Badge variant="secondary">{MODE_LABEL[p.tracking_mode ?? "telegram"]}</Badge>
                     <Badge variant="secondary">{VERTICAL_LABEL[p.vertical] ?? p.vertical}</Badge>
                     {p.is_active ? <Badge>Ativo</Badge> : <Badge variant="outline">Inativo</Badge>}
                     {p.bot_username && <Badge variant="outline">@{p.bot_username}</Badge>}
