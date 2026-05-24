@@ -646,8 +646,24 @@ export async function sendPhotoWithPremiumEmojiCaption(opts: {
       docIds: rendered.entities.map((e) => e.documentId),
       buttonRows: opts.buttonRows?.length ?? 0,
     });
+    // gramjs sendFile com string trata como filePath local — URLs remotas
+    // falham com "Either one of `buffer` or `filePath` should be specified".
+    // Baixamos a foto e enviamos como buffer (CustomFile) para garantir.
+    let fileArg: unknown = opts.photoUrl;
+    if (typeof opts.photoUrl === "string" && /^https?:\/\//i.test(opts.photoUrl)) {
+      const r = await fetch(opts.photoUrl);
+      if (!r.ok) throw new Error(`Falha ao baixar foto (${r.status})`);
+      const ab = await r.arrayBuffer();
+      const buf = Buffer.from(ab);
+      if (!buf.length) throw new Error("Foto vazia ao baixar URL");
+      const { CustomFile } = await import("telegram/client/uploads");
+      const name = opts.photoUrl.split("/").pop()?.split("?")[0] || "photo.jpg";
+      fileArg = new CustomFile(name, buf.length, "", buf);
+    } else if (!opts.photoUrl) {
+      throw new Error("photoUrl ausente para envio premium");
+    }
     const msg = await client.sendFile(target as never, {
-      file: opts.photoUrl,
+      file: fileArg as never,
       caption: formatted.text,
       formattingEntities: formatted.entities as never,
       replyTo: opts.replyToMessageId,
