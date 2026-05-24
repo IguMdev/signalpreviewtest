@@ -536,7 +536,6 @@ export async function sendVideoWithPremiumEmojiCaption(opts: {
   }
 
   const { Api } = await import("telegram");
-  const { CustomFile } = await import("telegram/client/uploads");
 
   const { client, isPremium } = await connectAndAssertPremium({
     tg_api_id: acc.tg_api_id as number,
@@ -559,7 +558,7 @@ export async function sendVideoWithPremiumEmojiCaption(opts: {
     const target = resolveTelegramTarget(opts.chatId);
     const buttons = await buildInlineMarkup(opts.buttonRows);
     const buf = Buffer.from(opts.videoBytes);
-    const file = new CustomFile(opts.filename, buf.length, "", buf);
+    const upload = await createUploadFile(opts.filename, buf);
     const attributes = [
       new Api.DocumentAttributeVideo({
         duration: Math.max(1, Math.round(opts.duration ?? 1)),
@@ -569,16 +568,20 @@ export async function sendVideoWithPremiumEmojiCaption(opts: {
       }),
       new Api.DocumentAttributeFilename({ fileName: opts.filename }),
     ];
-    const msg = await client.sendFile(target as never, {
-      file: file as never,
-      caption: formatted.text,
-      formattingEntities: formatted.entities as never,
-      attributes: attributes as never,
-      supportsStreaming: true,
-      replyTo: opts.replyToMessageId,
-      ...(buttons ? { buttons: buttons as never } : {}),
-    });
-    return { applied: true, ok: true, messageId: Number(msg.id) };
+    try {
+      const msg = await client.sendFile(target as never, {
+        file: upload.file as never,
+        caption: formatted.text,
+        formattingEntities: formatted.entities as never,
+        attributes: attributes as never,
+        supportsStreaming: true,
+        replyTo: opts.replyToMessageId,
+        ...(buttons ? { buttons: buttons as never } : {}),
+      });
+      return { applied: true, ok: true, messageId: Number(msg.id) };
+    } finally {
+      await upload.cleanup();
+    }
   } catch (e) {
     const raw = e instanceof Error ? e.message : String(e);
     const { message: error, reason } = translateMtprotoError(raw);
