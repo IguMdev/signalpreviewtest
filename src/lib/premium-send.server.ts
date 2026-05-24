@@ -666,9 +666,7 @@ export async function sendPhotoWithPremiumEmojiCaption(opts: {
       docIds: rendered.entities.map((e) => e.documentId),
       buttonRows: opts.buttonRows?.length ?? 0,
     });
-    // gramjs sendFile com string trata como filePath local — URLs remotas
-    // falham com "Either one of `buffer` or `filePath` should be specified".
-    // Baixamos a foto e enviamos como buffer (CustomFile) para garantir.
+    let upload: Awaited<ReturnType<typeof createUploadFile>> | null = null;
     let fileArg: unknown = opts.photoUrl;
     if (typeof opts.photoUrl === "string" && /^https?:\/\//i.test(opts.photoUrl)) {
       const r = await fetch(opts.photoUrl);
@@ -676,20 +674,24 @@ export async function sendPhotoWithPremiumEmojiCaption(opts: {
       const ab = await r.arrayBuffer();
       const buf = Buffer.from(ab);
       if (!buf.length) throw new Error("Foto vazia ao baixar URL");
-      const { CustomFile } = await import("telegram/client/uploads");
       const name = opts.photoUrl.split("/").pop()?.split("?")[0] || "photo.jpg";
-      fileArg = new CustomFile(name, buf.length, "", buf);
+      upload = await createUploadFile(name, buf);
+      fileArg = upload.file;
     } else if (!opts.photoUrl) {
       throw new Error("photoUrl ausente para envio premium");
     }
-    const msg = await client.sendFile(target as never, {
-      file: fileArg as never,
-      caption: formatted.text,
-      formattingEntities: formatted.entities as never,
-      replyTo: opts.replyToMessageId,
-      ...(buttons ? { buttons: buttons as never } : {}),
-    });
-    return { applied: true, ok: true, messageId: Number(msg.id) };
+    try {
+      const msg = await client.sendFile(target as never, {
+        file: fileArg as never,
+        caption: formatted.text,
+        formattingEntities: formatted.entities as never,
+        replyTo: opts.replyToMessageId,
+        ...(buttons ? { buttons: buttons as never } : {}),
+      });
+      return { applied: true, ok: true, messageId: Number(msg.id) };
+    } finally {
+      await upload?.cleanup();
+    }
   } catch (e) {
     const raw = e instanceof Error ? e.message : String(e);
     const { message: error, reason } = translateMtprotoError(raw);
