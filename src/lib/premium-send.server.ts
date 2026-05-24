@@ -209,6 +209,23 @@ function resolveTelegramTarget(chatId: number | string) {
   return Number.isFinite(numeric) ? (numeric as number) : chatId;
 }
 
+async function createUploadFile(filename: string, bytes: Buffer) {
+  const { CustomFile } = await import("telegram/client/uploads");
+  if (bytes.length < 20 * 1024 * 1024) {
+    return { file: new CustomFile(filename, bytes.length, "", bytes), cleanup: async () => {} };
+  }
+
+  const { writeFile, unlink } = await import("fs/promises");
+  const { join } = await import("path");
+  const { randomUUID } = await import("crypto");
+  const filePath = join("/tmp", `${randomUUID()}-${filename.replace(/[^a-zA-Z0-9._-]/g, "_")}`);
+  await writeFile(filePath, bytes);
+  return {
+    file: new CustomFile(filename, bytes.length, filePath),
+    cleanup: async () => { await unlink(filePath).catch(() => {}); },
+  };
+}
+
 /**
  * Conecta na conta MTProto e garante que ela é Telegram Premium.
  * Sem Premium o servidor do Telegram aceita a mensagem mas REMOVE as
@@ -519,7 +536,6 @@ export async function sendVideoWithPremiumEmojiCaption(opts: {
   }
 
   const { Api } = await import("telegram");
-  const { CustomFile } = await import("telegram/client/uploads");
 
   const { client, isPremium } = await connectAndAssertPremium({
     tg_api_id: acc.tg_api_id as number,
@@ -542,7 +558,7 @@ export async function sendVideoWithPremiumEmojiCaption(opts: {
     const target = resolveTelegramTarget(opts.chatId);
     const buttons = await buildInlineMarkup(opts.buttonRows);
     const buf = Buffer.from(opts.videoBytes);
-    const file = new CustomFile(opts.filename, buf.length, "", buf);
+    const upload = await createUploadFile(opts.filename, buf);
     const attributes = [
       new Api.DocumentAttributeVideo({
         duration: Math.max(1, Math.round(opts.duration ?? 1)),
@@ -552,16 +568,20 @@ export async function sendVideoWithPremiumEmojiCaption(opts: {
       }),
       new Api.DocumentAttributeFilename({ fileName: opts.filename }),
     ];
-    const msg = await client.sendFile(target as never, {
-      file: file as never,
-      caption: formatted.text,
-      formattingEntities: formatted.entities as never,
-      attributes: attributes as never,
-      supportsStreaming: true,
-      replyTo: opts.replyToMessageId,
-      ...(buttons ? { buttons: buttons as never } : {}),
-    });
-    return { applied: true, ok: true, messageId: Number(msg.id) };
+    try {
+      const msg = await client.sendFile(target as never, {
+        file: upload.file as never,
+        caption: formatted.text,
+        formattingEntities: formatted.entities as never,
+        attributes: attributes as never,
+        supportsStreaming: true,
+        replyTo: opts.replyToMessageId,
+        ...(buttons ? { buttons: buttons as never } : {}),
+      });
+      return { applied: true, ok: true, messageId: Number(msg.id) };
+    } finally {
+      await upload.cleanup();
+    }
   } catch (e) {
     const raw = e instanceof Error ? e.message : String(e);
     const { message: error, reason } = translateMtprotoError(raw);
@@ -646,9 +666,7 @@ export async function sendPhotoWithPremiumEmojiCaption(opts: {
       docIds: rendered.entities.map((e) => e.documentId),
       buttonRows: opts.buttonRows?.length ?? 0,
     });
-    // gramjs sendFile com string trata como filePath local — URLs remotas
-    // falham com "Either one of `buffer` or `filePath` should be specified".
-    // Baixamos a foto e enviamos como buffer (CustomFile) para garantir.
+    let upload: Awaited<ReturnType<typeof createUploadFile>> | null = null;
     let fileArg: unknown = opts.photoUrl;
     if (typeof opts.photoUrl === "string" && /^https?:\/\//i.test(opts.photoUrl)) {
       const r = await fetch(opts.photoUrl);
@@ -656,20 +674,24 @@ export async function sendPhotoWithPremiumEmojiCaption(opts: {
       const ab = await r.arrayBuffer();
       const buf = Buffer.from(ab);
       if (!buf.length) throw new Error("Foto vazia ao baixar URL");
-      const { CustomFile } = await import("telegram/client/uploads");
       const name = opts.photoUrl.split("/").pop()?.split("?")[0] || "photo.jpg";
-      fileArg = new CustomFile(name, buf.length, "", buf);
+      upload = await createUploadFile(name, buf);
+      fileArg = upload.file;
     } else if (!opts.photoUrl) {
       throw new Error("photoUrl ausente para envio premium");
     }
-    const msg = await client.sendFile(target as never, {
-      file: fileArg as never,
-      caption: formatted.text,
-      formattingEntities: formatted.entities as never,
-      replyTo: opts.replyToMessageId,
-      ...(buttons ? { buttons: buttons as never } : {}),
-    });
-    return { applied: true, ok: true, messageId: Number(msg.id) };
+    try {
+      const msg = await client.sendFile(target as never, {
+        file: fileArg as never,
+        caption: formatted.text,
+        formattingEntities: formatted.entities as never,
+        replyTo: opts.replyToMessageId,
+        ...(buttons ? { buttons: buttons as never } : {}),
+      });
+      return { applied: true, ok: true, messageId: Number(msg.id) };
+    } finally {
+      await upload?.cleanup();
+    }
   } catch (e) {
     const raw = e instanceof Error ? e.message : String(e);
     const { message: error, reason } = translateMtprotoError(raw);
