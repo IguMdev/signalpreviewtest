@@ -209,6 +209,23 @@ function resolveTelegramTarget(chatId: number | string) {
   return Number.isFinite(numeric) ? (numeric as number) : chatId;
 }
 
+async function createUploadFile(filename: string, bytes: Buffer) {
+  const { CustomFile } = await import("telegram/client/uploads");
+  if (bytes.length < 20 * 1024 * 1024) {
+    return { file: new CustomFile(filename, bytes.length, "", bytes), cleanup: async () => {} };
+  }
+
+  const { writeFile, unlink } = await import("fs/promises");
+  const { join } = await import("path");
+  const { randomUUID } = await import("crypto");
+  const filePath = join("/tmp", `${randomUUID()}-${filename.replace(/[^a-zA-Z0-9._-]/g, "_")}`);
+  await writeFile(filePath, bytes);
+  return {
+    file: new CustomFile(filename, bytes.length, filePath),
+    cleanup: async () => { await unlink(filePath).catch(() => {}); },
+  };
+}
+
 /**
  * Conecta na conta MTProto e garante que ela é Telegram Premium.
  * Sem Premium o servidor do Telegram aceita a mensagem mas REMOVE as
