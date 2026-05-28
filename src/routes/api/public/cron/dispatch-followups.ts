@@ -134,7 +134,7 @@ async function dispatchOne(opts: {
             filename: (vid.title || "video").replace(/[^\w.-]+/g, "_") + ".mp4",
             caption: text || null,
             parseMode: parse_mode,
-            replyMarkup: reply_markup,
+            replyMarkup: undefined,
           });
       if (!resp.ok) return { ok: false, error: resp.description, blocked: isBlocked(resp.description) };
       if (isRound && text) {
