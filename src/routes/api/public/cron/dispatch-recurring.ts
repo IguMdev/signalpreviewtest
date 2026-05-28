@@ -289,11 +289,13 @@ export const Route = createFileRoute("/api/public/cron/dispatch-recurring")({
             duration_seconds: number | null;
             title: string;
             kind: string | null;
+            width: number | null;
+            height: number | null;
           } | null = null;
           if (s.video_id) {
             const { data: v } = await supabaseAdmin
               .from("videos")
-              .select("storage_path, mime_type, duration_seconds, title, kind")
+              .select("storage_path, mime_type, duration_seconds, title, kind, width, height")
               .eq("id", s.video_id)
               .maybeSingle();
             video = v ?? null;
@@ -378,6 +380,8 @@ export const Route = createFileRoute("/api/public/cron/dispatch-recurring")({
                               filename: (video!.title || "video").replace(/[^\w.-]+/g, "_") + ".mp4",
                               mimeType: video!.mime_type ?? "video/mp4",
                               duration: video!.duration_seconds,
+                              width: video!.width,
+                              height: video!.height,
                               caption: s.content,
                               strict: true,
                             });
@@ -398,6 +402,8 @@ export const Route = createFileRoute("/api/public/cron/dispatch-recurring")({
                           storagePath: video!.storage_path,
                           chatId: c.chat_id,
                           duration: video!.duration_seconds,
+                          width: video!.width,
+                          height: video!.height,
                           mimeType: video!.mime_type,
                           filename: (video!.title || "video").replace(/[^\w.-]+/g, "_") + ".mp4",
                           caption: s.content,
@@ -452,6 +458,8 @@ export const Route = createFileRoute("/api/public/cron/dispatch-recurring")({
                     storagePath: video.storage_path,
                     mimeType: video.mime_type,
                     duration: video.duration_seconds,
+                    width: video.width,
+                    height: video.height,
                     filename: (video.title || "video").replace(/[^\w.-]+/g, "_") + ".mp4",
                   } : null,
                 },
@@ -558,11 +566,13 @@ export const Route = createFileRoute("/api/public/cron/dispatch-recurring")({
             duration_seconds: number | null;
             title: string;
             kind: string | null;
+            width: number | null;
+            height: number | null;
           } | null = null;
           if (p.video_id) {
             const { data: v } = await supabaseAdmin
               .from("videos")
-              .select("storage_path, mime_type, duration_seconds, title, kind")
+              .select("storage_path, mime_type, duration_seconds, title, kind, width, height")
               .eq("id", p.video_id)
               .maybeSingle();
             video = v ?? null;
@@ -594,6 +604,8 @@ export const Route = createFileRoute("/api/public/cron/dispatch-recurring")({
                           filename: (video!.title || "video").replace(/[^\w.-]+/g, "_") + ".mp4",
                           mimeType: video!.mime_type ?? "video/mp4",
                           duration: video!.duration_seconds,
+                          width: video!.width,
+                          height: video!.height,
                           caption: p.content,
                           strict: true,
                         });
@@ -617,6 +629,8 @@ export const Route = createFileRoute("/api/public/cron/dispatch-recurring")({
                       storagePath: video!.storage_path,
                       chatId: c.chat_id,
                       duration: video!.duration_seconds,
+                      width: video!.width,
+                      height: video!.height,
                       mimeType: video!.mime_type,
                       filename: (video!.title || "video").replace(/[^\w.-]+/g, "_") + ".mp4",
                       caption: p.content,
@@ -672,6 +686,8 @@ export const Route = createFileRoute("/api/public/cron/dispatch-recurring")({
                       storagePath: video.storage_path,
                       mimeType: video.mime_type,
                       duration: video.duration_seconds,
+                    width: video.width,
+                    height: video.height,
                       filename: (video.title || "video").replace(/[^\w.-]+/g, "_") + ".mp4",
                     } : null,
                   },
