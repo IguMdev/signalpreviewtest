@@ -120,6 +120,10 @@ export const sendVideoNoteNow = createServerFn({ method: "POST" })
       .download(video.storage_path);
     if (dErr || !file) throw new Error("Falha ao baixar vídeo: " + (dErr?.message ?? ""));
     const bytes = await file.arrayBuffer();
+    const { data: thumb } = await supabaseAdmin.storage
+      .from("videos")
+      .download(thumbnailPathForVideoPath(video.storage_path));
+    const thumbnailBytes = thumb ? await thumb.arrayBuffer() : null;
 
     const results: { chatId: string | number; ok: boolean; error?: string }[] = [];
     for (const chatId of data.chatIds) {
@@ -134,6 +138,7 @@ export const sendVideoNoteNow = createServerFn({ method: "POST" })
             duration: video.duration_seconds,
             width: (video as { width?: number | null }).width,
             height: (video as { height?: number | null }).height,
+            thumbnailBytes,
           })
         : await sendVideoNoteToChat({
             botToken: acc.bot_token,
