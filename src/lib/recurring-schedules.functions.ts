@@ -466,11 +466,13 @@ export const testMessage = createServerFn({ method: "POST" })
       duration_seconds: number | null;
       title: string;
       kind: string | null;
+      width: number | null;
+      height: number | null;
     } | null = null;
     if (data.videoId) {
       const { data: v } = await supabaseAdmin
         .from("videos")
-        .select("storage_path, mime_type, duration_seconds, title, kind")
+        .select("storage_path, mime_type, duration_seconds, title, kind, width, height")
         .eq("id", data.videoId)
         .maybeSingle();
       video = v ?? null;
@@ -576,6 +578,8 @@ export const testMessage = createServerFn({ method: "POST" })
                 filename: (video.title || "video").replace(/[^\w.-]+/g, "_") + ".mp4",
                 mimeType: video.mime_type ?? "video/mp4",
                 duration: video.duration_seconds,
+                width: video.width,
+                height: video.height,
                 caption: data.content,
                 strict: true,
               });
@@ -598,6 +602,8 @@ export const testMessage = createServerFn({ method: "POST" })
               storagePath: video.storage_path,
               chatId: c.chat_id,
               duration: video.duration_seconds,
+              width: video.width,
+              height: video.height,
               mimeType: video.mime_type,
               filename: (video.title || "video").replace(/[^\w.-]+/g, "_") + ".mp4",
               caption: captionForMedia,
