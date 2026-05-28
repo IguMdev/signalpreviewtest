@@ -12,6 +12,13 @@ function resolveNormalVideoDimensions(width?: number | null, height?: number | n
   return { width: 720, height: 1280 };
 }
 
+function thumbnailPathForVideoPath(storagePath: string) {
+  const parts = storagePath.split("/");
+  const file = parts.pop() || "video.mp4";
+  const base = file.replace(/\.[^.]+$/, "") || "video";
+  return [...parts, "thumbs", `${base}.jpg`].filter(Boolean).join("/");
+}
+
 async function sendVideoNoteToChat(opts: {
   botToken: string | null | undefined;
   chatId: number | string;
@@ -47,6 +54,7 @@ async function sendVideoToChat(opts: {
   duration?: number | null;
   width?: number | null;
   height?: number | null;
+  thumbnailBytes?: ArrayBuffer | null;
   caption?: string | null;
   parseMode?: string | null;
   replyMarkup?: unknown;
@@ -65,6 +73,9 @@ async function sendVideoToChat(opts: {
   form.append("width", String(dimensions.width));
   form.append("height", String(dimensions.height));
   form.append("supports_streaming", "true");
+  if (opts.thumbnailBytes) {
+    form.append("thumbnail", new Blob([opts.thumbnailBytes], { type: "image/jpeg" }), "thumbnail.jpg");
+  }
   if (opts.replyMarkup) form.append("reply_markup", JSON.stringify(opts.replyMarkup));
   form.append(
     "video",
@@ -156,7 +167,7 @@ export const deleteVideo = createServerFn({ method: "POST" })
       .eq("id", data.id)
       .maybeSingle();
     if (v?.storage_path) {
-      await supabaseAdmin.storage.from("videos").remove([v.storage_path]);
+      await supabaseAdmin.storage.from("videos").remove([v.storage_path, thumbnailPathForVideoPath(v.storage_path)]);
     }
     const { error } = await supabase.from("videos").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
@@ -209,6 +220,10 @@ export async function dispatchVideo(opts: {
     return { ok: false, description: "Falha ao baixar vídeo" };
   }
   const bytes = await file.arrayBuffer();
+  const { data: thumb } = await supabaseAdmin.storage
+    .from("videos")
+    .download(thumbnailPathForVideoPath(opts.storagePath));
+  const thumbnailBytes = thumb ? await thumb.arrayBuffer() : null;
   return sendVideoToChat({
     botToken: opts.botToken,
     chatId: opts.chatId,
@@ -218,6 +233,7 @@ export async function dispatchVideo(opts: {
     duration: opts.duration,
     width: opts.width,
     height: opts.height,
+    thumbnailBytes,
     caption: opts.caption,
     parseMode: opts.parseMode,
     replyMarkup: opts.replyMarkup,
