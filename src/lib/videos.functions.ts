@@ -45,19 +45,19 @@ async function sendVideoToChat(opts: {
   }
   const form = new FormData();
   form.append("chat_id", String(opts.chatId));
-  if (opts.duration) form.append("duration", String(opts.duration));
   if (opts.caption && opts.caption.trim()) {
     form.append("caption", opts.caption);
     if (opts.parseMode) form.append("parse_mode", opts.parseMode);
   }
   if (opts.replyMarkup) form.append("reply_markup", JSON.stringify(opts.replyMarkup));
-  form.append("supports_streaming", "true");
   form.append(
-    "video",
+    "document",
     new Blob([opts.fileBytes], { type: opts.mimeType || "video/mp4" }),
     opts.filename,
   );
-  const res = await fetch(`https://api.telegram.org/bot${opts.botToken}/sendVideo`, {
+  // Usa sendDocument para preservar o arquivo original sem recompressão do Telegram.
+  // O sendVideo da Bot API sempre re-encoda o vídeo no servidor.
+  const res = await fetch(`https://api.telegram.org/bot${opts.botToken}/sendDocument`, {
     method: "POST",
     body: form,
   });
