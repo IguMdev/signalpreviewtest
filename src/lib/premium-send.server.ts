@@ -218,6 +218,11 @@ function resolveNormalVideoDimensions(width?: number | null, height?: number | n
   return { width: 720, height: 1280 };
 }
 
+function safeTelegramThumbnail(bytes?: ArrayBuffer | null) {
+  if (!bytes || bytes.byteLength > 200 * 1024) return null;
+  return bytes;
+}
+
 async function createUploadFile(filename: string, bytes: Buffer) {
   const { CustomFile } = await import("telegram/client/uploads");
   if (bytes.length < 20 * 1024 * 1024) {
@@ -515,6 +520,7 @@ export async function sendVideoWithPremiumEmojiCaption(opts: {
   accountId?: string;
   chatId: number | string;
   videoBytes: ArrayBuffer;
+  thumbnailBytes?: ArrayBuffer | null;
   filename: string;
   mimeType: string;
   duration?: number | null;
@@ -570,6 +576,8 @@ export async function sendVideoWithPremiumEmojiCaption(opts: {
     const buttons = await buildInlineMarkup(opts.buttonRows);
     const buf = Buffer.from(opts.videoBytes);
     const upload = await createUploadFile(opts.filename, buf);
+    const thumbBytes = safeTelegramThumbnail(opts.thumbnailBytes);
+    const thumbUpload = thumbBytes ? await createUploadFile("thumbnail.jpg", Buffer.from(thumbBytes)) : null;
     const dimensions = resolveNormalVideoDimensions(opts.width, opts.height);
     const attributes = [
       new Api.DocumentAttributeVideo({
@@ -586,7 +594,9 @@ export async function sendVideoWithPremiumEmojiCaption(opts: {
         caption: formatted.text,
         formattingEntities: formatted.entities as never,
         attributes: attributes as never,
+        ...(thumbUpload ? { thumb: thumbUpload.file as never } : {}),
         forceDocument: false,
+        mimeType: opts.mimeType || "video/mp4",
         supportsStreaming: true,
         replyTo: opts.replyToMessageId,
         ...(buttons ? { buttons: buttons as never } : {}),
@@ -594,6 +604,7 @@ export async function sendVideoWithPremiumEmojiCaption(opts: {
       return { applied: true, ok: true, messageId: Number(msg.id) };
     } finally {
       await upload.cleanup();
+      await thumbUpload?.cleanup();
     }
   } catch (e) {
     const raw = e instanceof Error ? e.message : String(e);
