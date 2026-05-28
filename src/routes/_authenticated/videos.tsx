@@ -5,7 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/integrations/supabase/client";
 import { sendVideoNoteNow, deleteVideo } from "@/lib/videos.functions";
-import { createVideoThumbnailBlob, thumbnailPathForVideoPath } from "@/lib/video-thumbnail.client";
+import { createVideoThumbnailBlob, thumbnailPathForVideoPath } from "@/lib/video-thumbnail";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

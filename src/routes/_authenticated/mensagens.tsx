@@ -16,7 +16,7 @@ import {
   moveScheduleToFolder,
 } from "@/lib/schedule-folders.functions";
 import { syncRoomPhoto } from "@/lib/room-photos.functions";
-import { createVideoThumbnailBlob, thumbnailPathForVideoPath } from "@/lib/video-thumbnail.client";
+import { createVideoThumbnailBlob, thumbnailPathForVideoPath } from "@/lib/video-thumbnail";
 import { QuickTemplatesBar } from "@/components/QuickTemplatesBar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
