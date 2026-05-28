@@ -150,8 +150,6 @@ export async function dispatchVideoNote(opts: {
   storagePath: string;
   chatId: number;
   duration?: number | null;
-  width?: number | null;
-  height?: number | null;
   mimeType?: string | null;
   filename?: string;
 }): Promise<{ ok: boolean; result?: { message_id: number }; description?: string }> {
@@ -177,6 +175,8 @@ export async function dispatchVideo(opts: {
   storagePath: string;
   chatId: number;
   duration?: number | null;
+  width?: number | null;
+  height?: number | null;
   mimeType?: string | null;
   filename?: string;
   caption?: string | null;
