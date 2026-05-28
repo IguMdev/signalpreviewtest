@@ -102,17 +102,26 @@ export const sendVideoNoteNow = createServerFn({ method: "POST" })
 
     const results: { chatId: string | number; ok: boolean; error?: string }[] = [];
     for (const chatId of data.chatIds) {
-      const sender = (video as any).kind === "normal" ? sendVideoToChat : sendVideoNoteToChat;
-      const r = await sender({
-        botToken: acc.bot_token,
-        chatId,
-        fileBytes: bytes,
-        filename: video.title.replace(/[^\w.-]+/g, "_") + ".mp4",
-        mimeType: video.mime_type ?? "video/mp4",
-        duration: video.duration_seconds,
-        width: (video as { width?: number | null }).width,
-        height: (video as { height?: number | null }).height,
-      });
+      const filename = video.title.replace(/[^\w.-]+/g, "_") + ".mp4";
+      const r = (video as { kind?: string | null }).kind === "normal"
+        ? await sendVideoToChat({
+            botToken: acc.bot_token,
+            chatId,
+            fileBytes: bytes,
+            filename,
+            mimeType: video.mime_type ?? "video/mp4",
+            duration: video.duration_seconds,
+            width: (video as { width?: number | null }).width,
+            height: (video as { height?: number | null }).height,
+          })
+        : await sendVideoNoteToChat({
+            botToken: acc.bot_token,
+            chatId,
+            fileBytes: bytes,
+            filename,
+            mimeType: video.mime_type ?? "video/mp4",
+            duration: video.duration_seconds,
+          });
       await supabaseAdmin.from("message_logs").insert({
         user_id: userId,
         account_id: data.accountId,
