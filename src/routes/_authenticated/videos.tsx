@@ -69,7 +69,7 @@ const MAX_BYTES_NORMAL = 50 * 1024 * 1024;
 async function validateVideoFile(
   file: File,
   kind: "round" | "normal",
-): Promise<{ duration: number }> {
+): Promise<{ duration: number; width: number; height: number }> {
   if (kind === "round" && file.size > MAX_BYTES_ROUND) {
     throw new Error("O vídeo redondo deve ter no máximo 12 MB (limite do Telegram para video note).");
   }
@@ -101,7 +101,7 @@ async function validateVideoFile(
           return;
         }
       }
-      resolve({ duration: Math.round(dur) });
+      resolve({ duration: Math.round(dur), width: w, height: h });
     };
     v.onerror = () => {
       URL.revokeObjectURL(url);
@@ -119,7 +119,7 @@ function VideosPage() {
   const [uploading, setUploading] = useState(false);
   const [title, setTitle] = useState("");
   const [kind, setKind] = useState<"round" | "normal">("round");
-  const [pendingFile, setPendingFile] = useState<{ file: File; duration: number } | null>(null);
+  const [pendingFile, setPendingFile] = useState<{ file: File; duration: number; width: number; height: number } | null>(null);
 
   const [sendDialog, setSendDialog] = useState<{ videoId: string; title: string } | null>(null);
   const [accountId, setAccountId] = useState("");
@@ -152,8 +152,8 @@ function VideosPage() {
     const f = e.target.files?.[0];
     if (!f) return;
     try {
-      const { duration } = await validateVideoFile(f, kind);
-      setPendingFile({ file: f, duration });
+      const { duration, width, height } = await validateVideoFile(f, kind);
+      setPendingFile({ file: f, duration, width, height });
       setTitle(f.name.replace(/\.mp4$/i, ""));
     } catch (err) {
       toast.error((err as Error).message);
@@ -165,10 +165,12 @@ function VideosPage() {
     if (!pendingFile || !user) return;
     setUploading(true);
     try {
-      const path = `${user.id}/${crypto.randomUUID()}.mp4`;
+      const ext = pendingFile.file.name.split(".").pop()?.toLowerCase().replace(/[^a-z0-9]/g, "") || "mp4";
+      const mimeType = pendingFile.file.type || "video/mp4";
+      const path = `${user.id}/${crypto.randomUUID()}.${ext}`;
       const { error: upErr } = await supabase.storage
         .from("videos")
-        .upload(path, pendingFile.file, { contentType: "video/mp4", upsert: false });
+        .upload(path, pendingFile.file, { contentType: mimeType, upsert: false });
       if (upErr) throw upErr;
       const { error: insErr } = await supabase.from("videos").insert({
         user_id: user.id,
@@ -176,9 +178,11 @@ function VideosPage() {
         storage_path: path,
         file_size: pendingFile.file.size,
         duration_seconds: pendingFile.duration,
-        mime_type: "video/mp4",
+        mime_type: mimeType,
         kind,
-      });
+        width: pendingFile.width,
+        height: pendingFile.height,
+      } as never);
       if (insErr) throw insErr;
       toast.success("Vídeo enviado");
       setPendingFile(null);
@@ -289,7 +293,7 @@ function VideosPage() {
         </div>
         {pendingFile && (
           <p className="text-xs text-muted-foreground">
-            Pronto: {pendingFile.file.name} · {pendingFile.duration}s ·{" "}
+            Pronto: {pendingFile.file.name} · {pendingFile.width}×{pendingFile.height} · {pendingFile.duration}s ·{" "}
             {(pendingFile.file.size / 1024 / 1024).toFixed(2)} MB
           </p>
         )}
