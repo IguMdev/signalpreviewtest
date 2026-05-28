@@ -119,8 +119,6 @@ async function sendWelcomeBlock(opts: {
             storagePath: vid.storage_path,
             chatId: opts.chatId,
             duration: vid.duration_seconds,
-            width: (vid as { width?: number | null }).width,
-            height: (vid as { height?: number | null }).height,
             mimeType: vid.mime_type,
             filename: (vid.title || "video").replace(/[^\w.-]+/g, "_") + ".mp4",
           })
@@ -129,6 +127,8 @@ async function sendWelcomeBlock(opts: {
             storagePath: vid.storage_path,
             chatId: opts.chatId,
             duration: vid.duration_seconds,
+            width: (vid as { width?: number | null }).width,
+            height: (vid as { height?: number | null }).height,
             mimeType: vid.mime_type,
             filename: (vid.title || "video").replace(/[^\w.-]+/g, "_") + ".mp4",
             caption: opts.text,
