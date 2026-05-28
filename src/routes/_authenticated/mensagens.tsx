@@ -1028,6 +1028,7 @@ function ScheduleDialog({
     }
     setTestingPart(key);
     try {
+      if (payload.videoId) await ensureVideoThumbnail(payload.videoId);
       const res = await testMsgFn({
         data: {
           roomId,
@@ -1479,6 +1480,7 @@ function ScheduleDialog({
                               const next = v === "none" ? "" : v;
                               if (next) {
                                 update({ videoId: next, imagePath: "", imageMime: "" });
+                                void ensureVideoThumbnail(next);
                               } else {
                                 update({ videoId: "" });
                               }
@@ -1695,7 +1697,9 @@ function ScheduleDialog({
           <Button
             className="w-full sm:w-auto"
             disabled={!canSave}
-            onClick={() =>
+            onClick={async () => {
+              const ids = [videoId, ...followUps.map((f) => f.videoId)].filter(Boolean);
+              await Promise.all(ids.map((id) => ensureVideoThumbnail(id)));
               onSave({
                 id: editing?.id || undefined,
                 roomId,
@@ -1729,8 +1733,8 @@ function ScheduleDialog({
                 buttonText: buttonText.trim() || null,
                 buttonUrl: buttonUrl.trim() || null,
                 folderId: folderId || null,
-              })
-            }
+              });
+            }}
           >
             {editing?.id ? "Salvar alterações" : "Criar mensagem"}
           </Button>
