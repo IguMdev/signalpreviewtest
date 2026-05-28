@@ -110,7 +110,7 @@ async function sendWelcomeBlock(opts: {
 
   if (opts.videoId) {
     const { data: vid } = await supabaseAdmin
-      .from("videos").select("storage_path, kind, mime_type, duration_seconds, title").eq("id", opts.videoId).maybeSingle();
+      .from("videos").select("storage_path, kind, mime_type, duration_seconds, title, width, height").eq("id", opts.videoId).maybeSingle();
     if (vid?.storage_path) {
       const isRound = vid.kind === "round";
       const resp = isRound
@@ -119,6 +119,8 @@ async function sendWelcomeBlock(opts: {
             storagePath: vid.storage_path,
             chatId: opts.chatId,
             duration: vid.duration_seconds,
+            width: (vid as { width?: number | null }).width,
+            height: (vid as { height?: number | null }).height,
             mimeType: vid.mime_type,
             filename: (vid.title || "video").replace(/[^\w.-]+/g, "_") + ".mp4",
           })

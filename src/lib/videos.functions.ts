@@ -36,6 +36,8 @@ async function sendVideoToChat(opts: {
   filename: string;
   mimeType: string;
   duration?: number | null;
+  width?: number | null;
+  height?: number | null;
   caption?: string | null;
   parseMode?: string | null;
   replyMarkup?: unknown;
@@ -49,15 +51,17 @@ async function sendVideoToChat(opts: {
     form.append("caption", opts.caption);
     if (opts.parseMode) form.append("parse_mode", opts.parseMode);
   }
+  if (opts.duration) form.append("duration", String(Math.round(opts.duration)));
+  if (opts.width) form.append("width", String(Math.round(opts.width)));
+  if (opts.height) form.append("height", String(Math.round(opts.height)));
+  form.append("supports_streaming", "true");
   if (opts.replyMarkup) form.append("reply_markup", JSON.stringify(opts.replyMarkup));
   form.append(
-    "document",
+    "video",
     new Blob([opts.fileBytes], { type: opts.mimeType || "video/mp4" }),
     opts.filename,
   );
-  // Usa sendDocument para preservar o arquivo original sem recompressão do Telegram.
-  // O sendVideo da Bot API sempre re-encoda o vídeo no servidor.
-  const res = await fetch(`https://api.telegram.org/bot${opts.botToken}/sendDocument`, {
+  const res = await fetch(`https://api.telegram.org/bot${opts.botToken}/sendVideo`, {
     method: "POST",
     body: form,
   });
@@ -78,7 +82,7 @@ export const sendVideoNoteNow = createServerFn({ method: "POST" })
 
     const { data: video, error: vErr } = await supabase
       .from("videos")
-      .select("id, storage_path, mime_type, duration_seconds, title, kind")
+      .select("id, storage_path, mime_type, duration_seconds, title, kind, width, height")
       .eq("id", data.videoId)
       .maybeSingle();
     if (vErr || !video) throw new Error("Vídeo não encontrado");
@@ -106,6 +110,8 @@ export const sendVideoNoteNow = createServerFn({ method: "POST" })
         filename: video.title.replace(/[^\w.-]+/g, "_") + ".mp4",
         mimeType: video.mime_type ?? "video/mp4",
         duration: video.duration_seconds,
+        width: (video as { width?: number | null }).width,
+        height: (video as { height?: number | null }).height,
       });
       await supabaseAdmin.from("message_logs").insert({
         user_id: userId,
@@ -169,6 +175,8 @@ export async function dispatchVideo(opts: {
   storagePath: string;
   chatId: number;
   duration?: number | null;
+  width?: number | null;
+  height?: number | null;
   mimeType?: string | null;
   filename?: string;
   caption?: string | null;
@@ -189,6 +197,8 @@ export async function dispatchVideo(opts: {
     filename: opts.filename ?? "video.mp4",
     mimeType: opts.mimeType ?? "video/mp4",
     duration: opts.duration,
+    width: opts.width,
+    height: opts.height,
     caption: opts.caption,
     parseMode: opts.parseMode,
     replyMarkup: opts.replyMarkup,

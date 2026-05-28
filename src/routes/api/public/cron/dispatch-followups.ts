@@ -111,7 +111,7 @@ async function dispatchOne(opts: {
   if (msg.video_id) {
     const { data: vid } = await supabaseAdmin
       .from("videos")
-      .select("storage_path, kind, mime_type, duration_seconds, title")
+      .select("storage_path, kind, mime_type, duration_seconds, title, width, height")
       .eq("id", msg.video_id)
       .maybeSingle();
     if (vid?.storage_path) {
@@ -130,6 +130,8 @@ async function dispatchOne(opts: {
             storagePath: vid.storage_path,
             chatId: lead.chat_id,
             duration: vid.duration_seconds,
+            width: (vid as { width?: number | null }).width,
+            height: (vid as { height?: number | null }).height,
             mimeType: vid.mime_type,
             filename: (vid.title || "video").replace(/[^\w.-]+/g, "_") + ".mp4",
             caption: text || null,
