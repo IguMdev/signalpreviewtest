@@ -595,6 +595,7 @@ function MensagensPage() {
         videos={videos.data ?? []}
         folders={folders.data ?? []}
         presetRoomId={presetRoomId}
+        ensureVideoThumbnail={ensureVideoThumbnail}
         onClose={() => setEditing(null)}
         onSave={async (payload) => {
           try {
@@ -851,6 +852,7 @@ function ScheduleDialog({
   videos,
   folders,
   presetRoomId,
+  ensureVideoThumbnail,
   onClose,
   onSave,
 }: {
@@ -860,6 +862,7 @@ function ScheduleDialog({
   videos: { id: string; title: string; kind?: string | null }[];
   folders: ScheduleFolder[];
   presetRoomId: string | null;
+  ensureVideoThumbnail: (videoId: string) => Promise<void>;
   onClose: () => void;
   onSave: (data: {
     id?: string;
