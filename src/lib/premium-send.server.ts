@@ -596,7 +596,6 @@ export async function sendVideoWithPremiumEmojiCaption(opts: {
         attributes: attributes as never,
         ...(thumbUpload ? { thumb: thumbUpload.file as never } : {}),
         forceDocument: false,
-        mimeType: opts.mimeType || "video/mp4",
         supportsStreaming: true,
         replyTo: opts.replyToMessageId,
         ...(buttons ? { buttons: buttons as never } : {}),
