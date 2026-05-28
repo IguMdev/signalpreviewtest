@@ -2824,6 +2824,7 @@ export type Database = {
           created_at: string
           duration_seconds: number | null
           file_size: number | null
+          height: number | null
           id: string
           kind: string
           mime_type: string | null
@@ -2831,11 +2832,13 @@ export type Database = {
           title: string
           updated_at: string
           user_id: string
+          width: number | null
         }
         Insert: {
           created_at?: string
           duration_seconds?: number | null
           file_size?: number | null
+          height?: number | null
           id?: string
           kind?: string
           mime_type?: string | null
@@ -2843,11 +2846,13 @@ export type Database = {
           title: string
           updated_at?: string
           user_id: string
+          width?: number | null
         }
         Update: {
           created_at?: string
           duration_seconds?: number | null
           file_size?: number | null
+          height?: number | null
           id?: string
           kind?: string
           mime_type?: string | null
@@ -2855,6 +2860,7 @@ export type Database = {
           title?: string
           updated_at?: string
           user_id?: string
+          width?: number | null
         }
         Relationships: []
       }
