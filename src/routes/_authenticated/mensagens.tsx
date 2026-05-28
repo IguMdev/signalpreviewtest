@@ -16,7 +16,7 @@ import {
   moveScheduleToFolder,
 } from "@/lib/schedule-folders.functions";
 import { syncRoomPhoto } from "@/lib/room-photos.functions";
-import { createVideoThumbnailBlob } from "./videos";
+import { createVideoThumbnailBlob, thumbnailPathForVideoPath } from "@/lib/video-thumbnail.client";
 import { QuickTemplatesBar } from "@/components/QuickTemplatesBar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -128,13 +128,6 @@ type VideoOption = {
   kind: string | null;
   storage_path: string;
 };
-
-function thumbnailPathForVideoPath(storagePath: string) {
-  const parts = storagePath.split("/");
-  const file = parts.pop() || "video.mp4";
-  const base = file.replace(/\.[^.]+$/, "") || "video";
-  return [...parts, "thumbs", `${base}.jpg`].filter(Boolean).join("/");
-}
 
 function MensagensPage() {
   const qc = useQueryClient();
