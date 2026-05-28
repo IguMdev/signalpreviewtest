@@ -12,7 +12,7 @@ function resolveNormalVideoDimensions(width?: number | null, height?: number | n
   return { width: 720, height: 1280 };
 }
 
-function thumbnailPathForVideoPath(storagePath: string) {
+export function thumbnailPathForVideoPath(storagePath: string) {
   const parts = storagePath.split("/");
   const file = parts.pop() || "video.mp4";
   const base = file.replace(/\.[^.]+$/, "") || "video";
@@ -89,7 +89,7 @@ async function sendVideoToChat(opts: {
   return (await res.json()) as { ok: boolean; result?: { message_id: number }; description?: string };
 }
 
-async function loadVideoThumbnail(storagePath: string): Promise<ArrayBuffer | null> {
+export async function loadVideoThumbnail(storagePath: string): Promise<ArrayBuffer | null> {
   const { data: thumb } = await supabaseAdmin.storage
     .from("videos")
     .download(thumbnailPathForVideoPath(storagePath));
