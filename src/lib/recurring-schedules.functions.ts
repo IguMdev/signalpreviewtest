@@ -218,12 +218,14 @@ export const testSchedule = createServerFn({ method: "POST" })
       duration_seconds: number | null;
       title: string;
       kind: string | null;
+      width: number | null;
+      height: number | null;
     };
     const loadVideo = async (videoId: string | null | undefined): Promise<VideoRow | null> => {
       if (!videoId) return null;
       const { data: v } = await supabaseAdmin
         .from("videos")
-        .select("storage_path, mime_type, duration_seconds, title, kind")
+        .select("storage_path, mime_type, duration_seconds, title, kind, width, height")
         .eq("id", videoId)
         .maybeSingle();
       return (v as VideoRow | null) ?? null;
@@ -315,6 +317,8 @@ export const testSchedule = createServerFn({ method: "POST" })
                         filename: (video!.title || "video").replace(/[^\w.-]+/g, "_") + ".mp4",
                         mimeType: video!.mime_type ?? "video/mp4",
                         duration: video!.duration_seconds,
+                        width: video!.width,
+                        height: video!.height,
                         caption: p.content,
                         strict: true,
                       });
@@ -335,6 +339,8 @@ export const testSchedule = createServerFn({ method: "POST" })
                     storagePath: video!.storage_path,
                     chatId: c.chat_id,
                     duration: video!.duration_seconds,
+                    width: video!.width,
+                    height: video!.height,
                     mimeType: video!.mime_type,
                     filename: (video!.title || "video").replace(/[^\w.-]+/g, "_") + ".mp4",
                     caption: p.content,
