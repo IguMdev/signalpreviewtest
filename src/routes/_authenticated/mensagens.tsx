@@ -1239,6 +1239,7 @@ function ScheduleDialog({
                     if (next) {
                       setImagePath("");
                       setImageMime("");
+                      void ensureVideoThumbnail(next);
                     }
                   }}
                 >
