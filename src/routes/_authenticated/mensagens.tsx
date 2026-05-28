@@ -280,6 +280,20 @@ function MensagensPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const ensureVideoThumbnail = async (videoIdToFix: string) => {
+    const video = videos.data?.find((v) => v.id === videoIdToFix);
+    if (!video || video.kind !== "normal" || !video.storage_path) return;
+    const thumbPath = thumbnailPathForVideoPath(video.storage_path);
+    const existing = await supabase.storage.from("videos").download(thumbPath);
+    if (existing.data) return;
+    const signed = await supabase.storage.from("videos").createSignedUrl(video.storage_path, 300);
+    if (!signed.data?.signedUrl) return;
+    const res = await fetch(signed.data.signedUrl);
+    if (!res.ok) return;
+    const thumb = await createVideoThumbnailBlob(await res.blob());
+    await supabase.storage.from("videos").upload(thumbPath, thumb, { contentType: "image/jpeg", upsert: true });
+  };
+
   // Auto-sync photos for rooms missing one (once per session per room)
   const triedRef = useRef<Set<string>>(new Set());
   useEffect(() => {
