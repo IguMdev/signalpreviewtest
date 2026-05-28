@@ -6,6 +6,7 @@ import { callTelegram } from "@/lib/telegram.server";
 import { fireTrackingEvent } from "@/lib/tracking.server";
 import { sendTextWithPremiumEmojis, sendPhotoWithPremiumEmojiCaption } from "@/lib/premium-send.server";
 import { forwardWithPremiumEmojis, hasPremiumEmojiEntities, type BotApiPost } from "@/lib/forwarder-premium.server";
+import { dispatchVideo, dispatchVideoNote } from "@/lib/videos.functions";
 
 // ╔══════════════════════════════════════════════════════════╗
 // ║  WEBHOOK DO TELEGRAM — roteador único por conta de bot   ║
@@ -109,15 +110,30 @@ async function sendWelcomeBlock(opts: {
 
   if (opts.videoId) {
     const { data: vid } = await supabaseAdmin
-      .from("videos").select("storage_path, kind").eq("id", opts.videoId).maybeSingle();
+      .from("videos").select("storage_path, kind, mime_type, duration_seconds, title").eq("id", opts.videoId).maybeSingle();
     if (vid?.storage_path) {
-      const url = publicUrl("videos", vid.storage_path);
-      const method = vid.kind === "round" ? "sendVideoNote" : "sendVideo";
-      const body: Record<string, unknown> = { chat_id: opts.chatId };
-      if (method === "sendVideoNote") body.video_note = url;
-      else { body.video = url; body.caption = opts.text; body.parse_mode = parse_mode; if (reply_markup) body.reply_markup = reply_markup; }
-      const resp = await callTelegram(opts.botToken, method, body);
-      if (method === "sendVideoNote") {
+      const isRound = vid.kind === "round";
+      const resp = isRound
+        ? await dispatchVideoNote({
+            botToken: opts.botToken,
+            storagePath: vid.storage_path,
+            chatId: opts.chatId,
+            duration: vid.duration_seconds,
+            mimeType: vid.mime_type,
+            filename: (vid.title || "video").replace(/[^\w.-]+/g, "_") + ".mp4",
+          })
+        : await dispatchVideo({
+            botToken: opts.botToken,
+            storagePath: vid.storage_path,
+            chatId: opts.chatId,
+            duration: vid.duration_seconds,
+            mimeType: vid.mime_type,
+            filename: (vid.title || "video").replace(/[^\w.-]+/g, "_") + ".mp4",
+            caption: opts.text,
+            parseMode: parse_mode,
+            replyMarkup: reply_markup,
+          });
+      if (isRound) {
         if (usePremium) {
           await sendTextWithPremiumEmojis({
             userId: opts.userId, accountId: opts.premiumAccountId!, chatId: opts.chatId,
@@ -130,7 +146,7 @@ async function sendWelcomeBlock(opts: {
           await callTelegram(opts.botToken, "sendMessage", { chat_id: opts.chatId, text: opts.text, parse_mode, reply_markup });
         }
       }
-      return { ok: !!resp?.ok, description: resp?.description, mediaKind: method === "sendVideoNote" ? "video_note" : "video" };
+      return { ok: !!resp?.ok, description: resp?.description, mediaKind: isRound ? "video_note" : "video" };
     }
   }
 

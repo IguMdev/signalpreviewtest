@@ -559,22 +559,15 @@ export async function sendVideoWithPremiumEmojiCaption(opts: {
     const buttons = await buildInlineMarkup(opts.buttonRows);
     const buf = Buffer.from(opts.videoBytes);
     const upload = await createUploadFile(opts.filename, buf);
-    const attributes = [
-      new Api.DocumentAttributeVideo({
-        duration: Math.max(1, Math.round(opts.duration ?? 1)),
-        w: 0,
-        h: 0,
-        supportsStreaming: true,
-      }),
-      new Api.DocumentAttributeFilename({ fileName: opts.filename }),
-    ];
+    const attributes = [new Api.DocumentAttributeFilename({ fileName: opts.filename })];
     try {
       const msg = await client.sendFile(target as never, {
         file: upload.file as never,
         caption: formatted.text,
         formattingEntities: formatted.entities as never,
         attributes: attributes as never,
-        supportsStreaming: true,
+        forceDocument: true,
+        supportsStreaming: false,
         replyTo: opts.replyToMessageId,
         ...(buttons ? { buttons: buttons as never } : {}),
       });

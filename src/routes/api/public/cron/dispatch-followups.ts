@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { callTelegram } from "@/lib/telegram.server";
 import { sendTextWithPremiumEmojis, sendPhotoWithPremiumEmojiCaption } from "@/lib/premium-send.server";
+import { dispatchVideo, dispatchVideoNote } from "@/lib/videos.functions";
 
 // ╔══════════════════════════════════════════════════════════╗
 // ║  CRON: DISPATCH-FOLLOWUPS (executado a cada minuto)      ║
@@ -110,20 +111,31 @@ async function dispatchOne(opts: {
   if (msg.video_id) {
     const { data: vid } = await supabaseAdmin
       .from("videos")
-      .select("storage_path, kind")
+      .select("storage_path, kind, mime_type, duration_seconds, title")
       .eq("id", msg.video_id)
       .maybeSingle();
     if (vid?.storage_path) {
-      const url = publicUrl("videos", vid.storage_path);
       const isRound = vid.kind === "round";
-      const body: Record<string, unknown> = { chat_id: lead.chat_id };
-      if (isRound) body.video_note = url;
-      else {
-        body.video = url;
-        body.caption = text || undefined;
-        body.parse_mode = text ? parse_mode : undefined;
-      }
-      const resp = await callTelegram(botToken, isRound ? "sendVideoNote" : "sendVideo", body);
+      const resp = isRound
+        ? await dispatchVideoNote({
+            botToken,
+            storagePath: vid.storage_path,
+            chatId: lead.chat_id,
+            duration: vid.duration_seconds,
+            mimeType: vid.mime_type,
+            filename: (vid.title || "video").replace(/[^\w.-]+/g, "_") + ".mp4",
+          })
+        : await dispatchVideo({
+            botToken,
+            storagePath: vid.storage_path,
+            chatId: lead.chat_id,
+            duration: vid.duration_seconds,
+            mimeType: vid.mime_type,
+            filename: (vid.title || "video").replace(/[^\w.-]+/g, "_") + ".mp4",
+            caption: text || null,
+            parseMode: parse_mode,
+            replyMarkup: undefined,
+          });
       if (!resp.ok) return { ok: false, error: resp.description, blocked: isBlocked(resp.description) };
       if (isRound && text) {
         await callTelegram(botToken, "sendMessage", {
