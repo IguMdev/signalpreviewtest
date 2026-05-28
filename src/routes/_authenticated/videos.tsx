@@ -79,7 +79,7 @@ function canvasToJpegBlob(canvas: HTMLCanvasElement, quality: number): Promise<B
   });
 }
 
-async function createVideoThumbnail(file: File): Promise<Blob> {
+export async function createVideoThumbnailBlob(file: File | Blob): Promise<Blob> {
   const url = URL.createObjectURL(file);
   try {
     const video = await new Promise<HTMLVideoElement>((resolve, reject) => {
@@ -223,7 +223,7 @@ function VideosPage() {
       const ext = pendingFile.file.name.split(".").pop()?.toLowerCase().replace(/[^a-z0-9]/g, "") || "mp4";
       const mimeType = pendingFile.file.type || "video/mp4";
       const path = `${user.id}/${crypto.randomUUID()}.${ext}`;
-      const thumbnailBlob = kind === "normal" ? await createVideoThumbnail(pendingFile.file) : null;
+      const thumbnailBlob = kind === "normal" ? await createVideoThumbnailBlob(pendingFile.file) : null;
       const thumbnailPath = thumbnailBlob ? thumbnailPathForVideoPath(path) : null;
       const { error: upErr } = await supabase.storage
         .from("videos")
