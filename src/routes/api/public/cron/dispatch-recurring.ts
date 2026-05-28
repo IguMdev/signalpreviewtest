@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { callTelegram } from "@/lib/telegram.server";
-import { dispatchVideoNote, dispatchVideo } from "@/lib/videos.functions";
+import { dispatchVideoNote, dispatchVideo, loadVideoThumbnail } from "@/lib/videos.functions";
 import { triggerSignalReactions } from "@/lib/engagement.functions";
 import {
   sendPhotoWithPremiumEmojiCaption,
@@ -377,6 +377,7 @@ export const Route = createFileRoute("/api/public/cron/dispatch-recurring")({
                               userId: s.user_id,
                               chatId: c.chat_id,
                               videoBytes: bytes,
+                              thumbnailBytes: await loadVideoThumbnail(video!.storage_path),
                               filename: (video!.title || "video").replace(/[^\w.-]+/g, "_") + ".mp4",
                               mimeType: video!.mime_type ?? "video/mp4",
                               duration: video!.duration_seconds,
@@ -601,6 +602,7 @@ export const Route = createFileRoute("/api/public/cron/dispatch-recurring")({
                           userId: p.user_id,
                           chatId: c.chat_id,
                           videoBytes: bytes,
+                          thumbnailBytes: await loadVideoThumbnail(video!.storage_path),
                           filename: (video!.title || "video").replace(/[^\w.-]+/g, "_") + ".mp4",
                           mimeType: video!.mime_type ?? "video/mp4",
                           duration: video!.duration_seconds,
