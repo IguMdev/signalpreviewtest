@@ -209,6 +209,15 @@ function resolveTelegramTarget(chatId: number | string) {
   return Number.isFinite(numeric) ? (numeric as number) : chatId;
 }
 
+function resolveNormalVideoDimensions(width?: number | null, height?: number | null) {
+  const w = Number(width);
+  const h = Number(height);
+  if (Number.isFinite(w) && Number.isFinite(h) && w > 0 && h > 0) {
+    return { width: Math.round(w), height: Math.round(h) };
+  }
+  return { width: 720, height: 1280 };
+}
+
 async function createUploadFile(filename: string, bytes: Buffer) {
   const { CustomFile } = await import("telegram/client/uploads");
   if (bytes.length < 20 * 1024 * 1024) {
@@ -561,11 +570,12 @@ export async function sendVideoWithPremiumEmojiCaption(opts: {
     const buttons = await buildInlineMarkup(opts.buttonRows);
     const buf = Buffer.from(opts.videoBytes);
     const upload = await createUploadFile(opts.filename, buf);
+    const dimensions = resolveNormalVideoDimensions(opts.width, opts.height);
     const attributes = [
       new Api.DocumentAttributeVideo({
         duration: Math.max(1, Math.round(opts.duration ?? 1)),
-        w: Math.max(1, Math.round(opts.width ?? 1)),
-        h: Math.max(1, Math.round(opts.height ?? 1)),
+        w: dimensions.width,
+        h: dimensions.height,
         supportsStreaming: true,
       }),
       new Api.DocumentAttributeFilename({ fileName: opts.filename }),
