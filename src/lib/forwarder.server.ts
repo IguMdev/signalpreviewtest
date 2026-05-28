@@ -30,6 +30,8 @@ type MirrorPayload = {
     storagePath: string;
     mimeType?: string | null;
     duration?: number | null;
+    width?: number | null;
+    height?: number | null;
     filename?: string | null;
   } | null;
   replyMarkup?: { inline_keyboard?: Array<Array<{ text?: string; url?: string }>> } | null;
@@ -94,6 +96,8 @@ async function sendPremiumMirror(opts: {
       filename: opts.payload.video.filename ?? "video.mp4",
       mimeType: opts.payload.video.mimeType ?? "video/mp4",
       duration: opts.payload.video.duration,
+      width: opts.payload.video.width,
+      height: opts.payload.video.height,
       caption: text,
       strict: true,
       buttonRows,
