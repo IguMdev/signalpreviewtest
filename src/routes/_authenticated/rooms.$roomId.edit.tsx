@@ -422,7 +422,7 @@ function EngagementCard({ roomId }: { roomId: string }) {
         </div>
         {!hasAnySub && (
           <Button asChild size="sm" variant="outline">
-            <Link to="/engagement">Ver planos</Link>
+            <Link to="/recarga">Ver planos</Link>
           </Button>
         )}
       </div>
