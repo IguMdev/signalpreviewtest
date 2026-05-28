@@ -3,6 +3,15 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
+function resolveNormalVideoDimensions(width?: number | null, height?: number | null) {
+  const w = Number(width);
+  const h = Number(height);
+  if (Number.isFinite(w) && Number.isFinite(h) && w > 0 && h > 0) {
+    return { width: Math.round(w), height: Math.round(h) };
+  }
+  return { width: 720, height: 1280 };
+}
+
 async function sendVideoNoteToChat(opts: {
   botToken: string | null | undefined;
   chatId: number | string;
@@ -46,14 +55,15 @@ async function sendVideoToChat(opts: {
     return { ok: false, description: "Conta sem bot_token" } as { ok: boolean; result?: { message_id: number }; description?: string };
   }
   const form = new FormData();
+  const dimensions = resolveNormalVideoDimensions(opts.width, opts.height);
   form.append("chat_id", String(opts.chatId));
   if (opts.caption && opts.caption.trim()) {
     form.append("caption", opts.caption);
     if (opts.parseMode) form.append("parse_mode", opts.parseMode);
   }
   if (opts.duration) form.append("duration", String(Math.round(opts.duration)));
-  if (opts.width) form.append("width", String(Math.round(opts.width)));
-  if (opts.height) form.append("height", String(Math.round(opts.height)));
+  form.append("width", String(dimensions.width));
+  form.append("height", String(dimensions.height));
   form.append("supports_streaming", "true");
   if (opts.replyMarkup) form.append("reply_markup", JSON.stringify(opts.replyMarkup));
   form.append(
