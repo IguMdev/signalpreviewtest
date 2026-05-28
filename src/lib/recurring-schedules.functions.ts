@@ -3,7 +3,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { callTelegram } from "@/lib/telegram.server";
-import { dispatchVideoNote, dispatchVideo } from "@/lib/videos.functions";
+import { dispatchVideoNote, dispatchVideo, loadVideoThumbnail } from "@/lib/videos.functions";
 import {
   sendPhotoWithPremiumEmojiCaption,
   sendTextWithPremiumEmojis,
@@ -314,6 +314,7 @@ export const testSchedule = createServerFn({ method: "POST" })
                         userId: s.user_id,
                         chatId: c.chat_id,
                         videoBytes: bytes,
+                        thumbnailBytes: await loadVideoThumbnail(video!.storage_path),
                         filename: (video!.title || "video").replace(/[^\w.-]+/g, "_") + ".mp4",
                         mimeType: video!.mime_type ?? "video/mp4",
                         duration: video!.duration_seconds,
@@ -575,6 +576,7 @@ export const testMessage = createServerFn({ method: "POST" })
                 userId,
                 chatId: c.chat_id,
                 videoBytes: bytes,
+                thumbnailBytes: await loadVideoThumbnail(video.storage_path),
                 filename: (video.title || "video").replace(/[^\w.-]+/g, "_") + ".mp4",
                 mimeType: video.mime_type ?? "video/mp4",
                 duration: video.duration_seconds,

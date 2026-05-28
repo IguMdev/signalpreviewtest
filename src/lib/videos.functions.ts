@@ -12,7 +12,7 @@ function resolveNormalVideoDimensions(width?: number | null, height?: number | n
   return { width: 720, height: 1280 };
 }
 
-function thumbnailPathForVideoPath(storagePath: string) {
+export function thumbnailPathForVideoPath(storagePath: string) {
   const parts = storagePath.split("/");
   const file = parts.pop() || "video.mp4";
   const base = file.replace(/\.[^.]+$/, "") || "video";
@@ -73,7 +73,7 @@ async function sendVideoToChat(opts: {
   form.append("width", String(dimensions.width));
   form.append("height", String(dimensions.height));
   form.append("supports_streaming", "true");
-  if (opts.thumbnailBytes) {
+  if (opts.thumbnailBytes && opts.thumbnailBytes.byteLength <= 200 * 1024) {
     form.append("thumbnail", new Blob([opts.thumbnailBytes], { type: "image/jpeg" }), "thumbnail.jpg");
   }
   if (opts.replyMarkup) form.append("reply_markup", JSON.stringify(opts.replyMarkup));
@@ -87,6 +87,15 @@ async function sendVideoToChat(opts: {
     body: form,
   });
   return (await res.json()) as { ok: boolean; result?: { message_id: number }; description?: string };
+}
+
+export async function loadVideoThumbnail(storagePath: string): Promise<ArrayBuffer | null> {
+  const { data: thumb } = await supabaseAdmin.storage
+    .from("videos")
+    .download(thumbnailPathForVideoPath(storagePath));
+  if (!thumb) return null;
+  const bytes = await thumb.arrayBuffer();
+  return bytes.byteLength <= 200 * 1024 ? bytes : null;
 }
 
 export const sendVideoNoteNow = createServerFn({ method: "POST" })
@@ -120,10 +129,7 @@ export const sendVideoNoteNow = createServerFn({ method: "POST" })
       .download(video.storage_path);
     if (dErr || !file) throw new Error("Falha ao baixar vídeo: " + (dErr?.message ?? ""));
     const bytes = await file.arrayBuffer();
-    const { data: thumb } = await supabaseAdmin.storage
-      .from("videos")
-      .download(thumbnailPathForVideoPath(video.storage_path));
-    const thumbnailBytes = thumb ? await thumb.arrayBuffer() : null;
+    const thumbnailBytes = await loadVideoThumbnail(video.storage_path);
 
     const results: { chatId: string | number; ok: boolean; error?: string }[] = [];
     for (const chatId of data.chatIds) {
@@ -225,10 +231,7 @@ export async function dispatchVideo(opts: {
     return { ok: false, description: "Falha ao baixar vídeo" };
   }
   const bytes = await file.arrayBuffer();
-  const { data: thumb } = await supabaseAdmin.storage
-    .from("videos")
-    .download(thumbnailPathForVideoPath(opts.storagePath));
-  const thumbnailBytes = thumb ? await thumb.arrayBuffer() : null;
+  const thumbnailBytes = await loadVideoThumbnail(opts.storagePath);
   return sendVideoToChat({
     botToken: opts.botToken,
     chatId: opts.chatId,

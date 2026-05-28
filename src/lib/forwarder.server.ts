@@ -7,6 +7,7 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 // ╚══════════════════════════════════════════════════════════╝
 
 import { callTelegram } from "./telegram.server";
+import { loadVideoThumbnail } from "./videos.functions";
 import {
   sendPhotoWithPremiumEmojiCaptionRetry,
   sendTextWithPremiumEmojisRetry,
@@ -93,6 +94,7 @@ async function sendPremiumMirror(opts: {
       accountId: opts.premiumAccountId ?? undefined,
       chatId: opts.targetChatId,
       videoBytes: await file.arrayBuffer(),
+      thumbnailBytes: await loadVideoThumbnail(opts.payload.video.storagePath),
       filename: opts.payload.video.filename ?? "video.mp4",
       mimeType: opts.payload.video.mimeType ?? "video/mp4",
       duration: opts.payload.video.duration,
