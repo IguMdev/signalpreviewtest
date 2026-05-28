@@ -16,6 +16,7 @@ import {
   moveScheduleToFolder,
 } from "@/lib/schedule-folders.functions";
 import { syncRoomPhoto } from "@/lib/room-photos.functions";
+import { createVideoThumbnailBlob, thumbnailPathForVideoPath } from "@/lib/video-thumbnail.client";
 import { QuickTemplatesBar } from "@/components/QuickTemplatesBar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -121,6 +122,13 @@ type ScheduleFolder = {
   sort_order: number;
 };
 
+type VideoOption = {
+  id: string;
+  title: string;
+  kind: string | null;
+  storage_path: string;
+};
+
 function MensagensPage() {
   const qc = useQueryClient();
   const upsertFn = useServerFn(upsertSchedule);
@@ -165,7 +173,7 @@ function MensagensPage() {
   const videos = useQuery({
     queryKey: ["videos-min"],
     queryFn: async () =>
-      (await supabase.from("videos").select("id, title, kind")).data ?? [],
+      ((await supabase.from("videos").select("id, title, kind, storage_path")).data ?? []) as VideoOption[],
   });
 
   const list = useQuery({
@@ -264,6 +272,20 @@ function MensagensPage() {
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
+  const ensureVideoThumbnail = async (videoIdToFix: string) => {
+    const video = videos.data?.find((v) => v.id === videoIdToFix);
+    if (!video || video.kind !== "normal" || !video.storage_path) return;
+    const thumbPath = thumbnailPathForVideoPath(video.storage_path);
+    const existing = await supabase.storage.from("videos").download(thumbPath);
+    if (existing.data) return;
+    const signed = await supabase.storage.from("videos").createSignedUrl(video.storage_path, 300);
+    if (!signed.data?.signedUrl) return;
+    const res = await fetch(signed.data.signedUrl);
+    if (!res.ok) return;
+    const thumb = await createVideoThumbnailBlob(await res.blob());
+    await supabase.storage.from("videos").upload(thumbPath, thumb, { contentType: "image/jpeg", upsert: true });
+  };
 
   // Auto-sync photos for rooms missing one (once per session per room)
   const triedRef = useRef<Set<string>>(new Set());
@@ -573,6 +595,7 @@ function MensagensPage() {
         videos={videos.data ?? []}
         folders={folders.data ?? []}
         presetRoomId={presetRoomId}
+        ensureVideoThumbnail={ensureVideoThumbnail}
         onClose={() => setEditing(null)}
         onSave={async (payload) => {
           try {
@@ -829,6 +852,7 @@ function ScheduleDialog({
   videos,
   folders,
   presetRoomId,
+  ensureVideoThumbnail,
   onClose,
   onSave,
 }: {
@@ -838,6 +862,7 @@ function ScheduleDialog({
   videos: { id: string; title: string; kind?: string | null }[];
   folders: ScheduleFolder[];
   presetRoomId: string | null;
+  ensureVideoThumbnail: (videoId: string) => Promise<void>;
   onClose: () => void;
   onSave: (data: {
     id?: string;
@@ -1003,6 +1028,7 @@ function ScheduleDialog({
     }
     setTestingPart(key);
     try {
+      if (payload.videoId) await ensureVideoThumbnail(payload.videoId);
       const res = await testMsgFn({
         data: {
           roomId,
@@ -1210,6 +1236,7 @@ function ScheduleDialog({
                     if (next) {
                       setImagePath("");
                       setImageMime("");
+                      void ensureVideoThumbnail(next);
                     }
                   }}
                 >
@@ -1453,6 +1480,7 @@ function ScheduleDialog({
                               const next = v === "none" ? "" : v;
                               if (next) {
                                 update({ videoId: next, imagePath: "", imageMime: "" });
+                                void ensureVideoThumbnail(next);
                               } else {
                                 update({ videoId: "" });
                               }
@@ -1669,7 +1697,9 @@ function ScheduleDialog({
           <Button
             className="w-full sm:w-auto"
             disabled={!canSave}
-            onClick={() =>
+            onClick={async () => {
+              const ids = [videoId, ...followUps.map((f) => f.videoId)].filter(Boolean);
+              await Promise.all(ids.map((id) => ensureVideoThumbnail(id)));
               onSave({
                 id: editing?.id || undefined,
                 roomId,
@@ -1703,8 +1733,8 @@ function ScheduleDialog({
                 buttonText: buttonText.trim() || null,
                 buttonUrl: buttonUrl.trim() || null,
                 folderId: folderId || null,
-              })
-            }
+              });
+            }}
           >
             {editing?.id ? "Salvar alterações" : "Criar mensagem"}
           </Button>

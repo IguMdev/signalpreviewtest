@@ -5,6 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/integrations/supabase/client";
 import { sendVideoNoteNow, deleteVideo } from "@/lib/videos.functions";
+import { createVideoThumbnailBlob, thumbnailPathForVideoPath } from "@/lib/video-thumbnail.client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -65,61 +66,6 @@ export const Route = createFileRoute("/_authenticated/videos")({
 const MAX_BYTES_ROUND = 12 * 1024 * 1024;
 const MAX_DURATION_ROUND = 60;
 const MAX_BYTES_NORMAL = 50 * 1024 * 1024;
-
-function thumbnailPathForVideoPath(storagePath: string) {
-  const parts = storagePath.split("/");
-  const file = parts.pop() || "video.mp4";
-  const base = file.replace(/\.[^.]+$/, "") || "video";
-  return [...parts, "thumbs", `${base}.jpg`].filter(Boolean).join("/");
-}
-
-function canvasToJpegBlob(canvas: HTMLCanvasElement, quality: number): Promise<Blob> {
-  return new Promise((resolve, reject) => {
-    canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error("Não foi possível gerar o preview do vídeo."))), "image/jpeg", quality);
-  });
-}
-
-async function createVideoThumbnail(file: File): Promise<Blob> {
-  const url = URL.createObjectURL(file);
-  try {
-    const video = await new Promise<HTMLVideoElement>((resolve, reject) => {
-      const v = document.createElement("video");
-      let done = false;
-      const finish = () => {
-        if (!done) {
-          done = true;
-          resolve(v);
-        }
-      };
-      v.preload = "auto";
-      v.muted = true;
-      v.playsInline = true;
-      v.src = url;
-      v.onloadedmetadata = () => {
-        const target = Math.min(1, Math.max(0, Number.isFinite(v.duration) ? v.duration * 0.1 : 0));
-        if (target > 0) v.currentTime = target;
-        else finish();
-      };
-      v.onseeked = finish;
-      v.onerror = () => reject(new Error("Não foi possível gerar o preview do vídeo."));
-    });
-    const maxSide = 320;
-    const scale = Math.min(1, maxSide / Math.max(video.videoWidth || maxSide, video.videoHeight || maxSide));
-    const canvas = document.createElement("canvas");
-    canvas.width = Math.max(1, Math.round((video.videoWidth || maxSide) * scale));
-    canvas.height = Math.max(1, Math.round((video.videoHeight || maxSide) * scale));
-    const ctx = canvas.getContext("2d");
-    if (!ctx) throw new Error("Não foi possível gerar o preview do vídeo.");
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    for (const quality of [0.78, 0.62, 0.48]) {
-      const blob = await canvasToJpegBlob(canvas, quality);
-      if (blob.size <= 200 * 1024 || quality === 0.48) return blob;
-    }
-    throw new Error("Não foi possível gerar o preview do vídeo.");
-  } finally {
-    URL.revokeObjectURL(url);
-  }
-}
 
 async function validateVideoFile(
   file: File,
@@ -223,7 +169,7 @@ function VideosPage() {
       const ext = pendingFile.file.name.split(".").pop()?.toLowerCase().replace(/[^a-z0-9]/g, "") || "mp4";
       const mimeType = pendingFile.file.type || "video/mp4";
       const path = `${user.id}/${crypto.randomUUID()}.${ext}`;
-      const thumbnailBlob = kind === "normal" ? await createVideoThumbnail(pendingFile.file) : null;
+      const thumbnailBlob = kind === "normal" ? await createVideoThumbnailBlob(pendingFile.file) : null;
       const thumbnailPath = thumbnailBlob ? thumbnailPathForVideoPath(path) : null;
       const { error: upErr } = await supabase.storage
         .from("videos")
