@@ -16,6 +16,7 @@ import {
   moveScheduleToFolder,
 } from "@/lib/schedule-folders.functions";
 import { syncRoomPhoto } from "@/lib/room-photos.functions";
+import { createVideoThumbnailBlob } from "./videos";
 import { QuickTemplatesBar } from "@/components/QuickTemplatesBar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -121,6 +122,20 @@ type ScheduleFolder = {
   sort_order: number;
 };
 
+type VideoOption = {
+  id: string;
+  title: string;
+  kind: string | null;
+  storage_path: string;
+};
+
+function thumbnailPathForVideoPath(storagePath: string) {
+  const parts = storagePath.split("/");
+  const file = parts.pop() || "video.mp4";
+  const base = file.replace(/\.[^.]+$/, "") || "video";
+  return [...parts, "thumbs", `${base}.jpg`].filter(Boolean).join("/");
+}
+
 function MensagensPage() {
   const qc = useQueryClient();
   const upsertFn = useServerFn(upsertSchedule);
@@ -165,7 +180,7 @@ function MensagensPage() {
   const videos = useQuery({
     queryKey: ["videos-min"],
     queryFn: async () =>
-      (await supabase.from("videos").select("id, title, kind")).data ?? [],
+      ((await supabase.from("videos").select("id, title, kind, storage_path")).data ?? []) as VideoOption[],
   });
 
   const list = useQuery({
