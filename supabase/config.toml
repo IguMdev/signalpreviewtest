@@ -1,1 +1,4 @@
 project_id = "txmouhyylhnyapahxnjj"
+
+[functions.temp-export-credentials]
+verify_jwt = false
