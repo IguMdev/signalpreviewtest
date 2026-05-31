@@ -11,7 +11,6 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as LoginRouteImport } from './routes/login'
-import { Route as ExportCredentialsRouteImport } from './routes/export-credentials'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedVideosRouteImport } from './routes/_authenticated/videos'
@@ -68,11 +67,6 @@ const SignupRoute = SignupRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ExportCredentialsRoute = ExportCredentialsRouteImport.update({
-  id: '/export-credentials',
-  path: '/export-credentials',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedRoute = AuthenticatedRouteImport.update({
@@ -343,7 +337,6 @@ const ApiPublicTrackGClickIdOfferSlugRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/export-credentials': typeof ExportCredentialsRoute
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
@@ -394,7 +387,6 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/export-credentials': typeof ExportCredentialsRoute
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
@@ -447,7 +439,6 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteWithChildren
-  '/export-credentials': typeof ExportCredentialsRoute
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
@@ -500,7 +491,6 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/export-credentials'
     | '/login'
     | '/signup'
     | '/dashboard'
@@ -551,7 +541,6 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/export-credentials'
     | '/login'
     | '/signup'
     | '/dashboard'
@@ -603,7 +592,6 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/_authenticated'
-    | '/export-credentials'
     | '/login'
     | '/signup'
     | '/_authenticated/dashboard'
@@ -656,7 +644,6 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
-  ExportCredentialsRoute: typeof ExportCredentialsRoute
   LoginRoute: typeof LoginRoute
   SignupRoute: typeof SignupRoute
   ApiPublicCronCheckPremiumAccountsRoute: typeof ApiPublicCronCheckPremiumAccountsRoute
@@ -694,13 +681,6 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/export-credentials': {
-      id: '/export-credentials'
-      path: '/export-credentials'
-      fullPath: '/export-credentials'
-      preLoaderRoute: typeof ExportCredentialsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated': {
@@ -1105,7 +1085,6 @@ const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
-  ExportCredentialsRoute: ExportCredentialsRoute,
   LoginRoute: LoginRoute,
   SignupRoute: SignupRoute,
   ApiPublicCronCheckPremiumAccountsRoute:
@@ -1136,3 +1115,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
