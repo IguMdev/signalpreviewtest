@@ -577,7 +577,7 @@ export async function sendVideoWithPremiumEmojiCaption(opts: {
     const buf = Buffer.from(opts.videoBytes);
     const upload = await createUploadFile(opts.filename, buf);
     const thumbBytes = safeTelegramThumbnail(opts.thumbnailBytes);
-    const thumbUpload = thumbBytes ? await createUploadFile("thumbnail.jpg", Buffer.from(thumbBytes)) : null;
+    const thumbBuffer = thumbBytes ? Buffer.from(thumbBytes) : null;
     const dimensions = resolveNormalVideoDimensions(opts.width, opts.height);
     const attributes = [
       new Api.DocumentAttributeVideo({
@@ -594,7 +594,7 @@ export async function sendVideoWithPremiumEmojiCaption(opts: {
         caption: formatted.text,
         formattingEntities: formatted.entities as never,
         attributes: attributes as never,
-        ...(thumbUpload ? { thumb: thumbUpload.file as never } : {}),
+        ...(thumbBuffer ? { thumb: thumbBuffer as never } : {}),
         forceDocument: false,
         supportsStreaming: true,
         replyTo: opts.replyToMessageId,
@@ -603,7 +603,6 @@ export async function sendVideoWithPremiumEmojiCaption(opts: {
       return { applied: true, ok: true, messageId: Number(msg.id) };
     } finally {
       await upload.cleanup();
-      await thumbUpload?.cleanup();
     }
   } catch (e) {
     const raw = e instanceof Error ? e.message : String(e);
