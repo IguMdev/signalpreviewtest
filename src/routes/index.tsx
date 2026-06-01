@@ -20,13 +20,13 @@ import {
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "TelesinAIs — Automação Telegram para Sinais, Promoções e Comunidades" },
+      { title: "TeleSignal — Automação Telegram para Sinais, Promoções e Comunidades" },
       {
         name: "description",
         content:
           "Plataforma all-in-one para criar bots, automatizar envios, gerenciar grupos VIP e escalar sua comunidade no Telegram.",
       },
-      { property: "og:title", content: "TelesinAIs — Automação Telegram" },
+      { property: "og:title", content: "TeleSignal — Automação Telegram" },
       {
         property: "og:description",
         content:
@@ -89,8 +89,8 @@ function LandingPage() {
       {/* Nav */}
       <header className="relative z-10 mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
         <div className="flex items-center gap-2">
-          <img src="/favicon.png" alt="TelesinAIs" className="size-9 rounded-xl neon-glow" />
-          <span className="font-bold tracking-tight cyber-text">TelesinAIs</span>
+          <img src="/favicon.png" alt="TeleSignal" className="size-9 rounded-xl neon-glow" />
+          <span className="font-bold tracking-tight cyber-text">TeleSignal</span>
         </div>
         <nav className="hidden md:flex items-center gap-6 text-sm text-muted-foreground">
           <a href="#recursos" className="hover:text-foreground transition-colors">Recursos</a>
@@ -144,7 +144,7 @@ function LandingPage() {
       <section id="recursos" className="relative z-10 mx-auto max-w-6xl px-6 pb-24 scroll-mt-24">
         <div className="mb-12 text-center">
           <h2 className="text-3xl md:text-4xl font-bold tracking-tight">Tudo que você precisa em um lugar</h2>
-          <p className="mt-3 text-muted-foreground">Pare de juntar 5 ferramentas. O TelesinAIs faz o trabalho pesado.</p>
+          <p className="mt-3 text-muted-foreground">Pare de juntar 5 ferramentas. O TeleSignal faz o trabalho pesado.</p>
         </div>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {features.map((f) => (
@@ -197,7 +197,7 @@ function LandingPage() {
       </section>
 
       <footer className="relative z-10 border-t border-border/50 py-8 text-center text-sm text-muted-foreground">
-        © {new Date().getFullYear()} TelesinAIs — Automação Telegram
+        © {new Date().getFullYear()} TeleSignal — Automação Telegram
       </footer>
     </div>
   );

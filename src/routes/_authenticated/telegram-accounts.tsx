@@ -258,7 +258,7 @@ function TelegramAccountsPage() {
 
   const [testFor, setTestFor] = useState<string | null>(null);
   const [testChat, setTestChat] = useState("");
-  const [testText, setTestText] = useState("Mensagem de teste do TelesinAIs - Automação Telegram 🚀");
+  const [testText, setTestText] = useState("Mensagem de teste do TeleSignal - Automação Telegram 🚀");
 
   // Verificação automática de Premium — roda silenciosamente em background.
   // Intervalo fixo; cron server-side também executa a checagem periódica.
