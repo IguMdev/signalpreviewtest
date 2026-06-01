@@ -676,6 +676,55 @@ export const Route = createFileRoute("/api/public/telegram/webhook/$accountId")(
           }
           // ── FIM: TRACKEAMENTO DE MEMBROS ───────────────────────
         }
+        // ── FIM: CHAT_MEMBER ─────────────────────────────────────
+
+        // ╔══════════════════════════════════════════════════════╗
+        // ║  BOT BOAS-VINDAS — SOLICITAÇÃO DE ENTRADA           ║
+        // ║  Quando o canal exige aprovação, o Telegram envia   ║
+        // ║  chat_join_request. Nesse momento o bot PODE enviar  ║
+        // ║  DM ao solicitante sem precisar de /start prévio.   ║
+        // ╚══════════════════════════════════════════════════════╝
+        const joinReq = update.chat_join_request;
+        if (joinReq?.from?.id && joinReq?.chat?.id) {
+          await cacheDetectedChat({
+            userId: acc.user_id,
+            accountId: acc.id,
+            chat: joinReq.chat,
+          }).catch((e) => console.error("[telegram-chat-cache] join_req failed:", e));
+
+          await runWelcomeBot({
+            userId: acc.user_id,
+            accountId: acc.id,
+            botToken: acc.bot_token,
+            chatId: joinReq.chat.id,
+            user: joinReq.from,
+          }).catch((e) => console.error("[welcome-bot] join_req failed:", e));
+
+          // Auto-aprovação de membros (se o bot de boas-vindas estiver ativo, aprovamos a entrada)
+          const { data: rc } = await supabaseAdmin
+            .from("room_chats")
+            .select("room_id")
+            .eq("user_id", acc.user_id)
+            .eq("chat_id", joinReq.chat.id)
+            .limit(1)
+            .maybeSingle();
+
+          if (rc?.room_id) {
+            const { data: cfg } = await supabaseAdmin
+              .from("room_engagement_settings")
+              .select("welcome_bot_enabled")
+              .eq("room_id", rc.room_id)
+              .maybeSingle();
+
+            if (cfg?.welcome_bot_enabled) {
+              await callTelegram(acc.bot_token, "approveChatJoinRequest", {
+                chat_id: joinReq.chat.id,
+                user_id: joinReq.from.id,
+              }).catch((e) => console.error("[auto-approve] failed:", e));
+            }
+          }
+        }
+        // ── FIM: BOT BOAS-VINDAS JOIN REQUEST ─────────────────
 
         // ╔══════════════════════════════════════════════════════╗
         // ║  BOT ENCAMINHADOR                                    ║

@@ -9,7 +9,7 @@ import { callTelegram } from "@/lib/telegram.server";
 // ║  para esta aplicação e com o secret_token correto.       ║
 // ╚══════════════════════════════════════════════════════════╝
 
-const ALLOWED_UPDATES = ["chat_member", "my_chat_member", "message", "channel_post"];
+const ALLOWED_UPDATES = ["chat_member", "my_chat_member", "message", "channel_post", "chat_join_request"];
 
 function publicBaseUrl() {
   const explicit = process.env.PUBLIC_BASE_URL;
