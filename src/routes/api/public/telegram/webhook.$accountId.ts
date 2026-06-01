@@ -280,7 +280,7 @@ async function runWelcomeBot(opts: {
   const first = await sendWelcomeBlock({
     userId: opts.userId,
     botToken: opts.botToken,
-    chatId: opts.chatId,
+    chatId: opts.user.id,
     text,
     parseMode: parse_mode,
     imagePath: cfg.welcome_image_path,
@@ -314,7 +314,7 @@ async function runWelcomeBot(opts: {
     const r = await sendWelcomeBlock({
       userId: opts.userId,
       botToken: opts.botToken,
-      chatId: opts.chatId,
+      chatId: opts.user.id,
       text: body,
       parseMode: ex.parse_mode || "HTML",
       imagePath: ex.image_path,
