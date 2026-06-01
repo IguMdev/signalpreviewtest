@@ -235,12 +235,38 @@ export const upsertWelcomeBotConfig = createServerFn({ method: "POST" })
     }).parse(d),
   )
   .handler(async ({ data, context }) => {
-    const { supabase, userId } = context;
+    const { userId } = context;
     if (data.enabled) await assertActiveBotSub(userId, "boasvindas");
-    const { error } = await supabase
+
+    // Check if row exists
+    const { data: existing } = await supabaseAdmin
       .from("room_engagement_settings")
-      .upsert(
-        {
+      .select("room_id")
+      .eq("room_id", data.roomId)
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    let error;
+    if (existing) {
+      // UPDATE only the welcome fields to avoid overwriting other settings
+      ({ error } = await supabaseAdmin
+        .from("room_engagement_settings")
+        .update({
+          welcome_bot_enabled: data.enabled,
+          welcome_message: data.message ?? null,
+          welcome_image_path: data.imagePath ?? null,
+          welcome_image_mime: data.imageMime ?? null,
+          welcome_video_id: data.videoId ?? null,
+          welcome_parse_mode: data.parseMode ?? "HTML",
+          welcome_premium_enabled: data.premiumEnabled ?? false,
+          welcome_premium_account_id: data.premiumAccountId ?? null,
+        } as never)
+        .eq("room_id", data.roomId)
+        .eq("user_id", userId));
+    } else {
+      ({ error } = await supabaseAdmin
+        .from("room_engagement_settings")
+        .insert({
           room_id: data.roomId,
           user_id: userId,
           welcome_bot_enabled: data.enabled,
@@ -251,9 +277,8 @@ export const upsertWelcomeBotConfig = createServerFn({ method: "POST" })
           welcome_parse_mode: data.parseMode ?? "HTML",
           welcome_premium_enabled: data.premiumEnabled ?? false,
           welcome_premium_account_id: data.premiumAccountId ?? null,
-        } as never,
-        { onConflict: "room_id" },
-      );
+        } as never));
+    }
     if (error) throw new Error(error.message);
     return { ok: true };
   });
