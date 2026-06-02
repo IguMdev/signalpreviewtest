@@ -3,10 +3,10 @@ import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import viteReact from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import viteTsconfigPaths from "vite-tsconfig-paths";
+import { cloudflare } from "@cloudflare/vite-plugin";
 
 // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
-// @cloudflare/vite-plugin builds from this — wrangler.jsonc main alone is insufficient.
-export default defineConfig(({ command, mode }) => {
+export default defineConfig(({ mode }) => {
   const loadedEnv = loadEnv(mode, process.cwd(), "VITE_");
   const envDefine: Record<string, string> = {};
   for (const [key, value] of Object.entries(loadedEnv)) {
@@ -33,6 +33,7 @@ export default defineConfig(({ command, mode }) => {
       port: 8080,
     },
     plugins: [
+      cloudflare({ persistTo: ".wrangler/state" }),
       tanstackStart({
         server: { entry: "server" },
         importProtection: {
