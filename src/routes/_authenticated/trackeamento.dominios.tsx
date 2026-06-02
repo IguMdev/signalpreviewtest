@@ -136,8 +136,8 @@ function DomainsPage() {
                       <p className="text-muted-foreground">1. Registro <strong>TXT</strong> para verificar a propriedade:</p>
                       <div className="grid grid-cols-[80px_1fr] gap-2 font-mono">
                         <span className="text-muted-foreground">Tipo:</span><span>TXT</span>
-                        <span className="text-muted-foreground">Nome:</span><CopyChip value={`_lovable.${d.domain}`} />
-                        <span className="text-muted-foreground">Valor:</span><CopyChip value={`lovable_verify=${d.verification_token}`} />
+                        <span className="text-muted-foreground">Nome:</span><CopyChip value={`_signal.${d.domain}`} />
+                        <span className="text-muted-foreground">Valor:</span><CopyChip value={`signal_verify=${d.verification_token}`} />
                       </div>
                     </div>
                     <div className="space-y-1 pt-2 border-t border-border/50">
@@ -145,7 +145,7 @@ function DomainsPage() {
                       <div className="grid grid-cols-[80px_1fr] gap-2 font-mono">
                         <span className="text-muted-foreground">Tipo:</span><span>CNAME</span>
                         <span className="text-muted-foreground">Nome:</span><CopyChip value={d.domain} />
-                        <span className="text-muted-foreground">Valor:</span><CopyChip value="cname.lovable.app" />
+                        <span className="text-muted-foreground">Valor:</span><CopyChip value="cname.telesignal.com.br" />
                       </div>
                       <p className="text-muted-foreground pt-1">
                         Use Cloudflare (modo proxy) para SSL automático. Pode levar até 1h para propagar.

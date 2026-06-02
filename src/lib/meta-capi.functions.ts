@@ -115,7 +115,7 @@ export const sendMetaTestEvent = createServerFn({ method: "POST" })
       actionSource: "system_generated",
       userData: { externalId: userId },
       customData: {
-        content_name: `Teste de conexão Lovable (${mapped})`,
+        content_name: `Teste de conexão TeleSignal (${mapped})`,
         value: 0,
         currency: "BRL",
       },

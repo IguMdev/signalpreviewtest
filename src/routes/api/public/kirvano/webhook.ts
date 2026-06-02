@@ -13,7 +13,7 @@ type KirvanoPayload = {
   product?: { offer_url?: string; slug?: string };
   total_price?: number | string;
   currency?: string;
-  // Lovable: o cliente vincula a conta passando o user_id como query/UTM
+  // TeleSignal: o cliente vincula a conta passando o user_id como query/UTM
   utm?: { utm_content?: string };
   metadata?: Record<string, string>;
 };

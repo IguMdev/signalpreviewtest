@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Império Invest Academy — Treinamento de Trading</title>
+<meta name="description" content="Treinamento completo para operar no mercado financeiro com a máxima assertividade." />
+<meta property="og:title" content="Império Invest Academy" />
+<meta property="og:description" content="Treinamento completo para operar no mercado financeiro com a máxima assertividade." />
+<meta property="og:type" content="website" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0b1220;--fg:#f1f5f9;--muted:#94a3b8;--card:#111a2e;--border:rgba(255,255,255,.08);
+  --brand:#f5c451;--brand-fg:#1b1306;
+}
+*{box-sizing:border-box;margin:0;padding:0;border-color:var(--border)}
+html,body{background:var(--bg);color:var(--fg);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+img{display:block;max-width:100%}
+a{color:inherit;text-decoration:none}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+header{position:sticky;top:0;z-index:40;background:rgba(11,18,32,.85);backdrop-filter:blur(8px);border-bottom:1px solid var(--border)}
+.header-inner{max-width:1100px;margin:0 auto;height:96px;display:flex;align-items:center;justify-content:center;padding:0 16px}
+.header-inner img{height:72px;width:auto}
+@media(min-width:768px){.header-inner{height:112px}.header-inner img{height:88px}}
+main{display:block}
+.hero{max-width:1100px;margin:0 auto;text-align:center;padding:64px 16px 32px}
+.hero h1{font-size:30px;font-weight:800;letter-spacing:-.01em}
+.hero p{max-width:640px;margin:16px auto 0;color:var(--muted);font-size:14px;line-height:1.6}
+.hero p strong{color:var(--fg)}
+@media(min-width:768px){.hero{padding-top:96px}.hero h1{font-size:48px}.hero p{font-size:16px}}
+.cards{max-width:960px;margin:0 auto;padding:0 16px 80px;display:flex;flex-direction:column;gap:20px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:16px;box-shadow:0 1px 2px rgba(0,0,0,.2)}
+@media(min-width:768px){.card{padding:20px;display:grid;grid-template-columns:minmax(0,360px) 1fr;gap:24px;align-items:stretch}}
+.thumb{position:relative;display:block;aspect-ratio:16/9;border-radius:14px;overflow:hidden;background:linear-gradient(135deg,#27272a,#52525b);width:100%;text-align:left}
+.thumb img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:transform .3s}
+.thumb:hover img{transform:scale(1.05)}
+.thumb-overlay{position:absolute;inset:0;background:rgba(0,0,0,.15);transition:background .2s}
+.thumb:hover .thumb-overlay{background:rgba(0,0,0,.35)}
+.play-btn{position:absolute;left:12px;bottom:12px;display:flex;align-items:center;justify-content:center;width:48px;height:48px;border-radius:9999px;background:rgba(245,196,81,.92);color:var(--brand-fg);box-shadow:0 8px 24px rgba(0,0,0,.4);outline:2px solid rgba(255,255,255,.3);transition:transform .2s}
+.thumb:hover .play-btn{transform:scale(1.1)}
+@media(min-width:768px){.play-btn{width:56px;height:56px}.play-btn svg{width:26px;height:26px}}
+.thumb-label{position:absolute;top:12px;left:12px;display:flex;flex-direction:column;align-items:flex-start;text-shadow:0 2px 4px rgba(0,0,0,.5)}
+.ep{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:rgba(255,255,255,.9)}
+.ep-title{margin-top:4px;max-width:200px;font-size:12px;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media(min-width:768px){.ep{font-size:14px}.ep-title{font-size:14px;max-width:260px}}
+.card-body{display:flex;flex-direction:column;justify-content:space-between;gap:16px;padding:4px 0}
+.card-body h3{font-size:20px;font-weight:700;line-height:1.25}
+.card-body p{color:var(--muted);font-size:14px;line-height:1.6;margin-top:12px}
+@media(min-width:768px){.card-body h3{font-size:24px}.card-body p{font-size:16px}}
+.cta-row{display:flex;justify-content:flex-end}
+.cta{display:inline-flex;align-items:center;gap:8px;background:var(--brand);color:var(--brand-fg);padding:10px 16px;border-radius:8px;font-weight:600;font-size:14px;box-shadow:0 1px 2px rgba(0,0,0,.2);transition:background .15s}
+.cta:hover{background:#e7b53b}
+footer{border-top:1px solid var(--border);padding:40px 16px;text-align:center;color:var(--muted);font-size:12px}
+footer p+p{margin-top:8px;max-width:640px;margin-left:auto;margin-right:auto}
+.modal{position:fixed;inset:0;z-index:100;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.75);padding:16px}
+.modal.open{display:flex}
+.modal-content{position:relative;width:100%;max-width:960px;background:#000;border-radius:14px;overflow:hidden}
+.modal-content .video{position:relative;aspect-ratio:16/9;width:100%;background:#000}
+.modal-content iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+.modal-close{position:absolute;top:8px;right:8px;z-index:2;width:38px;height:38px;border-radius:9999px;background:var(--brand);color:var(--brand-fg);display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(0,0,0,.5);outline:2px solid rgba(255,255,255,.7);transition:transform .15s}
+.modal-close:hover{transform:scale(1.1)}
+@media(min-width:640px){.modal-close{top:-14px;right:-14px}}
+</style>
+</head>
+<body>
+<header>
+  <div class="header-inner">
+    <a href="/"><img src="assets/logo-imperio-invest.png" alt="Império Invest" /></a>
+  </div>
+</header>
+<main>
+  <section class="hero">
+    <h1>06 AULAS PRÁTICAS</h1>
+    <p>Cada aula foi cuidadosamente estruturada para que você aprenda a operar com a <strong>Império Invest Academy</strong> em poucos minutos.</p>
+  </section>
+  <section class="cards">
+    
+<article class="card">
+  <button class="thumb" type="button" data-yt="B1ryvONnXLY" aria-label="Reproduzir vídeo: Boas vindas">
+    <img src="assets/thumb-01.jpg" alt="Boas vindas" loading="eager" />
+    <div class="thumb-overlay"></div>
+    <div class="play-btn"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></div>
+    <div class="thumb-label">
+      <span class="ep">EP 01</span>
+      <span class="ep-title">Boas vindas</span>
+    </div>
+  </button>
+  <div class="card-body">
+    <h3>01 - Boas vindas</h3>
+    <p>Seja bem-vindo a Império Invest Academy! Nesta aula inicial você vai entender como funciona o método, a estrutura do treinamento e os primeiros passos para começar a operar com segurança e lucro.</p>
+    <div class="cta-row">
+      <a class="cta" href="https://t.me/+CLD4jcb7NtsyMWFh" target="_blank" rel="noopener noreferrer">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+        Grupo no Telegram
+      </a>
+    </div>
+  </div>
+</article>
+
+<article class="card">
+  <button class="thumb" type="button" data-yt="YTDmqT_sGh0" aria-label="Reproduzir vídeo: Corretora que eu opero">
+    <img src="assets/thumb-02.jpg" alt="Corretora que eu opero" loading="eager" />
+    <div class="thumb-overlay"></div>
+    <div class="play-btn"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></div>
+    <div class="thumb-label">
+      <span class="ep">EP 02</span>
+      <span class="ep-title">Corretora que eu opero</span>
+    </div>
+  </button>
+  <div class="card-body">
+    <h3>02 - Corretora que eu opero</h3>
+    <p>Acesse a corretora Titanium Broker que eu uso para fazer minhas operações com gráfico real do mercado pelo Tradingview. Crypto, Forex, OTC e payouts maiores para maximizar seus ganhos.</p>
+    <div class="cta-row">
+      <a class="cta" href="https://titaniumbroker.io/" target="_blank" rel="noopener noreferrer">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+        Acessar Titanium Broker
+      </a>
+    </div>
+  </div>
+</article>
+
+<article class="card">
+  <button class="thumb" type="button" data-yt="V8MGa41Lbb8" aria-label="Reproduzir vídeo: Colocando saldo na corretora">
+    <img src="assets/thumb-03.jpg" alt="Colocando saldo na corretora" loading="lazy" />
+    <div class="thumb-overlay"></div>
+    <div class="play-btn"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></div>
+    <div class="thumb-label">
+      <span class="ep">EP 03</span>
+      <span class="ep-title">Colocando saldo na corretora</span>
+    </div>
+  </button>
+  <div class="card-body">
+    <h3>03 - Colocando saldo na corretora</h3>
+    <p>Aprenda o passo a passo completo para fazer seu primeiro depósito com segurança. Métodos de pagamento disponíveis, valores mínimos e como validar sua conta para começar a operar.</p>
+    <div class="cta-row">
+      <a class="cta" href="https://titaniumbroker.io/" target="_blank" rel="noopener noreferrer">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+        Acessar Titanium Broker
+      </a>
+    </div>
+  </div>
+</article>
+
+<article class="card">
+  <button class="thumb" type="button" data-yt="0fnzZ1G9TpA" aria-label="Reproduzir vídeo: Gerenciamento Império Invest">
+    <img src="assets/thumb-04.jpg" alt="Gerenciamento Império Invest" loading="lazy" />
+    <div class="thumb-overlay"></div>
+    <div class="play-btn"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></div>
+    <div class="thumb-label">
+      <span class="ep">EP 04</span>
+      <span class="ep-title">Gerenciamento Império Invest</span>
+    </div>
+  </button>
+  <div class="card-body">
+    <h3>04 - Gerenciamento Império Invest</h3>
+    <p>Aprenda o gerenciamento de banca revolucionário SEM USAR MARTINGALE. Descubra a estratégia que me permite lucrar consistentemente acertando apenas 30% das operações.</p>
+    <div class="cta-row">
+      <a class="cta" href="https://www.gerenciamentoimperio.com/" target="_blank" rel="noopener noreferrer">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+        Acessar Planilha
+      </a>
+    </div>
+  </div>
+</article>
+
+<article class="card">
+  <button class="thumb" type="button" data-yt="mDyQ_8rc9hk" aria-label="Reproduzir vídeo: Indicadores que eu opero">
+    <img src="assets/thumb-05.jpg" alt="Indicadores que eu opero" loading="lazy" />
+    <div class="thumb-overlay"></div>
+    <div class="play-btn"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></div>
+    <div class="thumb-label">
+      <span class="ep">EP 05</span>
+      <span class="ep-title">Indicadores que eu opero</span>
+    </div>
+  </button>
+  <div class="card-body">
+    <h3>05 - Indicadores que eu opero</h3>
+    <p>Conheça os indicadores técnicos que realmente funcionam na prática. Aprenda como configurar, interpretar e usar cada um deles para identificar as melhores oportunidades de entrada no mercado.</p>
+    <div class="cta-row">
+      <a class="cta" href="https://titaniumbroker.io/" target="_blank" rel="noopener noreferrer">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+        Acessar Titanium Broker
+      </a>
+    </div>
+  </div>
+</article>
+
+<article class="card">
+  <button class="thumb" type="button" data-yt="SMWsX1aTcTo" aria-label="Reproduzir vídeo: Suporte e orientações">
+    <img src="assets/thumb-06.jpg" alt="Suporte e orientações" loading="lazy" />
+    <div class="thumb-overlay"></div>
+    <div class="play-btn"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></div>
+    <div class="thumb-label">
+      <span class="ep">EP 06</span>
+      <span class="ep-title">Suporte e orientações</span>
+    </div>
+  </button>
+  <div class="card-body">
+    <h3>06 - Suporte e orientações</h3>
+    <p>Tire suas dúvidas e receba orientações diretas para evoluir na sua jornada. Suporte dedicado para te ajudar a aplicar o método e alcançar seus resultados com mais segurança.</p>
+    <div class="cta-row">
+      <a class="cta" href="https://wa.me/5561981364351?text=Ol%C3%A1!%20Preciso%20de%20suporte%20da%20Imp%C3%A9rio%20Invest" target="_blank" rel="noopener noreferrer">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+        Falar no WhatsApp
+      </a>
+    </div>
+  </div>
+</article>
+  </section>
+</main>
+<footer>
+  <p>© <span id="yr"></span> Império Invest Academy. Todos os direitos reservados.</p>
+  <p>Operar no mercado financeiro envolve riscos. Resultados passados não garantem lucros futuros.</p>
+</footer>
+<div class="modal" id="modal" role="dialog" aria-modal="true">
+  <div class="modal-content">
+    <button class="modal-close" id="modalClose" aria-label="Fechar">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+    <div class="video" id="videoSlot"></div>
+  </div>
+</div>
+<script>
+document.getElementById('yr').textContent = new Date().getFullYear();
+const modal = document.getElementById('modal');
+const slot = document.getElementById('videoSlot');
+function openYT(id){
+  slot.innerHTML = '<iframe src="https://www.youtube.com/embed/'+id+'?autoplay=1&rel=0" title="Vídeo" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>';
+  modal.classList.add('open');
+  document.body.style.overflow='hidden';
+}
+function closeModal(){
+  modal.classList.remove('open');
+  slot.innerHTML='';
+  document.body.style.overflow='';
+}
+document.querySelectorAll('.thumb').forEach(b=>b.addEventListener('click',()=>openYT(b.dataset.yt)));
+document.getElementById('modalClose').addEventListener('click',closeModal);
+modal.addEventListener('click',e=>{if(e.target===modal)closeModal()});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal()});
+</script>
+</body>
+</html>

@@ -7,8 +7,7 @@ import { callTelegram } from "./telegram.server";
 function publicBaseUrl() {
   const explicit = process.env.PUBLIC_BASE_URL;
   if (explicit) return explicit.replace(/\/$/, "");
-  const projectId = process.env.LOVABLE_PROJECT_ID || "8dafe7ca-cf53-49eb-9c75-fa970d91c13f";
-  return `https://project--${projectId}-dev.lovable.app`;
+  return `https://telesignal.com.br`;
 }
 
 const ALLOWED_UPDATES = ["chat_member", "my_chat_member", "message", "channel_post"];

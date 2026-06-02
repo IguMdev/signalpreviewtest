@@ -96,7 +96,7 @@ async function fetchFeed(url: string, source: string, category: TipCategory): Pr
     const res = await fetch(url, {
       headers: {
         "User-Agent":
-          "Mozilla/5.0 (compatible; LovableMarketTips/1.0; +https://lovable.app)",
+          "Mozilla/5.0 (compatible; TeleSignalMarketTips/1.0)",
         Accept: "application/rss+xml, application/xml, text/xml;q=0.9, */*;q=0.5",
       },
       signal: AbortSignal.timeout(8000),

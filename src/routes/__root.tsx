@@ -82,11 +82,11 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { property: "og:description", content: "Painel para gerenciar contas Telegram, grupos e envio agendado de sinais." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
-      { name: "twitter:site", content: "@Lovable" },
+      { name: "twitter:site", content: "@TeleSignal" },
       { name: "twitter:title", content: "TeleSignal - Automação Telegram" },
       { name: "twitter:description", content: "Painel para gerenciar contas Telegram, grupos e envio agendado de sinais." },
-      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/61fd2e1c-55c0-4a82-b948-634b3955da86/id-preview-75255798--8dafe7ca-cf53-49eb-9c75-fa970d91c13f.lovable.app-1779152694622.png" },
-      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/61fd2e1c-55c0-4a82-b948-634b3955da86/id-preview-75255798--8dafe7ca-cf53-49eb-9c75-fa970d91c13f.lovable.app-1779152694622.png" },
+      { property: "og:image", content: "/favicon.png" },
+      { name: "twitter:image", content: "/favicon.png" },
     ],
     links: [
       {

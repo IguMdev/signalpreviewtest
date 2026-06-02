@@ -61,7 +61,7 @@ function DirectResponsePanel({ pixelId }: { pixelId: string }) {
   });
 
   const origin = typeof window !== "undefined" ? window.location.origin : "";
-  const snippet = `<!-- Lovable Tracking (Direct Response) -->
+  const snippet = `<!-- Signal Tracking (Direct Response) -->
 <script>
 (function(){
   var PIXEL = "${pixelId}";

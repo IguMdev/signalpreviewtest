@@ -428,9 +428,9 @@ export const verifyDomain = createServerFn({ method: "POST" })
     if (!dom) throw new Error("Domínio não encontrado");
     const d = dom as any;
 
-    // Resolve TXT _lovable.<domain> and check the verification_token is present.
+    // Resolve TXT _signal.<domain> and check the verification_token is present.
     const dns = await import("dns/promises");
-    const recordName = `_lovable.${d.domain}`;
+    const recordName = `_signal.${d.domain}`;
     let txtRecords: string[][] = [];
     try {
       txtRecords = await dns.resolveTxt(recordName);
@@ -438,7 +438,7 @@ export const verifyDomain = createServerFn({ method: "POST" })
       throw new Error(`Falha ao consultar DNS (${recordName}). O registro TXT ainda pode não ter propagado.`);
     }
     const flat = txtRecords.flat().map((s) => s.trim());
-    const expected = `lovable_verify=${d.verification_token}`;
+    const expected = `signal_verify=${d.verification_token}`;
     if (!flat.includes(expected)) {
       throw new Error(`Registro TXT não encontrado. Esperado: ${expected}`);
     }
