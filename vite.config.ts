@@ -3,7 +3,6 @@ import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import viteReact from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import viteTsconfigPaths from "vite-tsconfig-paths";
-import { cloudflare } from "@cloudflare/vite-plugin";
 
 // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
 export default defineConfig(({ mode }) => {
@@ -33,7 +32,6 @@ export default defineConfig(({ mode }) => {
       port: 8080,
     },
     plugins: [
-      cloudflare({ persistTo: ".wrangler/state" }),
       tanstackStart({
         server: { entry: "server" },
         importProtection: {

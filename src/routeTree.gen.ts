@@ -27,6 +27,7 @@ import { Route as AuthenticatedRoomsIndexRouteImport } from './routes/_authentic
 import { Route as AuthenticatedTrackeamentoPostbacksRouteImport } from './routes/_authenticated/trackeamento.postbacks'
 import { Route as AuthenticatedTrackeamentoPixelsRouteImport } from './routes/_authenticated/trackeamento.pixels'
 import { Route as AuthenticatedTrackeamentoMetricasRouteImport } from './routes/_authenticated/trackeamento.metricas'
+import { Route as AuthenticatedTrackeamentoMensagensRouteImport } from './routes/_authenticated/trackeamento.mensagens'
 import { Route as AuthenticatedTrackeamentoIntegracoesRouteImport } from './routes/_authenticated/trackeamento.integracoes'
 import { Route as AuthenticatedTrackeamentoFunisRouteImport } from './routes/_authenticated/trackeamento.funis'
 import { Route as AuthenticatedTrackeamentoDominiosRouteImport } from './routes/_authenticated/trackeamento.dominios'
@@ -152,6 +153,12 @@ const AuthenticatedTrackeamentoMetricasRoute =
   AuthenticatedTrackeamentoMetricasRouteImport.update({
     id: '/trackeamento/metricas',
     path: '/trackeamento/metricas',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedTrackeamentoMensagensRoute =
+  AuthenticatedTrackeamentoMensagensRouteImport.update({
+    id: '/trackeamento/mensagens',
+    path: '/trackeamento/mensagens',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
 const AuthenticatedTrackeamentoIntegracoesRoute =
@@ -359,6 +366,7 @@ export interface FileRoutesByFullPath {
   '/trackeamento/dominios': typeof AuthenticatedTrackeamentoDominiosRoute
   '/trackeamento/funis': typeof AuthenticatedTrackeamentoFunisRoute
   '/trackeamento/integracoes': typeof AuthenticatedTrackeamentoIntegracoesRoute
+  '/trackeamento/mensagens': typeof AuthenticatedTrackeamentoMensagensRoute
   '/trackeamento/metricas': typeof AuthenticatedTrackeamentoMetricasRoute
   '/trackeamento/pixels': typeof AuthenticatedTrackeamentoPixelsRoute
   '/trackeamento/postbacks': typeof AuthenticatedTrackeamentoPostbacksRoute
@@ -409,6 +417,7 @@ export interface FileRoutesByTo {
   '/trackeamento/dominios': typeof AuthenticatedTrackeamentoDominiosRoute
   '/trackeamento/funis': typeof AuthenticatedTrackeamentoFunisRoute
   '/trackeamento/integracoes': typeof AuthenticatedTrackeamentoIntegracoesRoute
+  '/trackeamento/mensagens': typeof AuthenticatedTrackeamentoMensagensRoute
   '/trackeamento/metricas': typeof AuthenticatedTrackeamentoMetricasRoute
   '/trackeamento/pixels': typeof AuthenticatedTrackeamentoPixelsRoute
   '/trackeamento/postbacks': typeof AuthenticatedTrackeamentoPostbacksRoute
@@ -461,6 +470,7 @@ export interface FileRoutesById {
   '/_authenticated/trackeamento/dominios': typeof AuthenticatedTrackeamentoDominiosRoute
   '/_authenticated/trackeamento/funis': typeof AuthenticatedTrackeamentoFunisRoute
   '/_authenticated/trackeamento/integracoes': typeof AuthenticatedTrackeamentoIntegracoesRoute
+  '/_authenticated/trackeamento/mensagens': typeof AuthenticatedTrackeamentoMensagensRoute
   '/_authenticated/trackeamento/metricas': typeof AuthenticatedTrackeamentoMetricasRoute
   '/_authenticated/trackeamento/pixels': typeof AuthenticatedTrackeamentoPixelsRoute
   '/_authenticated/trackeamento/postbacks': typeof AuthenticatedTrackeamentoPostbacksRoute
@@ -513,6 +523,7 @@ export interface FileRouteTypes {
     | '/trackeamento/dominios'
     | '/trackeamento/funis'
     | '/trackeamento/integracoes'
+    | '/trackeamento/mensagens'
     | '/trackeamento/metricas'
     | '/trackeamento/pixels'
     | '/trackeamento/postbacks'
@@ -563,6 +574,7 @@ export interface FileRouteTypes {
     | '/trackeamento/dominios'
     | '/trackeamento/funis'
     | '/trackeamento/integracoes'
+    | '/trackeamento/mensagens'
     | '/trackeamento/metricas'
     | '/trackeamento/pixels'
     | '/trackeamento/postbacks'
@@ -614,6 +626,7 @@ export interface FileRouteTypes {
     | '/_authenticated/trackeamento/dominios'
     | '/_authenticated/trackeamento/funis'
     | '/_authenticated/trackeamento/integracoes'
+    | '/_authenticated/trackeamento/mensagens'
     | '/_authenticated/trackeamento/metricas'
     | '/_authenticated/trackeamento/pixels'
     | '/_authenticated/trackeamento/postbacks'
@@ -793,6 +806,13 @@ declare module '@tanstack/react-router' {
       path: '/trackeamento/metricas'
       fullPath: '/trackeamento/metricas'
       preLoaderRoute: typeof AuthenticatedTrackeamentoMetricasRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/trackeamento/mensagens': {
+      id: '/_authenticated/trackeamento/mensagens'
+      path: '/trackeamento/mensagens'
+      fullPath: '/trackeamento/mensagens'
+      preLoaderRoute: typeof AuthenticatedTrackeamentoMensagensRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/trackeamento/integracoes': {
@@ -1036,6 +1056,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedTrackeamentoDominiosRoute: typeof AuthenticatedTrackeamentoDominiosRoute
   AuthenticatedTrackeamentoFunisRoute: typeof AuthenticatedTrackeamentoFunisRoute
   AuthenticatedTrackeamentoIntegracoesRoute: typeof AuthenticatedTrackeamentoIntegracoesRoute
+  AuthenticatedTrackeamentoMensagensRoute: typeof AuthenticatedTrackeamentoMensagensRoute
   AuthenticatedTrackeamentoMetricasRoute: typeof AuthenticatedTrackeamentoMetricasRoute
   AuthenticatedTrackeamentoPixelsRoute: typeof AuthenticatedTrackeamentoPixelsRoute
   AuthenticatedTrackeamentoPostbacksRoute: typeof AuthenticatedTrackeamentoPostbacksRoute
@@ -1068,6 +1089,8 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedTrackeamentoFunisRoute: AuthenticatedTrackeamentoFunisRoute,
   AuthenticatedTrackeamentoIntegracoesRoute:
     AuthenticatedTrackeamentoIntegracoesRoute,
+  AuthenticatedTrackeamentoMensagensRoute:
+    AuthenticatedTrackeamentoMensagensRoute,
   AuthenticatedTrackeamentoMetricasRoute:
     AuthenticatedTrackeamentoMetricasRoute,
   AuthenticatedTrackeamentoPixelsRoute: AuthenticatedTrackeamentoPixelsRoute,

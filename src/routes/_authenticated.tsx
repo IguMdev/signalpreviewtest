@@ -58,6 +58,7 @@ const navItems = [
 ] as const;
 
 const trackingItems = [
+  { to: "/trackeamento/mensagens", label: "Mensagens", icon: MessageCircle },
   { to: "/trackeamento/dominios", label: "Domínios", icon: Globe },
   { to: "/trackeamento/pixels", label: "Pixels", icon: Code2 },
   { to: "/trackeamento/canal", label: "Canal", icon: Send },
@@ -67,9 +68,7 @@ const trackingItems = [
   { to: "/trackeamento/integracoes", label: "Integrações", icon: Link2 },
 ] as const;
 
-const trackingLockedItems = [
-  { label: "Mensagens", icon: MessageCircle },
-] as const;
+const trackingLockedItems = [] as const;
 
 const promoItems = [
   { to: "/promocoes/contas", label: "Contas de afiliado", icon: ShoppingBag },
