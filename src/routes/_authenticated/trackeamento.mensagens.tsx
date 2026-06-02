@@ -50,7 +50,7 @@ function TrackingMessagesPage() {
     enabled: !!selectedBotId,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("tracking_bot_messages")
+        .from("tracking_bot_messages" as any)
         .select("*")
         .eq("tracking_bot_id", selectedBotId)
         .order("sort_order", { ascending: true });
@@ -110,7 +110,7 @@ function TrackingMessagesPage() {
       if (!selectedBotId) return;
       const { data: u } = await supabase.auth.getUser();
       const sortOrder = (messagesQ.data?.length ?? 0) + 1;
-      const { error } = await supabase.from("tracking_bot_messages").insert({
+      const { error } = await supabase.from("tracking_bot_messages" as any).insert({
         user_id: u.user!.id,
         tracking_bot_id: selectedBotId,
         content: "Nova mensagem...",
@@ -125,7 +125,7 @@ function TrackingMessagesPage() {
 
   const updateMsgMut = useMutation({
     mutationFn: async ({ id, updates }: { id: string; updates: any }) => {
-      const { error } = await supabase.from("tracking_bot_messages").update(updates).eq("id", id);
+      const { error } = await supabase.from("tracking_bot_messages" as any).update(updates).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -137,7 +137,7 @@ function TrackingMessagesPage() {
 
   const deleteMsgMut = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("tracking_bot_messages").delete().eq("id", id);
+      const { error } = await supabase.from("tracking_bot_messages" as any).delete().eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["tracking-bot-messages", selectedBotId] }),
@@ -291,7 +291,7 @@ function TrackingMessagesPage() {
           <CardHeader className="pb-3 flex flex-row items-center justify-between">
             <CardTitle className="text-base">Mensagem de Entrada</CardTitle>
             <Switch
-              checked={selectedBot?.welcome_enabled ?? false}
+              checked={(selectedBot as any)?.welcome_enabled ?? false}
               onCheckedChange={(v) => updateMut.mutate({ welcome_enabled: v })}
               disabled={!selectedBot}
             />
@@ -302,7 +302,7 @@ function TrackingMessagesPage() {
             </p>
             <div className="space-y-2">
               <Textarea
-                value={selectedBot?.welcome_message ?? ""}
+                value={(selectedBot as any)?.welcome_message ?? ""}
                 onChange={(e) => updateMut.mutate({ welcome_message: e.target.value })}
                 placeholder="Seja bem-vindo ao grupo!"
                 rows={3}
@@ -317,7 +317,7 @@ function TrackingMessagesPage() {
           <CardHeader className="pb-3 flex flex-row items-center justify-between">
             <CardTitle className="text-base">Auto-Aceite</CardTitle>
             <Switch
-              checked={selectedBot?.auto_accept_enabled ?? false}
+              checked={(selectedBot as any)?.auto_accept_enabled ?? false}
               onCheckedChange={(v) => updateMut.mutate({ auto_accept_enabled: v })}
               disabled={!selectedBot}
             />
@@ -329,7 +329,7 @@ function TrackingMessagesPage() {
             <div className="space-y-2">
               <Label className="text-xs text-muted-foreground">Aceitar membro após:</Label>
               <Select
-                value={selectedBot?.auto_accept_delay_seconds?.toString() || "0"}
+                value={(selectedBot as any)?.auto_accept_delay_seconds?.toString() || "0"}
                 onValueChange={(v) => updateMut.mutate({ auto_accept_delay_seconds: parseInt(v) })}
                 disabled={!selectedBot}
               >
