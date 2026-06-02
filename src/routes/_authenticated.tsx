@@ -35,6 +35,7 @@ import {
   Lock,
   ShoppingBag,
   BarChart2,
+  Mic,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -54,6 +55,7 @@ const navItems = [
   { to: "/membros", label: "Membros", icon: UserPlus, tour: "nav-membros" },
   { to: "/mensagens", label: "Agendamentos", icon: CalendarClock, tour: "nav-mensagens" },
   { to: "/videos", label: "Vídeos", icon: Video, tour: "nav-videos" },
+  { to: "/audios", label: "Áudios", icon: Mic, tour: "nav-audios" },
   { to: "/recarga", label: "Recarga", icon: Wallet, tour: "nav-recarga" },
 ] as const;
 

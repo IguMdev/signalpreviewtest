@@ -22,6 +22,7 @@ import { Route as AuthenticatedPerfilRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedMensagensRouteImport } from './routes/_authenticated/mensagens'
 import { Route as AuthenticatedMembrosRouteImport } from './routes/_authenticated/membros'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedAudiosRouteImport } from './routes/_authenticated/audios'
 import { Route as AuthenticatedTrackeamentoIndexRouteImport } from './routes/_authenticated/trackeamento.index'
 import { Route as AuthenticatedRoomsIndexRouteImport } from './routes/_authenticated/rooms.index'
 import { Route as AuthenticatedTrackeamentoPostbacksRouteImport } from './routes/_authenticated/trackeamento.postbacks'
@@ -124,6 +125,11 @@ const AuthenticatedMembrosRoute = AuthenticatedMembrosRouteImport.update({
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedAudiosRoute = AuthenticatedAudiosRouteImport.update({
+  id: '/audios',
+  path: '/audios',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedTrackeamentoIndexRoute =
@@ -346,6 +352,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
+  '/audios': typeof AuthenticatedAudiosRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/membros': typeof AuthenticatedMembrosRoute
   '/mensagens': typeof AuthenticatedMensagensRoute
@@ -397,6 +404,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
+  '/audios': typeof AuthenticatedAudiosRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/membros': typeof AuthenticatedMembrosRoute
   '/mensagens': typeof AuthenticatedMensagensRoute
@@ -450,6 +458,7 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
+  '/_authenticated/audios': typeof AuthenticatedAudiosRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/membros': typeof AuthenticatedMembrosRoute
   '/_authenticated/mensagens': typeof AuthenticatedMensagensRoute
@@ -503,6 +512,7 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/signup'
+    | '/audios'
     | '/dashboard'
     | '/membros'
     | '/mensagens'
@@ -554,6 +564,7 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/signup'
+    | '/audios'
     | '/dashboard'
     | '/membros'
     | '/mensagens'
@@ -606,6 +617,7 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/login'
     | '/signup'
+    | '/_authenticated/audios'
     | '/_authenticated/dashboard'
     | '/_authenticated/membros'
     | '/_authenticated/mensagens'
@@ -771,6 +783,13 @@ declare module '@tanstack/react-router' {
       path: '/dashboard'
       fullPath: '/dashboard'
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/audios': {
+      id: '/_authenticated/audios'
+      path: '/audios'
+      fullPath: '/audios'
+      preLoaderRoute: typeof AuthenticatedAudiosRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/trackeamento/': {
@@ -1036,6 +1055,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteChildren {
+  AuthenticatedAudiosRoute: typeof AuthenticatedAudiosRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedMembrosRoute: typeof AuthenticatedMembrosRoute
   AuthenticatedMensagensRoute: typeof AuthenticatedMensagensRoute
@@ -1066,6 +1086,7 @@ interface AuthenticatedRouteChildren {
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedAudiosRoute: AuthenticatedAudiosRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedMembrosRoute: AuthenticatedMembrosRoute,
   AuthenticatedMensagensRoute: AuthenticatedMensagensRoute,
@@ -1138,13 +1159,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
