@@ -32,7 +32,7 @@ async function sendVoiceToChat(opts: {
 }
 
 export const sendAudioNow = createServerFn({ method: "POST" })
-  .validator((data: { audioId: string; accountId: string; chatIds: string[] }) => data)
+  .inputValidator((data: { audioId: string; accountId: string; chatIds: string[] }) => data)
   .handler(async ({ data }) => {
     try {
       const { data: audio } = await supabaseAdmin
@@ -86,7 +86,7 @@ export const sendAudioNow = createServerFn({ method: "POST" })
   });
 
 export const deleteAudio = createServerFn({ method: "POST" })
-  .validator((id: string) => id)
+  .inputValidator((id: string) => id)
   .handler(async ({ data: id }) => {
     try {
       const { data: audio } = await supabaseAdmin
