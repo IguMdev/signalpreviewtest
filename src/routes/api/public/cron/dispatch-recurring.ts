@@ -101,6 +101,7 @@ type Schedule = {
   account_id: string | null;
   content: string | null;
   video_id: string | null;
+  audio_id: string | null;
   image_path: string | null;
   image_mime: string | null;
   parse_mode: string;
@@ -115,6 +116,7 @@ type Schedule = {
     image_path: string | null;
     image_mime: string | null;
     video_id: string | null;
+    audio_id: string | null;
     button_text?: string | null;
     button_url?: string | null;
   }> | null;
@@ -134,6 +136,7 @@ type PendingFollowup = {
   image_path: string | null;
   image_mime: string | null;
   video_id: string | null;
+  audio_id: string | null;
   parse_mode: string;
   button_text?: string | null;
   button_url?: string | null;
@@ -226,9 +229,9 @@ export const Route = createFileRoute("/api/public/cron/dispatch-recurring")({
           .lt("scheduled_at", new Date(Date.now() - 5 * 60 * 1000).toISOString());
 
         const { data: schedules, error } = await supabaseAdmin
-          .from("recurring_schedules")
+          .from("recurring_schedules" as never)
           .select(
-            "id, user_id, room_id, account_id, content, video_id, image_path, image_mime, parse_mode, is_premium, times, weekdays, weekday_overrides, follow_ups, timezone, last_fire_key, button_text, button_url",
+            "id, user_id, room_id, account_id, content, video_id, audio_id, image_path, image_mime, parse_mode, is_premium, times, weekdays, weekday_overrides, follow_ups, timezone, last_fire_key, button_text, button_url",
           )
           .eq("is_active", true);
         if (error) {
@@ -250,8 +253,8 @@ export const Route = createFileRoute("/api/public/cron/dispatch-recurring")({
 
           // claim this minute atomically
           const { data: claim } = await supabaseAdmin
-            .from("recurring_schedules")
-            .update({ last_fire_key: dateKey })
+            .from("recurring_schedules" as never)
+            .update({ last_fire_key: dateKey } as never)
             .eq("id", s.id)
             .or(`last_fire_key.is.null,last_fire_key.neq.${dateKey}`)
             .select("id")
@@ -300,6 +303,21 @@ export const Route = createFileRoute("/api/public/cron/dispatch-recurring")({
               .maybeSingle();
             video = v ?? null;
           }
+
+          let audio: {
+            storage_path: string;
+            duration_seconds: number | null;
+            title: string;
+          } | null = null;
+          if (s.audio_id) {
+            const { data: a } = await supabaseAdmin
+              .from("audios" as never)
+              .select("storage_path, duration_seconds, title")
+              .eq("id" as never, s.audio_id)
+              .maybeSingle();
+            audio = (a as any) ?? null;
+          }
+
           const isNormalVideo = video && video.kind === "normal";
           const replyMarkup = undefined;
 
@@ -420,6 +438,22 @@ export const Route = createFileRoute("/api/public/cron/dispatch-recurring")({
                         mimeType: video.mime_type,
                         filename: (video.title || "video").replace(/[^\w.-]+/g, "_") + ".mp4",
                       })
+                  : audio
+                    ? await (async () => {
+                        const { data: fileData, error } = await supabaseAdmin.storage.from("audios").download(audio.storage_path);
+                        if (error || !fileData) return { ok: false, description: "Falha ao baixar áudio" };
+                        const bytes = await fileData.arrayBuffer();
+                        const { sendVoiceToChat } = await import("@/lib/audios.functions");
+                        return await sendVoiceToChat({
+                          botToken: acc.bot_token,
+                          chatId: c.chat_id,
+                          fileBytes: bytes,
+                          filename: audio.title + ".ogg",
+                          mimeType: "audio/ogg",
+                          duration: audio.duration_seconds,
+                          caption: s.content,
+                        });
+                      })()
                   : hasEmojiTokens(s.content)
                     ? { ok: false, description: PREMIUM_LOCK_ERROR }
                     : await callTelegram<{ message_id: number }>(acc.bot_token, "sendMessage", {
@@ -494,6 +528,7 @@ export const Route = createFileRoute("/api/public/cron/dispatch-recurring")({
                 image_path: f.image_path ?? null,
                 image_mime: f.image_mime ?? null,
                 video_id: f.video_id ?? null,
+                audio_id: f.audio_id ?? null,
                 parse_mode: s.parse_mode,
                 button_text: f.button_text ?? null,
                 button_url: f.button_url ?? null,
@@ -506,9 +541,9 @@ export const Route = createFileRoute("/api/public/cron/dispatch-recurring")({
         // Process due follow-ups
         const nowIso = new Date().toISOString();
         const { data: pendings } = await supabaseAdmin
-          .from("recurring_pending_followups")
+          .from("recurring_pending_followups" as never)
           .select(
-            "id, schedule_id, user_id, room_id, account_id, content, image_path, image_mime, video_id, parse_mode, button_text, button_url",
+            "id, schedule_id, user_id, room_id, account_id, content, image_path, image_mime, video_id, audio_id, parse_mode, button_text, button_url",
           )
           .eq("status", "pending")
           .lte("scheduled_at", nowIso)
@@ -518,8 +553,8 @@ export const Route = createFileRoute("/api/public/cron/dispatch-recurring")({
         for (const p of (pendings ?? []) as PendingFollowup[]) {
           // Claim
           const { data: claim } = await supabaseAdmin
-            .from("recurring_pending_followups")
-            .update({ status: "sending" })
+            .from("recurring_pending_followups" as never)
+            .update({ status: "sending", last_error: null } as never)
             .eq("id", p.id)
             .eq("status", "pending")
             .select("id")
@@ -537,8 +572,8 @@ export const Route = createFileRoute("/api/public/cron/dispatch-recurring")({
           }
           if (!accountId) {
             await supabaseAdmin
-              .from("recurring_pending_followups")
-              .update({ status: "failed", last_error: "Sem conta" })
+              .from("recurring_pending_followups" as never)
+              .update({ status: "failed", last_error: "Agendamento pai ausente" } as never)
               .eq("id", p.id);
             continue;
           }
@@ -578,6 +613,21 @@ export const Route = createFileRoute("/api/public/cron/dispatch-recurring")({
               .maybeSingle();
             video = v ?? null;
           }
+
+          let audio: {
+            storage_path: string;
+            duration_seconds: number | null;
+            title: string;
+          } | null = null;
+          if (p.audio_id) {
+            const { data: a } = await supabaseAdmin
+              .from("audios" as never)
+              .select("storage_path, duration_seconds, title")
+              .eq("id" as never, p.audio_id)
+              .maybeSingle();
+            audio = (a as any) ?? null;
+          }
+
           const { data: parentSchedule } = p.schedule_id
             ? await supabaseAdmin
                 .from("recurring_schedules")

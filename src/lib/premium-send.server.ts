@@ -582,8 +582,6 @@ export async function sendVideoWithPremiumEmojiCaption(opts: {
     const attributes = [
       new Api.DocumentAttributeVideo({
         duration: Math.max(1, Math.round(opts.duration ?? 1)),
-        w: dimensions.width,
-        h: dimensions.height,
         supportsStreaming: true,
       }),
       new Api.DocumentAttributeFilename({ fileName: opts.filename }),

@@ -69,6 +69,7 @@ const FollowUpInput = z.object({
   imagePath: z.string().max(500).nullable().optional(),
   imageMime: z.string().max(100).nullable().optional(),
   videoId: z.string().uuid().nullable().optional(),
+  audioId: z.string().uuid().nullable().optional(),
   buttonText: z.string().max(64).nullable().optional(),
   buttonUrl: z.string().url().max(2048).nullable().optional(),
 });
@@ -80,6 +81,7 @@ const ScheduleInput = z.object({
   title: z.string().min(1).max(120),
   content: z.string().max(4000).nullable().optional(),
   videoId: z.string().uuid().nullable().optional(),
+  audioId: z.string().uuid().nullable().optional(),
   imagePath: z.string().max(500).nullable().optional(),
   imageMime: z.string().max(100).nullable().optional(),
   parseMode: z.enum(["HTML", "Markdown", "MarkdownV2"]).default("HTML"),
@@ -109,6 +111,7 @@ export const upsertSchedule = createServerFn({ method: "POST" })
       title: data.title.trim(),
       content: data.content ?? null,
       video_id: data.videoId ?? null,
+      audio_id: data.audioId ?? null,
       image_path: data.imagePath ?? null,
       image_mime: data.imageMime ?? null,
       parse_mode: data.parseMode,
@@ -126,6 +129,7 @@ export const upsertSchedule = createServerFn({ method: "POST" })
         image_path: f.imagePath ?? null,
         image_mime: f.imageMime ?? null,
         video_id: f.videoId ?? null,
+        audio_id: f.audioId ?? null,
         button_text: f.buttonText ?? null,
         button_url: f.buttonUrl ?? null,
       })),
@@ -138,14 +142,14 @@ export const upsertSchedule = createServerFn({ method: "POST" })
     };
     if (data.id) {
       const { error } = await supabase
-        .from("recurring_schedules")
+        .from("recurring_schedules" as never)
         .update(row as never)
-        .eq("id", data.id);
+        .eq("id" as never, data.id);
       if (error) throw new Error(error.message);
       return { id: data.id };
     }
     const { data: ins, error } = await supabase
-      .from("recurring_schedules")
+      .from("recurring_schedules" as never)
       .insert(row as never)
       .select("id")
       .single();
@@ -158,9 +162,9 @@ export const toggleSchedule = createServerFn({ method: "POST" })
   .inputValidator((d) => z.object({ id: z.string().uuid(), isActive: z.boolean() }).parse(d))
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase
-      .from("recurring_schedules")
-      .update({ is_active: data.isActive })
-      .eq("id", data.id);
+      .from("recurring_schedules" as never)
+      .update({ is_active: data.isActive } as never)
+      .eq("id" as never, data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -169,7 +173,7 @@ export const deleteSchedule = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
-    const { error } = await context.supabase.from("recurring_schedules").delete().eq("id", data.id);
+    const { error } = await context.supabase.from("recurring_schedules" as never).delete().eq("id" as never, data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -180,16 +184,16 @@ export const testSchedule = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { userId } = context;
     const { data: s, error } = await supabaseAdmin
-      .from("recurring_schedules")
+      .from("recurring_schedules" as never)
       .select(
-        "id, user_id, room_id, account_id, content, video_id, image_path, image_mime, parse_mode, is_premium, button_text, button_url, follow_ups",
+        "id, user_id, room_id, account_id, content, video_id, audio_id, image_path, image_mime, parse_mode, is_premium, button_text, button_url, follow_ups",
       )
-      .eq("id", data.id)
+      .eq("id" as never, data.id)
       .maybeSingle();
     if (error) throw new Error(error.message);
-    if (!s || s.user_id !== userId) throw new Error("Agendamento não encontrado");
+    if (!s || (s as any).user_id !== userId) throw new Error("Agendamento não encontrado");
 
-    let accountId = s.account_id as string | null;
+    let accountId = (s as any).account_id as string | null;
     if (!accountId) {
       const { data: room } = await supabaseAdmin
         .from("rooms")
@@ -231,10 +235,26 @@ export const testSchedule = createServerFn({ method: "POST" })
       return (v as VideoRow | null) ?? null;
     };
 
+    type AudioRow = {
+      storage_path: string;
+      duration_seconds: number | null;
+      title: string;
+    };
+    const loadAudio = async (audioId: string | null | undefined): Promise<AudioRow | null> => {
+      if (!audioId) return null;
+      const { data: a } = await supabaseAdmin
+        .from("audios")
+        .select("storage_path, duration_seconds, title")
+        .eq("id", audioId)
+        .maybeSingle();
+      return (a as AudioRow | null) ?? null;
+    };
+
     type Payload = {
       content: string | null;
       image_path: string | null;
       video: VideoRow | null;
+      audio: AudioRow | null;
       parse_mode: string;
       is_premium: boolean;
     };
@@ -243,6 +263,7 @@ export const testSchedule = createServerFn({ method: "POST" })
       let failed = 0;
       let lastError: string | null = null;
       const video = p.video;
+      const audio = p.audio;
       const isNormalVideo = video && video.kind === "normal";
       for (const c of chats) {
       let r: { ok: boolean; result?: { message_id?: number }; description?: string } = {
@@ -357,6 +378,22 @@ export const testSchedule = createServerFn({ method: "POST" })
                   mimeType: video.mime_type,
                   filename: (video.title || "video").replace(/[^\w.-]+/g, "_") + ".mp4",
                 })
+            : audio
+              ? await (async () => {
+                  const { data: fileData, error } = await supabaseAdmin.storage.from("audios").download(audio.storage_path);
+                  if (error || !fileData) return { ok: false, description: "Falha ao baixar áudio" };
+                  const bytes = await fileData.arrayBuffer();
+                  const { sendVoiceToChat } = await import("@/lib/audios.functions");
+                  return await sendVoiceToChat({
+                    botToken: acc.bot_token,
+                    chatId: c.chat_id,
+                    fileBytes: bytes,
+                    filename: audio.title + ".ogg",
+                    mimeType: "audio/ogg",
+                    duration: audio.duration_seconds,
+                    caption: p.content,
+                  });
+                })()
             : await callTelegram<{ message_id: number }>(acc.bot_token, "sendMessage", {
                 chat_id: c.chat_id,
                 text: p.content ?? "",
@@ -389,11 +426,13 @@ export const testSchedule = createServerFn({ method: "POST" })
       return { sent, failed, lastError };
     };
 
-    const mainVideo = await loadVideo(s.video_id);
+    const mainVideo = await loadVideo(data.videoId);
+    const mainAudio = await loadAudio(data.audioId);
     const mainRes = await sendPayload({
-      content: s.content ?? null,
-      image_path: s.image_path ?? null,
+      content: data.content ?? null,
+      image_path: data.imagePath ?? null,
       video: mainVideo,
+      audio: mainAudio,
       parse_mode: s.parse_mode,
       is_premium: !!s.is_premium,
     });
@@ -404,10 +443,12 @@ export const testSchedule = createServerFn({ method: "POST" })
     const fups = Array.isArray(s.follow_ups) ? (s.follow_ups as Array<Record<string, unknown>>) : [];
     for (const f of fups) {
       const fVideo = await loadVideo((f.video_id as string | null) ?? null);
+      const fAudio = await loadAudio((f.audio_id as string | null) ?? null);
       const fr = await sendPayload({
         content: (f.content as string | null) ?? null,
         image_path: (f.image_path as string | null) ?? null,
         video: fVideo,
+        audio: fAudio,
         parse_mode: s.parse_mode,
         is_premium: !!s.is_premium,
       });
@@ -423,6 +464,7 @@ const TestMessageInput = z.object({
   accountId: z.string().uuid().nullable().optional(),
   content: z.string().max(4000).nullable().optional(),
   videoId: z.string().uuid().nullable().optional(),
+  audioId: z.string().uuid().nullable().optional(),
   imagePath: z.string().max(500).nullable().optional(),
   imageMime: z.string().max(100).nullable().optional(),
   parseMode: z.enum(["HTML", "Markdown", "MarkdownV2"]).default("HTML"),
@@ -621,6 +663,23 @@ export const testMessage = createServerFn({ method: "POST" })
             duration: video.duration_seconds,
             mimeType: video.mime_type,
             filename: (video.title || "video").replace(/[^\w.-]+/g, "_") + ".mp4",
+          });
+        }
+      } else if (audio) {
+        const { data: fileData, error } = await supabaseAdmin.storage.from("audios").download((audio as any).storage_path);
+        if (error || !fileData) {
+          r = { ok: false, description: "Falha ao baixar áudio" };
+        } else {
+          const bytes = await fileData.arrayBuffer();
+          const { sendVoiceToChat } = await import("@/lib/audios.functions");
+          r = await sendVoiceToChat({
+            botToken: acc.bot_token,
+            chatId: c.chat_id,
+            fileBytes: bytes,
+            filename: (audio as any).title + ".ogg",
+            mimeType: "audio/ogg",
+            duration: (audio as any).duration_seconds,
+            caption: data.content,
           });
         }
       } else {

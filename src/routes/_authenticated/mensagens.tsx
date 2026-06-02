@@ -96,7 +96,8 @@ type Schedule = {
     image_path: string | null;
     image_mime: string | null;
     video_id: string | null;
-    button_text?: string | null;
+    audio_id: string | null;
+    button_text: string | null;
     button_url?: string | null;
   }> | null;
   is_premium: boolean;
@@ -126,6 +127,12 @@ type VideoOption = {
   id: string;
   title: string;
   kind: string | null;
+  storage_path: string;
+};
+
+type AudioOption = {
+  id: string;
+  title: string;
   storage_path: string;
 };
 
@@ -174,6 +181,12 @@ function MensagensPage() {
     queryKey: ["videos-min"],
     queryFn: async () =>
       ((await supabase.from("videos").select("id, title, kind, storage_path")).data ?? []) as VideoOption[],
+  });
+
+  const audios = useQuery({
+    queryKey: ["audios-min"],
+    queryFn: async () =>
+      ((await supabase.from("audios" as never).select("id, title, storage_path")).data ?? []) as any as AudioOption[],
   });
 
   const list = useQuery({
@@ -305,23 +318,30 @@ function MensagensPage() {
     setPresetRoomId(roomId ?? null);
     setEditing({
       id: "",
+      user_id: "",
       room_id: roomId ?? "",
-      account_id: null,
+      account_id: roomId ? (rooms.data?.find((r) => r.id === roomId)?.default_account_id ?? null) : null,
       title: "",
       content: "",
       video_id: null,
+      audio_id: null,
       image_path: null,
       image_mime: null,
       parse_mode: "HTML",
-      times: [],
-      weekdays: [],
+      times: ["08:00"],
+      weekdays: [0, 1, 2, 3, 4, 5, 6],
       weekday_overrides: {},
       follow_ups: [],
       is_premium: false,
       is_active: true,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
       timezone: "America/Sao_Paulo",
       last_sent_at: null,
-    });
+      last_fire_key: null,
+      button_text: "",
+      button_url: "",
+    } as any);
   };
 
   const openDuplicate = (s: Schedule) => {
@@ -593,6 +613,7 @@ function MensagensPage() {
         rooms={rooms.data ?? []}
         accounts={accounts.data ?? []}
         videos={videos.data ?? []}
+        audios={audios.data ?? []}
         folders={folders.data ?? []}
         presetRoomId={presetRoomId}
         ensureVideoThumbnail={ensureVideoThumbnail}
@@ -850,6 +871,7 @@ function ScheduleDialog({
   rooms,
   accounts,
   videos,
+  audios,
   folders,
   presetRoomId,
   ensureVideoThumbnail,
@@ -860,6 +882,7 @@ function ScheduleDialog({
   rooms: Room[];
   accounts: { id: string; label: string }[];
   videos: { id: string; title: string; kind?: string | null }[];
+  audios: { id: string; title: string }[];
   folders: ScheduleFolder[];
   presetRoomId: string | null;
   ensureVideoThumbnail: (videoId: string) => Promise<void>;
@@ -871,6 +894,7 @@ function ScheduleDialog({
     title: string;
     content: string | null;
     videoId: string | null;
+    audioId: string | null;
     imagePath: string | null;
     imageMime: string | null;
     parseMode: "HTML" | "Markdown" | "MarkdownV2";
@@ -884,6 +908,7 @@ function ScheduleDialog({
       imagePath: string | null;
       imageMime: string | null;
       videoId: string | null;
+      audioId: string | null;
       buttonText?: string | null;
       buttonUrl?: string | null;
     }>;
@@ -902,6 +927,7 @@ function ScheduleDialog({
   const [accountId, setAccountId] = useState<string>("");
   const [content, setContent] = useState("");
   const [videoId, setVideoId] = useState<string>("");
+  const [audioId, setAudioId] = useState<string>("");
   const [imagePath, setImagePath] = useState<string>("");
   const [imageMime, setImageMime] = useState<string>("");
   const [uploading, setUploading] = useState(false);
@@ -910,7 +936,7 @@ function ScheduleDialog({
   const [weekdayOverrides, setWeekdayOverrides] = useState<Record<string, string[]>>({});
   const [overrideInputs, setOverrideInputs] = useState<Record<string, string>>({});
   const [followUps, setFollowUps] = useState<
-    Array<{ delayValue: number; delayUnit: "seconds" | "minutes"; content: string; imagePath: string; imageMime: string; videoId: string; buttonText: string; buttonUrl: string }>
+    Array<{ delayValue: number; delayUnit: "seconds" | "minutes"; content: string; imagePath: string; imageMime: string; videoId: string; audioId: string; buttonText: string; buttonUrl: string }>
   >([]);
   const [followUpUploading, setFollowUpUploading] = useState<number | null>(null);
   const [isPremium, setIsPremium] = useState(false);
@@ -936,6 +962,7 @@ function ScheduleDialog({
       setAccountId(editing.account_id ?? "");
       setContent(editing.content ?? "");
       setVideoId(editing.video_id ?? "");
+      setAudioId((editing as any).audio_id ?? "");
       setImagePath(editing.image_path ?? "");
       setImageMime(editing.image_mime ?? "");
       setTimes(editing.times);
@@ -952,6 +979,7 @@ function ScheduleDialog({
           imagePath: f.image_path ?? "",
           imageMime: f.image_mime ?? "",
           videoId: f.video_id ?? "",
+          audioId: (f as any).audio_id ?? "",
           buttonText: f.button_text ?? "",
           buttonUrl: f.button_url ?? "",
         })),
@@ -990,6 +1018,7 @@ function ScheduleDialog({
       setImagePath(path);
       setImageMime(file.type);
       setVideoId("");
+      setAudioId("");
       toast.success("Imagem carregada");
     } catch (e) {
       toast.error((e as Error).message);
@@ -1016,6 +1045,7 @@ function ScheduleDialog({
     payload: {
       content: string;
       videoId: string;
+      audioId: string;
       imagePath: string;
       imageMime: string;
       buttonText: string;
@@ -1035,8 +1065,9 @@ function ScheduleDialog({
           accountId: accountId || null,
           content: payload.content || null,
           videoId: payload.videoId || null,
-          imagePath: payload.videoId ? null : payload.imagePath || null,
-          imageMime: payload.videoId ? null : payload.imageMime || null,
+          audioId: payload.audioId || null,
+          imagePath: payload.videoId || payload.audioId ? null : payload.imagePath || null,
+          imageMime: payload.videoId || payload.audioId ? null : payload.imageMime || null,
           parseMode: "HTML",
           isPremium,
           buttonText: payload.buttonText?.trim() || null,
@@ -1204,7 +1235,7 @@ function ScheduleDialog({
                 ) : (
                   <label
                     className={`flex items-center gap-2 px-3 py-2 rounded-md border border-dashed cursor-pointer hover:bg-muted/40 text-sm ${
-                      videoId ? "opacity-50 pointer-events-none" : ""
+                      videoId || audioId ? "opacity-50 pointer-events-none" : ""
                     }`}
                   >
                     {uploading ? (
@@ -1234,6 +1265,7 @@ function ScheduleDialog({
                     const next = v === "none" ? "" : v;
                     setVideoId(next);
                     if (next) {
+                      setAudioId("");
                       setImagePath("");
                       setImageMime("");
                       void ensureVideoThumbnail(next);
@@ -1249,6 +1281,29 @@ function ScheduleDialog({
                   </SelectContent>
                 </Select>
               </div>
+              <div className="space-y-2">
+                <Label>Áudio da biblioteca (opcional — substitui texto/imagem/vídeo)</Label>
+                <Select
+                  value={audioId || "none"}
+                  onValueChange={(v) => {
+                    const next = v === "none" ? "" : v;
+                    setAudioId(next);
+                    if (next) {
+                      setVideoId("");
+                      setImagePath("");
+                      setImageMime("");
+                    }
+                  }}
+                >
+                  <SelectTrigger><SelectValue placeholder="Nenhum (enviar texto)" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Nenhum (enviar texto)</SelectItem>
+                    {audios.map((a) => (
+                      <SelectItem key={a.id} value={a.id}>{a.title}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               <div className="flex justify-end pt-1">
                 <Button
                   type="button"
@@ -1259,6 +1314,7 @@ function ScheduleDialog({
                     runPartTest("main", {
                       content,
                       videoId,
+                      audioId,
                       imagePath,
                       imageMime,
                       buttonText,
@@ -1294,7 +1350,7 @@ function ScheduleDialog({
                   onClick={() =>
                     setFollowUps([
                       ...followUps,
-                      { delayValue: 1, delayUnit: "minutes", content: "", imagePath: "", imageMime: "", videoId: "", buttonText: "", buttonUrl: "" },
+                      { delayValue: 1, delayUnit: "minutes", content: "", imagePath: "", imageMime: "", videoId: "", audioId: "", buttonText: "", buttonUrl: "" },
                     ])
                   }
                 >
@@ -1318,6 +1374,7 @@ function ScheduleDialog({
                         imagePath: string;
                         imageMime: string;
                         videoId: string;
+                        audioId: string;
                         buttonText: string;
                         buttonUrl: string;
                       }>,
@@ -1422,7 +1479,7 @@ function ScheduleDialog({
                         ) : (
                           <label
                             className={`flex items-center gap-2 px-3 py-2 rounded-md border border-dashed cursor-pointer hover:bg-muted/40 text-sm w-fit ${
-                              f.videoId ? "opacity-50 pointer-events-none" : ""
+                              f.videoId || f.audioId ? "opacity-50 pointer-events-none" : ""
                             }`}
                           >
                             {followUpUploading === idx ? (
@@ -1459,7 +1516,7 @@ function ScheduleDialog({
                                       upsert: false,
                                     });
                                   if (error) throw error;
-                                  update({ imagePath: path, imageMime: file.type, videoId: "" });
+                                  update({ imagePath: path, imageMime: file.type, videoId: "", audioId: "" });
                                   toast.success("Imagem carregada");
                                 } catch (err) {
                                   toast.error((err as Error).message);
@@ -1472,14 +1529,14 @@ function ScheduleDialog({
                         )}
                         <div className="space-y-1">
                           <Label className="text-xs">
-                            Vídeo da biblioteca (substitui texto/imagem)
+                            Vídeo da biblioteca (opcional)
                           </Label>
                           <Select
                             value={f.videoId || "none"}
                             onValueChange={(v) => {
                               const next = v === "none" ? "" : v;
                               if (next) {
-                                update({ videoId: next, imagePath: "", imageMime: "" });
+                                update({ videoId: next, audioId: "", imagePath: "", imageMime: "" });
                                 void ensureVideoThumbnail(next);
                               } else {
                                 update({ videoId: "" });
@@ -1497,6 +1554,32 @@ function ScheduleDialog({
                             </SelectContent>
                           </Select>
                         </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs">
+                            Áudio da biblioteca (opcional)
+                          </Label>
+                          <Select
+                            value={f.audioId || "none"}
+                            onValueChange={(v) => {
+                              const next = v === "none" ? "" : v;
+                              if (next) {
+                                update({ audioId: next, videoId: "", imagePath: "", imageMime: "" });
+                              } else {
+                                update({ audioId: "" });
+                              }
+                            }}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Nenhum (enviar texto/imagem)" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="none">Nenhum (enviar texto/imagem)</SelectItem>
+                              {audios.map((a) => (
+                                <SelectItem key={a.id} value={a.id}>{a.title}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
                         <div className="flex justify-end">
                           <Button
                             type="button"
@@ -1507,6 +1590,7 @@ function ScheduleDialog({
                               runPartTest(`fu-${idx}`, {
                                 content: f.content,
                                 videoId: f.videoId,
+                                audioId: f.audioId,
                                 imagePath: f.imagePath,
                                 imageMime: f.imageMime,
                                 buttonText: f.buttonText,
@@ -1707,8 +1791,9 @@ function ScheduleDialog({
                 title: title.trim(),
                 content: content || null,
                 videoId: videoId || null,
-                imagePath: videoId ? null : imagePath || null,
-                imageMime: videoId ? null : imageMime || null,
+                audioId: audioId || null,
+                imagePath: videoId || audioId ? null : imagePath || null,
+                imageMime: videoId || audioId ? null : imageMime || null,
                 parseMode: "HTML",
                 times,
                 weekdays,
@@ -1724,6 +1809,7 @@ function ScheduleDialog({
                   imagePath: f.imagePath || null,
                   imageMime: f.imageMime || null,
                   videoId: f.videoId || null,
+                  audioId: f.audioId || null,
                   buttonText: f.buttonText?.trim() || null,
                   buttonUrl: f.buttonUrl?.trim() || null,
                 })),
