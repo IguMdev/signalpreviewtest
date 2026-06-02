@@ -10,6 +10,10 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Upload, Eye, EyeOff, LogOut } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { getMySubscriptions } from "@/lib/engagement.functions";
+import { useServerFn } from "@tanstack/react-start";
+import { formatDistanceToNow, isPast } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 export const Route = createFileRoute("/_authenticated/perfil")({
   component: PerfilPage,
@@ -41,13 +45,22 @@ function PerfilPage() {
 
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
+  const [email, setEmail] = useState("");
   const [savingInfo, setSavingInfo] = useState(false);
+
+  const fetchSubs = useServerFn(getMySubscriptions);
+  const subsQ = useQuery({
+    queryKey: ["engagement-subs", user?.id],
+    queryFn: () => fetchSubs(),
+    enabled: !!user,
+  });
 
   useEffect(() => {
     const n = splitName(profile?.display_name);
     setFirstName(n.first);
     setLastName(n.last);
-  }, [profile?.display_name]);
+    if (user?.email) setEmail(user.email);
+  }, [profile?.display_name, user?.email]);
 
   const [currentPwd, setCurrentPwd] = useState("");
   const [newPwd, setNewPwd] = useState("");
@@ -99,6 +112,13 @@ function PerfilPage() {
         .update({ display_name })
         .eq("id", user.id);
       if (error) throw error;
+      
+      if (email && email !== user.email) {
+        const { error: emailErr } = await supabase.auth.updateUser({ email });
+        if (emailErr) throw emailErr;
+        toast.info("Enviamos um email de confirmação para o novo endereço.");
+      }
+
       await qc.invalidateQueries({ queryKey: ["profile", user.id] });
       toast.success("Informações salvas");
     } catch (err: any) {
@@ -183,6 +203,32 @@ function PerfilPage() {
                   <Upload className="size-4 mr-1.5" />
                   {uploading ? "Enviando..." : "Enviar foto"}
                 </Button>
+
+                {/* Subscriptions */}
+                {subsQ.data && subsQ.data.length > 0 && (
+                  <div className="mt-4 pt-4 border-t space-y-3">
+                    <p className="text-sm font-semibold">Suas Assinaturas</p>
+                    {subsQ.data.map((sub: any) => {
+                      const isExpired = sub.current_period_end && isPast(new Date(sub.current_period_end));
+                      const timeLeft = sub.current_period_end
+                        ? formatDistanceToNow(new Date(sub.current_period_end), { locale: ptBR })
+                        : null;
+
+                      return (
+                        <div key={sub.id} className="text-sm bg-muted/30 p-2 rounded-md border">
+                          <p className="font-medium">{sub.plan?.name || "Plano Customizado"}</p>
+                          <div className="flex justify-between items-center mt-1 text-xs text-muted-foreground">
+                            <span>Status: {sub.status === 'active' ? 'Ativo' : sub.status}</span>
+                            {sub.status === 'active' && timeLeft && (
+                              <span>Renova em {timeLeft}</span>
+                            )}
+                            {isExpired && <span>Expirado</span>}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </div>
           </CardContent>
@@ -220,7 +266,12 @@ function PerfilPage() {
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="email">Email</Label>
-                <Input id="email" value={user?.email ?? ""} disabled />
+                <Input 
+                  id="email" 
+                  value={email} 
+                  onChange={(e) => setEmail(e.target.value)} 
+                />
+                <p className="text-xs text-muted-foreground">Ao trocar o email, você precisará confirmar a alteração no novo e no antigo endereço.</p>
               </div>
               <Button onClick={saveInfo} disabled={savingInfo}>
                 {savingInfo ? "Salvando..." : "Salvar tudo"}
