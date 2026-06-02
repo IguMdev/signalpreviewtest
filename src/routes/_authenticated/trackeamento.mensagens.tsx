@@ -63,7 +63,7 @@ function TrackingMessagesPage() {
   const createMut = useMutation({
     mutationFn: async () => {
       const { data: u } = await supabase.auth.getUser();
-      const { data, error } = await supabase.from("tracking_bots").insert({
+      const { data, error } = await supabase.from("tracking_bots" as any).insert({
         user_id: u.user!.id,
         label: "Bot " + token.substring(0, 10) + "...",
         bot_token: token,
@@ -83,7 +83,7 @@ function TrackingMessagesPage() {
 
   const deleteMut = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("tracking_bots").delete().eq("id", id);
+      const { error } = await supabase.from("tracking_bots" as any).delete().eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -95,7 +95,7 @@ function TrackingMessagesPage() {
   const updateMut = useMutation({
     mutationFn: async (updates: any) => {
       if (!selectedBotId) return;
-      const { error } = await supabase.from("tracking_bots").update(updates).eq("id", selectedBotId);
+      const { error } = await supabase.from("tracking_bots" as any).update(updates).eq("id", selectedBotId);
       if (error) throw error;
     },
     onSuccess: () => {

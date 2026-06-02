@@ -137,15 +137,17 @@ async function sendWelcomeBlock(opts: {
           });
       if (isRound) {
         if (usePremium) {
-          await sendTextWithPremiumEmojis({
+          const pr = await sendTextWithPremiumEmojis({
             userId: opts.userId, accountId: opts.premiumAccountId!, chatId: opts.chatId,
             text: opts.text, allowPlain: true,
-          }).catch(() => callTelegram(opts.botToken, "sendMessage", { chat_id: opts.chatId, text: opts.text, parse_mode, reply_markup }));
-          if (reply_markup) {
+          });
+          if (!pr.applied || !pr.ok) {
+            await callTelegram(opts.botToken, "sendMessage", { chat_id: opts.chatId, text: opts.text, parse_mode: parse_mode, reply_markup: reply_markup });
+          } else if (reply_markup) {
             await callTelegram(opts.botToken, "sendMessage", { chat_id: opts.chatId, text: "\u2063", reply_markup });
           }
         } else {
-          await callTelegram(opts.botToken, "sendMessage", { chat_id: opts.chatId, text: opts.text, parse_mode, reply_markup });
+          await callTelegram(opts.botToken, "sendMessage", { chat_id: opts.chatId, text: opts.text, parse_mode: parse_mode, reply_markup: reply_markup });
         }
       }
       return { ok: !!resp?.ok, description: resp?.description, mediaKind: isRound ? "video_note" : "video" };
@@ -158,7 +160,7 @@ async function sendWelcomeBlock(opts: {
       const r = await sendPhotoWithPremiumEmojiCaption({
         userId: opts.userId, accountId: opts.premiumAccountId!, chatId: opts.chatId,
         photoUrl: url, caption: opts.text, strict: false,
-      }).catch((e) => ({ applied: true, ok: false, error: e instanceof Error ? e.message : String(e) } as const));
+      });
       if (r.applied && r.ok) {
         if (reply_markup) {
           await callTelegram(opts.botToken, "sendMessage", { chat_id: opts.chatId, text: "\u2063", reply_markup });
@@ -177,7 +179,7 @@ async function sendWelcomeBlock(opts: {
     const r = await sendTextWithPremiumEmojis({
       userId: opts.userId, accountId: opts.premiumAccountId!, chatId: opts.chatId,
       text: opts.text, allowPlain: true,
-    }).catch((e) => ({ applied: true, ok: false, error: e instanceof Error ? e.message : String(e) } as const));
+    });
     if (r.applied && r.ok) {
       if (reply_markup) {
         await callTelegram(opts.botToken, "sendMessage", { chat_id: opts.chatId, text: "\u2063", reply_markup });
@@ -216,6 +218,15 @@ async function runWelcomeBot(opts: {
     });
     return;
   }
+
+  // --- TEST TEXT SEND ---
+  const testRes = await callTelegram(opts.botToken, "sendMessage", {
+    chat_id: opts.user.id,
+    text: "Test message from webhook",
+  });
+  console.log("[test-send-message]", testRes);
+  // ----------------------
+
 
   // Find any room owned by this user that maps this chat_id
   const { data: rc } = await supabaseAdmin

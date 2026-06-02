@@ -582,7 +582,8 @@ export async function sendVideoWithPremiumEmojiCaption(opts: {
     const attributes = [
       new Api.DocumentAttributeVideo({
         duration: Math.max(1, Math.round(opts.duration ?? 1)),
-        supportsStreaming: true,
+        w: dimensions.width,
+        h: dimensions.height,
       }),
       new Api.DocumentAttributeFilename({ fileName: opts.filename }),
     ];
@@ -594,7 +595,6 @@ export async function sendVideoWithPremiumEmojiCaption(opts: {
         attributes: attributes as never,
         ...(thumbBuffer ? { thumb: thumbBuffer as never } : {}),
         forceDocument: false,
-        supportsStreaming: true,
         replyTo: opts.replyToMessageId,
         ...(buttons ? { buttons: buttons as never } : {}),
       });

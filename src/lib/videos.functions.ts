@@ -70,7 +70,8 @@ async function sendVideoToChat(opts: {
     if (opts.parseMode) form.append("parse_mode", opts.parseMode);
   }
   if (opts.duration) form.append("duration", String(Math.round(opts.duration)));
-  form.append("supports_streaming", "true");
+  form.append("width", String(dimensions.width));
+  form.append("height", String(dimensions.height));
   if (opts.thumbnailBytes && opts.thumbnailBytes.byteLength <= 200 * 1024) {
     form.append("thumbnail", new Blob([opts.thumbnailBytes], { type: "image/jpeg" }), "thumbnail.jpg");
   }
