@@ -60,12 +60,12 @@ const navItems = [
 ] as const;
 
 const trackingItems = [
-  { to: "/trackeamento/mensagens", label: "Mensagens", icon: MessageCircle },
   { to: "/trackeamento/dominios", label: "Domínios", icon: Globe },
   { to: "/trackeamento/pixels", label: "Pixels", icon: Code2 },
   { to: "/trackeamento/canal", label: "Canal", icon: Send },
   { to: "/trackeamento/funis", label: "Funis", icon: Funnel },
   { to: "/trackeamento/metricas", label: "Métricas", icon: BarChart3 },
+  { to: "/trackeamento/mensagens", label: "Mensagens", icon: MessageCircle },
   { to: "/trackeamento/postbacks", label: "Postbacks", icon: Repeat },
   { to: "/trackeamento/integracoes", label: "Integrações", icon: Link2 },
 ] as const;

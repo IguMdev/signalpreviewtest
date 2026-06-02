@@ -262,14 +262,13 @@ function TrackingMessagesPage() {
                         </span>
                       </td>
                       <td className="px-4 py-3 text-right space-x-2">
-                        <Button size="sm" variant="outline" className="h-7 text-xs bg-blue-600/10 text-blue-500 hover:bg-blue-600/20 hover:text-blue-500 border-blue-600/20">
+                        <Button size="sm" className="h-7 text-xs bg-blue-600 text-white hover:bg-blue-700">
                           Editar
                         </Button>
                         <Button
                           size="sm"
-                          variant="outline"
                           onClick={(e) => { e.stopPropagation(); deleteMut.mutate(bot.id); }}
-                          className="h-7 text-xs bg-destructive/10 text-destructive hover:bg-destructive/20 hover:text-destructive border-destructive/20"
+                          className="h-7 text-xs bg-red-600 text-white hover:bg-red-700"
                         >
                           Deletar
                         </Button>
@@ -285,47 +284,105 @@ function TrackingMessagesPage() {
 
       {/* Configurações Padrão */}
       <h2 className="text-lg font-semibold pt-4">Configurações Padrão</h2>
-      <div className="grid md:grid-cols-2 gap-4">
+      <div className="grid md:grid-cols-3 gap-4">
         {/* Mensagem de Entrada */}
         <Card className="border-border/60 shadow-none bg-card/40">
-          <CardHeader className="pb-3 flex flex-row items-center justify-between">
-            <CardTitle className="text-base">Mensagem de Entrada</CardTitle>
-            <Switch
-              checked={(selectedBot as any)?.welcome_enabled ?? false}
-              onCheckedChange={(v) => updateMut.mutate({ welcome_enabled: v })}
-              disabled={!selectedBot}
-            />
+          <CardHeader className="pb-3 flex flex-row justify-center items-center">
+            <CardTitle className="text-sm">Mensagem de Entrada</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <p className={`text-xs ${selectedBot?.welcome_enabled ? 'text-emerald-500' : 'text-destructive'}`}>
-              {selectedBot?.welcome_enabled ? 'Ativo' : 'Inativo'}
-            </p>
-            <div className="space-y-2">
-              <Textarea
-                value={(selectedBot as any)?.welcome_message ?? ""}
-                onChange={(e) => updateMut.mutate({ welcome_message: e.target.value })}
-                placeholder="Seja bem-vindo ao grupo!"
-                rows={3}
+            <div className="flex items-center justify-between mb-4">
+              <span className={`text-xs font-semibold ${selectedBot?.welcome_enabled ? 'text-emerald-500' : 'text-destructive'}`}>
+                {selectedBot?.welcome_enabled ? 'Ativo' : 'Inativo'}
+              </span>
+              <Switch
+                checked={(selectedBot as any)?.welcome_enabled ?? false}
+                onCheckedChange={(v) => updateMut.mutate({ welcome_enabled: v })}
                 disabled={!selectedBot}
               />
             </div>
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button className="w-full bg-primary hover:bg-primary/90" disabled={!selectedBot}>Configurar</Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Mensagem de Entrada</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <Label>Conteúdo da mensagem</Label>
+                    <Textarea
+                      value={(selectedBot as any)?.welcome_message ?? ""}
+                      onChange={(e) => updateMut.mutate({ welcome_message: e.target.value })}
+                      placeholder="Seja bem-vindo ao grupo!"
+                      rows={5}
+                      disabled={!selectedBot}
+                    />
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </CardContent>
+        </Card>
+
+        {/* Mensagem de Saída */}
+        <Card className="border-border/60 shadow-none bg-card/40">
+          <CardHeader className="pb-3 flex flex-row justify-center items-center">
+            <CardTitle className="text-sm">Mensagem de Saída</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between mb-4">
+              <span className={`text-xs font-semibold ${selectedBot?.leave_enabled ? 'text-emerald-500' : 'text-destructive'}`}>
+                {selectedBot?.leave_enabled ? 'Ativo' : 'Inativo'}
+              </span>
+              <Switch
+                checked={(selectedBot as any)?.leave_enabled ?? false}
+                onCheckedChange={(v) => updateMut.mutate({ leave_enabled: v })}
+                disabled={!selectedBot}
+              />
+            </div>
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button className="w-full bg-primary hover:bg-primary/90" disabled={!selectedBot}>Configurar</Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Mensagem de Saída</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <Label>Conteúdo da mensagem</Label>
+                    <Textarea
+                      value={(selectedBot as any)?.leave_message ?? ""}
+                      onChange={(e) => updateMut.mutate({ leave_message: e.target.value })}
+                      placeholder="Até logo!"
+                      rows={5}
+                      disabled={!selectedBot}
+                    />
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
           </CardContent>
         </Card>
 
         {/* Auto-Aceite */}
         <Card className="border-border/60 shadow-none bg-card/40">
-          <CardHeader className="pb-3 flex flex-row items-center justify-between">
-            <CardTitle className="text-base">Auto-Aceite</CardTitle>
-            <Switch
-              checked={(selectedBot as any)?.auto_accept_enabled ?? false}
-              onCheckedChange={(v) => updateMut.mutate({ auto_accept_enabled: v })}
-              disabled={!selectedBot}
-            />
+          <CardHeader className="pb-3 flex flex-row justify-center items-center">
+            <CardTitle className="text-sm">Auto-Aceite</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <p className={`text-xs ${selectedBot?.auto_accept_enabled ? 'text-emerald-500' : 'text-destructive'}`}>
-              {selectedBot?.auto_accept_enabled ? 'Ativo' : 'Inativo'}
-            </p>
+            <div className="flex items-center justify-between mb-4">
+              <span className={`text-xs font-semibold ${selectedBot?.auto_accept_enabled ? 'text-emerald-500' : 'text-destructive'}`}>
+                {selectedBot?.auto_accept_enabled ? 'Ativo' : 'Inativo'}
+              </span>
+              <Switch
+                checked={(selectedBot as any)?.auto_accept_enabled ?? false}
+                onCheckedChange={(v) => updateMut.mutate({ auto_accept_enabled: v })}
+                disabled={!selectedBot}
+              />
+            </div>
             <div className="space-y-2">
               <Label className="text-xs text-muted-foreground">Aceitar membro após:</Label>
               <Select
@@ -351,7 +408,7 @@ function TrackingMessagesPage() {
       {/* Mensagens Personalizadas */}
       <div className="flex items-center justify-between pt-4">
         <h2 className="text-lg font-semibold">Mensagens Personalizadas</h2>
-        <Button size="sm" onClick={() => addMsgMut.mutate()} className="bg-primary/20 text-primary hover:bg-primary/30" disabled={!selectedBot || addMsgMut.isPending}>
+        <Button size="sm" onClick={() => addMsgMut.mutate()} className="bg-primary text-primary-foreground hover:bg-primary/90" disabled={!selectedBot || addMsgMut.isPending}>
           <Plus className="size-4 mr-2" /> Nova Mensagem
         </Button>
       </div>
