@@ -698,6 +698,22 @@ export const Route = createFileRoute("/api/public/cron/dispatch-recurring")({
                     mimeType: video.mime_type,
                     filename: (video.title || "video").replace(/[^\w.-]+/g, "_") + ".mp4",
                   })
+              : audio
+                ? await (async () => {
+                    const { data: fileData, error } = await supabaseAdmin.storage.from("audios").download(audio.storage_path);
+                    if (error || !fileData) return { ok: false, description: "Falha ao baixar áudio" };
+                    const bytes = await fileData.arrayBuffer();
+                    const { sendVoiceToChat } = await import("@/lib/audios.functions");
+                    return await sendVoiceToChat({
+                      botToken: acc.bot_token,
+                      chatId: c.chat_id,
+                      fileBytes: bytes,
+                      filename: audio.title + ".ogg",
+                      mimeType: "audio/ogg",
+                      duration: audio.duration_seconds,
+                      caption: p.content,
+                    });
+                  })()
               : await sendOne(acc.bot_token, c.chat_id, {
                   content: p.content,
                   image_path: p.image_path,

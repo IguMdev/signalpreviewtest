@@ -426,11 +426,11 @@ export const testSchedule = createServerFn({ method: "POST" })
       return { sent, failed, lastError };
     };
 
-    const mainVideo = await loadVideo(data.videoId);
-    const mainAudio = await loadAudio(data.audioId);
+    const mainVideo = await loadVideo(s.video_id);
+    const mainAudio = await loadAudio(s.audio_id);
     const mainRes = await sendPayload({
-      content: data.content ?? null,
-      image_path: data.imagePath ?? null,
+      content: s.content ?? null,
+      image_path: s.image_path ?? null,
       video: mainVideo,
       audio: mainAudio,
       parse_mode: s.parse_mode,
