@@ -238,6 +238,9 @@ export const Route = createFileRoute("/api/public/cron/dispatch-recurring")({
           return Response.json({ error: error.message }, { status: 500 });
         }
 
+        /* -------------------------------------------------------------------------- */
+        /*                          PROCESS PARENT SCHEDULES                          */
+        /* -------------------------------------------------------------------------- */
         const now = new Date();
         const dateKey = now.toISOString().slice(0, 16); // UTC YYYY-MM-DDTHH:MM
         let processed = 0;
@@ -440,7 +443,7 @@ export const Route = createFileRoute("/api/public/cron/dispatch-recurring")({
                       })
                   : audio
                     ? await (async () => {
-                        const { data: fileData, error } = await supabaseAdmin.storage.from("audios").download(audio.storage_path);
+                        const { data: fileData, error } = await supabaseAdmin.storage.from("audio-files").download(audio.storage_path);
                         if (error || !fileData) return { ok: false, description: "Falha ao baixar áudio" };
                         const bytes = await fileData.arrayBuffer();
                         const { sendVoiceToChat } = await import("@/lib/audios.functions");
@@ -518,7 +521,7 @@ export const Route = createFileRoute("/api/public/cron/dispatch-recurring")({
                   ? Number(f.delay_seconds)
                   : Math.max(1, Number(f.delay_minutes) || 1) * 60;
               cumulative += sec;
-              return {
+              const row: any = {
                 schedule_id: s.id,
                 user_id: s.user_id,
                 room_id: s.room_id,
@@ -528,16 +531,21 @@ export const Route = createFileRoute("/api/public/cron/dispatch-recurring")({
                 image_path: f.image_path ?? null,
                 image_mime: f.image_mime ?? null,
                 video_id: f.video_id ?? null,
-                audio_id: f.audio_id ?? null,
                 parse_mode: s.parse_mode,
                 button_text: f.button_text ?? null,
                 button_url: f.button_url ?? null,
               };
+              if (f.audio_id) row.audio_id = f.audio_id;
+              return row;
             });
-            await supabaseAdmin.from("recurring_pending_followups").insert(rows as never);
+            const { error: insErr } = await (supabaseAdmin as any).from("recurring_pending_followups").insert(rows as any);
+            if (insErr) console.error("[dispatch-recurring] Erro ao inserir follow-ups:", insErr);
           }
         }
 
+        /* -------------------------------------------------------------------------- */
+        /*                           PROCESS DUE FOLLOW-UPS                           */
+        /* -------------------------------------------------------------------------- */
         // Process due follow-ups
         const nowIso = new Date().toISOString();
         const { data: pendings } = await supabaseAdmin
@@ -700,7 +708,7 @@ export const Route = createFileRoute("/api/public/cron/dispatch-recurring")({
                   })
               : audio
                 ? await (async () => {
-                    const { data: fileData, error } = await supabaseAdmin.storage.from("audios").download(audio.storage_path);
+                    const { data: fileData, error } = await supabaseAdmin.storage.from("audio-files").download(audio.storage_path);
                     if (error || !fileData) return { ok: false, description: "Falha ao baixar áudio" };
                     const bytes = await fileData.arrayBuffer();
                     const { sendVoiceToChat } = await import("@/lib/audios.functions");

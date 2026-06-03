@@ -229,6 +229,7 @@ function getTpl(list: Template[], kind: string, fallback: string): Template {
   return list.find((t) => t.kind === kind) ?? { kind, content: fallback, parse_mode: "HTML" };
 }
 
+/* -------------------------------------------------------------------------- */
 /* ============ STEP 1: agendar novos sinais ============ */
 async function scheduleSignals(): Promise<number> {
   const { data: windows } = await supabaseAdmin
@@ -312,6 +313,7 @@ async function scheduleSignals(): Promise<number> {
   return scheduled;
 }
 
+/* -------------------------------------------------------------------------- */
 /* ============ STEP 2: enviar sinais agendados ============ */
 async function sendScheduled(): Promise<number> {
   const now = new Date();
@@ -397,6 +399,7 @@ async function sendScheduled(): Promise<number> {
   return sent;
 }
 
+/* -------------------------------------------------------------------------- */
 /* ============ STEP 3: resolver sinais expirados (WIN/LOSS) ============ */
 async function resolveExpired(): Promise<number> {
   const now = new Date();

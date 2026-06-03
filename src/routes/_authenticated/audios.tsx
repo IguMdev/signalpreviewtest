@@ -104,7 +104,7 @@ function AudiosPage() {
     queryFn: async () =>
       (
         await supabase
-          .from("audios")
+          .from("audios" as any)
           .select("id, title, storage_path, file_size, duration_seconds, created_at")
           .order("created_at", { ascending: false })
       ).data ?? [],
@@ -145,14 +145,14 @@ function AudiosPage() {
         .upload(path, pendingFile.file, { contentType: mimeType, upsert: false });
       if (upErr) throw upErr;
 
-      const { error: insErr } = await supabase.from("audios").insert({
+      const { error: insErr } = await supabase.from("audios" as any).insert({
         user_id: user.id,
         title: title.trim() || "Áudio",
         storage_path: path,
         file_size: pendingFile.file.size,
         duration_seconds: pendingFile.duration,
         mime_type: mimeType,
-      } as never);
+      } as any);
       if (insErr) throw insErr;
       
       toast.success("Áudio enviado com sucesso!");
@@ -186,7 +186,7 @@ function AudiosPage() {
         .from("room_chats")
         .select("chat_id")
         .eq("room_id", roomId);
-      const chatIds = (chats ?? []).map((c) => c.chat_id);
+      const chatIds = (chats ?? []).map((c) => String(c.chat_id));
       if (!chatIds.length) {
         toast.error("Esse grupo não tem chats vinculados.");
         return;
@@ -254,7 +254,7 @@ function AudiosPage() {
             Nenhum áudio enviado ainda.
           </Card>
         )}
-        {audios.data?.map((a) => (
+        {audios.data?.map((a: any) => (
           <Card key={a.id} className="p-4 flex flex-col justify-between space-y-4">
             <AudioPreview path={a.storage_path} />
             <div className="min-w-0 flex-1">

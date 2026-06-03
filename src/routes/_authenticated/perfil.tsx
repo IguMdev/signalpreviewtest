@@ -164,7 +164,7 @@ function PerfilPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Configurações do usuário</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Minha Conta</h1>
           <p className="text-sm text-muted-foreground">Gerencie sua conta e preferências.</p>
         </div>
         <Button variant="outline" size="sm" onClick={() => signOut()}>
@@ -206,23 +206,41 @@ function PerfilPage() {
 
                 {/* Subscriptions */}
                 {subsQ.data && subsQ.data.length > 0 && (
-                  <div className="mt-4 pt-4 border-t space-y-3">
-                    <p className="text-sm font-semibold">Suas Assinaturas</p>
+                  <div className="mt-6 pt-6 border-t space-y-4">
+                    <p className="text-sm font-semibold text-foreground/90 uppercase tracking-wide">Assinatura Atual</p>
                     {subsQ.data.map((sub: any) => {
                       const isExpired = sub.current_period_end && isPast(new Date(sub.current_period_end));
                       const timeLeft = sub.current_period_end
                         ? formatDistanceToNow(new Date(sub.current_period_end), { locale: ptBR })
                         : null;
+                      
+                      const endDate = sub.current_period_end ? new Date(sub.current_period_end).toLocaleDateString('pt-BR') : '--/--/----';
 
                       return (
-                        <div key={sub.id} className="text-sm bg-muted/30 p-2 rounded-md border">
-                          <p className="font-medium">{sub.plan?.name || "Plano Customizado"}</p>
-                          <div className="flex justify-between items-center mt-1 text-xs text-muted-foreground">
-                            <span>Status: {sub.status === 'active' ? 'Ativo' : sub.status}</span>
-                            {sub.status === 'active' && timeLeft && (
-                              <span>Renova em {timeLeft}</span>
-                            )}
-                            {isExpired && <span>Expirado</span>}
+                        <div key={sub.id} className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-background to-muted/30 p-4 shadow-sm transition-all hover:shadow-md">
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-2">
+                              <span className="flex size-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)] animate-pulse" />
+                              <p className="font-bold text-base text-foreground">
+                                {sub.plan?.name || "Plano Customizado"}
+                              </p>
+                            </div>
+                            <span className="px-2.5 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-wider">
+                              {sub.status === 'active' ? 'Ativo' : sub.status}
+                            </span>
+                          </div>
+
+                          <div className="space-y-1.5 mt-4">
+                            <div className="flex justify-between items-center text-xs">
+                              <span className="text-muted-foreground font-medium">Próxima cobrança</span>
+                              <span className="font-semibold">{endDate}</span>
+                            </div>
+                            <div className="flex justify-between items-center text-xs">
+                              <span className="text-muted-foreground font-medium">Tempo restante</span>
+                              <span className="font-semibold text-primary">
+                                {isExpired ? "Expirado" : timeLeft}
+                              </span>
+                            </div>
                           </div>
                         </div>
                       );

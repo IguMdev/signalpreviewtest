@@ -1,3 +1,6 @@
+/* -------------------------------------------------------------------------- */
+/*                                  IMPORTS                                   */
+/* -------------------------------------------------------------------------- */
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
@@ -99,6 +102,10 @@ const ScheduleInput = z.object({
   folderId: z.string().uuid().nullable().optional(),
 });
 
+/* -------------------------------------------------------------------------- */
+/*                             SERVER FUNCTIONS                               */
+/* -------------------------------------------------------------------------- */
+
 export const upsertSchedule = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => ScheduleInput.parse(d))
@@ -141,18 +148,18 @@ export const upsertSchedule = createServerFn({ method: "POST" })
       folder_id: data.folderId ?? null,
     };
     if (data.id) {
-      const { error } = await supabase
-        .from("recurring_schedules" as never)
-        .update(row as never)
-        .eq("id" as never, data.id);
+      const { error } = await (supabase as any)
+        .from("recurring_schedules" as any)
+        .update(row as any)
+        .eq("id" as any, data.id);
       if (error) throw new Error(error.message);
       return { id: data.id };
     }
-    const { data: ins, error } = await supabase
-      .from("recurring_schedules" as never)
-      .insert(row as never)
+    const { data: ins, error } = (await (supabase as any)
+      .from("recurring_schedules" as any)
+      .insert(row as any)
       .select("id")
-      .single();
+      .single()) as any;
     if (error) throw new Error(error.message);
     return { id: ins.id };
   });
@@ -161,10 +168,10 @@ export const toggleSchedule = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ id: z.string().uuid(), isActive: z.boolean() }).parse(d))
   .handler(async ({ data, context }) => {
-    const { error } = await context.supabase
-      .from("recurring_schedules" as never)
-      .update({ is_active: data.isActive } as never)
-      .eq("id" as never, data.id);
+    const { error } = await (context.supabase as any)
+      .from("recurring_schedules" as any)
+      .update({ is_active: data.isActive } as any)
+      .eq("id" as any, data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -173,7 +180,7 @@ export const deleteSchedule = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
-    const { error } = await context.supabase.from("recurring_schedules" as never).delete().eq("id" as never, data.id);
+    const { error } = await (context.supabase as any).from("recurring_schedules" as any).delete().eq("id" as any, data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -183,13 +190,13 @@ export const testSchedule = createServerFn({ method: "POST" })
   .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { userId } = context;
-    const { data: s, error } = await supabaseAdmin
-      .from("recurring_schedules" as never)
+    const { data: s, error } = (await (supabaseAdmin as any)
+      .from("recurring_schedules")
       .select(
         "id, user_id, room_id, account_id, content, video_id, audio_id, image_path, image_mime, parse_mode, is_premium, button_text, button_url, follow_ups",
       )
-      .eq("id" as never, data.id)
-      .maybeSingle();
+      .eq("id" as any, data.id)
+      .maybeSingle()) as any;
     if (error) throw new Error(error.message);
     if (!s || (s as any).user_id !== userId) throw new Error("Agendamento não encontrado");
 
@@ -242,11 +249,11 @@ export const testSchedule = createServerFn({ method: "POST" })
     };
     const loadAudio = async (audioId: string | null | undefined): Promise<AudioRow | null> => {
       if (!audioId) return null;
-      const { data: a } = await supabaseAdmin
-        .from("audios")
+      const { data: a } = (await supabaseAdmin
+        .from("audios" as any)
         .select("storage_path, duration_seconds, title")
-        .eq("id", audioId)
-        .maybeSingle();
+        .eq("id" as any, audioId)
+        .maybeSingle()) as any;
       return (a as AudioRow | null) ?? null;
     };
 
@@ -380,7 +387,7 @@ export const testSchedule = createServerFn({ method: "POST" })
                 })
             : audio
               ? await (async () => {
-                  const { data: fileData, error } = await supabaseAdmin.storage.from("audios").download(audio.storage_path);
+                  const { data: fileData, error } = await supabaseAdmin.storage.from("audio-files").download(audio.storage_path);
                   if (error || !fileData) return { ok: false, description: "Falha ao baixar áudio" };
                   const bytes = await fileData.arrayBuffer();
                   const { sendVoiceToChat } = await import("@/lib/audios.functions");
@@ -519,6 +526,20 @@ export const testMessage = createServerFn({ method: "POST" })
         .eq("id", data.videoId)
         .maybeSingle();
       video = v ?? null;
+    }
+
+    let mainAudio: {
+      storage_path: string;
+      duration_seconds: number | null;
+      title: string;
+    } | null = null;
+    if (data.audioId) {
+      const { data: a } = (await (supabaseAdmin as any)
+        .from("audios")
+        .select("storage_path, duration_seconds, title")
+        .eq("id", data.audioId)
+        .maybeSingle()) as any;
+      mainAudio = a ?? null;
     }
 
     const replyMarkup = undefined;
@@ -665,8 +686,8 @@ export const testMessage = createServerFn({ method: "POST" })
             filename: (video.title || "video").replace(/[^\w.-]+/g, "_") + ".mp4",
           });
         }
-      } else if (audio) {
-        const { data: fileData, error } = await supabaseAdmin.storage.from("audios").download((audio as any).storage_path);
+      } else if (mainAudio) {
+        const { data: fileData, error } = await supabaseAdmin.storage.from("audio-files").download((mainAudio as any).storage_path);
         if (error || !fileData) {
           r = { ok: false, description: "Falha ao baixar áudio" };
         } else {
@@ -676,9 +697,9 @@ export const testMessage = createServerFn({ method: "POST" })
             botToken: acc.bot_token,
             chatId: c.chat_id,
             fileBytes: bytes,
-            filename: (audio as any).title + ".ogg",
+            filename: (mainAudio as any).title + ".ogg",
             mimeType: "audio/ogg",
-            duration: (audio as any).duration_seconds,
+            duration: (mainAudio as any).duration_seconds,
             caption: data.content,
           });
         }

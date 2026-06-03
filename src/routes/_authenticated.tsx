@@ -70,7 +70,7 @@ const trackingItems = [
   { to: "/trackeamento/integracoes", label: "Integrações", icon: Link2 },
 ] as const;
 
-const trackingLockedItems = [] as const;
+const trackingLockedItems: { label: string; icon: any }[] = [];
 
 const promoItems = [
   { to: "/promocoes/contas", label: "Contas de afiliado", icon: ShoppingBag },

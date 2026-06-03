@@ -26,7 +26,7 @@ function TrackingMessagesPage() {
   const botsQ = useQuery({
     queryKey: ["tracking-bots"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("tracking_bots").select("*").order("created_at", { ascending: false });
+      const { data, error } = (await supabase.from("tracking_bots" as any).select("*").order("created_at", { ascending: false })) as any;
       if (error) {
         // Fallback for when table doesn't exist yet
         console.error(error);
@@ -39,7 +39,7 @@ function TrackingMessagesPage() {
   const [selectedBotId, setSelectedBotId] = useState<string | null>(null);
   useEffect(() => {
     if (!selectedBotId && botsQ.data?.[0]) {
-      setSelectedBotId(botsQ.data[0].id);
+      setSelectedBotId((botsQ.data[0] as any).id);
     }
   }, [botsQ.data, selectedBotId]);
 
@@ -53,7 +53,7 @@ function TrackingMessagesPage() {
         .from("tracking_bot_messages" as any)
         .select("*")
         .eq("tracking_bot_id", selectedBotId)
-        .order("sort_order", { ascending: true });
+        .order("sort_order", { ascending: true }) as any;
       if (error) throw error;
       return data;
     },
@@ -67,7 +67,7 @@ function TrackingMessagesPage() {
         user_id: u.user!.id,
         label: "Bot " + token.substring(0, 10) + "...",
         bot_token: token,
-      }).select().single();
+      }).select().single() as any;
       if (error) throw error;
       return data;
     },
