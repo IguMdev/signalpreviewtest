@@ -141,8 +141,8 @@ async function sendToRoom(opts: {
       // Premium não aplicável ou falhou → garante envio via Bot API com a imagem.
       const botText = await renderBotApiText(opts.userId, opts.text);
       const r = await withRetry(
-        () =>
-          callTelegram<{ message_id: number }>(opts.botToken, "sendPhoto", {
+        async () => {
+          const res = await callTelegram<{ message_id: number }>(opts.botToken, "sendPhoto", {
             chat_id: cid,
             photo: pub.publicUrl,
             caption: botText || undefined,
@@ -150,9 +150,15 @@ async function sendToRoom(opts: {
             reply_to_message_id: opts.replyTo?.[String(cid)],
             allow_sending_without_reply: true,
             reply_markup: opts.replyMarkup,
-          }),
+          });
+          if (!res.ok) console.error(`[dispatch-signals] Erro Telegram sendPhoto (chat ${cid}):`, res.description);
+          return res;
+        },
         { isRetryable: (res, err) => Boolean(err) || !res?.ok },
-      ).catch(() => ({ ok: false } as { ok: false; result?: { message_id: number } }));
+      ).catch((e) => {
+        console.error(`[dispatch-signals] Exception em sendPhoto:`, e);
+        return { ok: false } as { ok: false; result?: { message_id: number } };
+      });
       if (r.ok && r.result?.message_id) out[String(cid)] = r.result.message_id;
       continue;
     }
@@ -171,17 +177,23 @@ async function sendToRoom(opts: {
     }
     const botText = await renderBotApiText(opts.userId, opts.text);
     const r = await withRetry(
-      () =>
-        callTelegram<{ message_id: number }>(opts.botToken, "sendMessage", {
+      async () => {
+        const res = await callTelegram<{ message_id: number }>(opts.botToken, "sendMessage", {
           chat_id: cid,
           text: botText,
           parse_mode: opts.parseMode || "HTML",
           reply_to_message_id: opts.replyTo?.[String(cid)],
           allow_sending_without_reply: true,
           reply_markup: opts.replyMarkup,
-        }),
+        });
+        if (!res.ok) console.error(`[dispatch-signals] Erro Telegram sendMessage (chat ${cid}):`, res.description);
+        return res;
+      },
       { isRetryable: (res, err) => Boolean(err) || !res?.ok },
-    ).catch(() => ({ ok: false } as { ok: false; result?: { message_id: number } }));
+    ).catch((e) => {
+      console.error(`[dispatch-signals] Exception em sendMessage:`, e);
+      return { ok: false } as { ok: false; result?: { message_id: number } };
+    });
     if (r.ok && r.result?.message_id) out[String(cid)] = r.result.message_id;
   }
   return out;
@@ -415,7 +427,7 @@ async function resolveExpired(): Promise<number> {
   let resolved = 0;
 
   for (const s of list) {
-    const candle = await getBinanceM1Candle(s.asset_code, new Date(s.entry_at));
+    const candle = await getBinanceCandle(s.asset_code, new Date(s.entry_at), s.timeframe);
     if (!candle) {
       // ativo não está na Binance (OTC/ações) → resolve como simulado com hit rate alto
       const win = Math.random() < 0.85;
@@ -505,6 +517,11 @@ async function postResult(
         replyMarkup: resultReplyMarkup,
       },
     });
+  }
+
+  if (Object.keys(ids).length === 0 && ctx.chatIds.length > 0) {
+    console.error(`[dispatch-signals][Error] SINAL ${s.id}: Nenhuma mensagem de ${outcome} (${tplKind}) foi entregue. ` +
+      `Verifique possiveis quebras no HTML ou erros de parse do template!`);
   }
 
   // se LOSS e ainda há gales disponíveis, encadeia próxima entrada

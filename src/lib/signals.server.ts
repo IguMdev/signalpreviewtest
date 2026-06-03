@@ -23,14 +23,19 @@ export function categoryFor(assetCode: string): AssetCategory | null {
 
 /**
  * Busca preços real-time da Binance (grátis, sem API key).
- * Retorna preço de abertura da vela M1 que contém `entryAt` e fechamento da mesma vela.
+ * Retorna preço de abertura e fechamento da vela correspondente ao timeframe.
  */
-export async function getBinanceM1Candle(asset: string, entryAt: Date): Promise<{ open: number; close: number } | null> {
+export async function getBinanceCandle(asset: string, entryAt: Date, timeframe: string): Promise<{ open: number; close: number } | null> {
   const symbol = BINANCE_SYMBOL_MAP[asset];
   if (!symbol) return null;
+
+  // Mapeia "M5" para "5m", "M15" para "15m", padrão "1m"
+  const intervalMap: Record<string, string> = { M1: "1m", M5: "5m", M15: "15m" };
+  const interval = intervalMap[timeframe?.toUpperCase()] || "1m";
+
   // alinha ao minuto da entrada
   const minuteStart = Math.floor(entryAt.getTime() / 60000) * 60000;
-  const url = `https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=1m&startTime=${minuteStart}&limit=1`;
+  const url = `https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${interval}&startTime=${minuteStart}&limit=1`;
   try {
     const res = await fetch(url);
     if (!res.ok) return null;
