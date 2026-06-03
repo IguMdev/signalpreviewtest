@@ -548,7 +548,7 @@ export const Route = createFileRoute("/api/public/cron/dispatch-recurring")({
         /* -------------------------------------------------------------------------- */
         // Process due follow-ups
         const nowIso = new Date().toISOString();
-        const { data: pendings } = await supabaseAdmin
+        const { data: pendings, error: pendingsErr } = await supabaseAdmin
           .from("recurring_pending_followups" as never)
           .select(
             "id, schedule_id, user_id, room_id, account_id, content, image_path, image_mime, video_id, audio_id, parse_mode, button_text, button_url",
@@ -556,6 +556,10 @@ export const Route = createFileRoute("/api/public/cron/dispatch-recurring")({
           .eq("status", "pending")
           .lte("scheduled_at", nowIso)
           .limit(100);
+
+        if (pendingsErr) {
+          console.error("[dispatch-recurring] Erro ao buscar pendings:", pendingsErr);
+        }
 
         let followupsFired = 0;
         for (const p of (pendings ?? []) as PendingFollowup[]) {
