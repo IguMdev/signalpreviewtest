@@ -214,7 +214,8 @@ function MensagensPage() {
     return folderFiltered.filter(
       (s) =>
         s.title.toLowerCase().includes(q) ||
-        (s.content ?? "").toLowerCase().includes(q),
+        (s.content ?? "").toLowerCase().includes(q) ||
+        (s.follow_ups ?? []).some((f) => (f.content ?? "").toLowerCase().includes(q)),
     );
   }, [folderFiltered, search]);
 
@@ -329,7 +330,7 @@ function MensagensPage() {
       image_mime: null,
       parse_mode: "HTML",
       times: ["08:00"],
-      weekdays: [0, 1, 2, 3, 4, 5, 6],
+      weekdays: [1, 2, 3, 4, 5, 6, 7],
       weekday_overrides: {},
       follow_ups: [],
       is_premium: false,
@@ -536,6 +537,11 @@ function MensagensPage() {
                         {s.last_sent_at && (
                           <p className="text-xs text-muted-foreground mt-1">
                             Último envio: {new Date(s.last_sent_at).toLocaleString("pt-BR")}
+                          </p>
+                        )}
+                        {search.trim() && (s.follow_ups ?? []).some((f) => (f.content ?? "").toLowerCase().includes(search.trim().toLowerCase())) && (
+                          <p className="text-xs text-muted-foreground mt-2 bg-muted/50 px-2 py-1 rounded inline-flex items-center gap-1.5">
+                            <Search className="size-3" /> Correspondência encontrada na mensagem em sequência
                           </p>
                         )}
                         </div>

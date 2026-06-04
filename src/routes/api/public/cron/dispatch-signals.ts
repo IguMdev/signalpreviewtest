@@ -7,7 +7,7 @@ import { renderEmojiTokens, renderEmojiTokensToHtml } from "@/lib/premium-emoji-
 import {
   buildSlots,
   categoryFor,
-  getBinanceM1Candle,
+  getBinanceCandle,
   nowParts,
   pickRandom,
   renderTemplate,
