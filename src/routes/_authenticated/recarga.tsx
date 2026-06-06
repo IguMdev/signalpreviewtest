@@ -29,7 +29,7 @@ export const Route = createFileRoute("/_authenticated/recarga")({
 
 // Central do Assinante da Kirvano — cliente faz login com o e-mail da compra
 // e cancela sozinho. O webhook SUBSCRIPTION_CANCELED desativa o plano aqui.
-const KIRVANO_CUSTOMER_PORTAL = "https://app.kirvano.com/purchases";
+const WIVEN_CUSTOMER_PORTAL = "https://app.wiven.com.br/purchases";
 
 type SalaPlano = {
   id: string;
@@ -174,7 +174,7 @@ function RecargaPage() {
   // Map de URLs de checkout das salas (vindas do banco) por slug
   const salasUrlBySlug = new Map<string, string | null>();
   for (const p of (plansQ.data ?? []) as any[]) {
-    if (p.bot_type === "salas") salasUrlBySlug.set(p.slug, p.kirvano_checkout_url);
+    if (p.bot_type === "salas") salasUrlBySlug.set(p.slug, p.wiven_checkout_url);
   }
   const salasPlanosResolved = salasPlanos.map((p) => ({
     ...p,
@@ -402,10 +402,10 @@ function RecargaPage() {
                           <span className="text-xs font-normal text-muted-foreground">/mês</span>
                         </div>
                         <p className="text-xs text-muted-foreground min-h-[32px]">{p.description}</p>
-                        {p.kirvano_checkout_url ? (
+                        {p.wiven_checkout_url ? (
                           isCurrent ? (
                             <Button asChild size="sm" variant="outline" className="w-full">
-                              <a href={KIRVANO_CUSTOMER_PORTAL} target="_blank" rel="noreferrer">
+                              <a href={WIVEN_CUSTOMER_PORTAL} target="_blank" rel="noreferrer">
                                 Gerenciar assinatura
                                 <ExternalLink className="size-3 ml-1" />
                               </a>
@@ -413,7 +413,7 @@ function RecargaPage() {
                           ) : (
                             <Button asChild size="sm" className="w-full">
                               <a
-                                href={`${p.kirvano_checkout_url}${p.kirvano_checkout_url.includes("?") ? "&" : "?"}utm_content=${user?.id ?? ""}`}
+                                href={`${p.wiven_checkout_url}${p.wiven_checkout_url.includes("?") ? "&" : "?"}utm_content=${user?.id ?? ""}`}
                                 target="_blank"
                                 rel="noreferrer"
                               >
@@ -511,10 +511,10 @@ function RecargaPage() {
                               <Lock className="size-3 mr-1" />
                               Requer BotBoasVindas ativo
                             </Button>
-                          ) : p.kirvano_checkout_url ? (
+                          ) : p.wiven_checkout_url ? (
                             isCurrent ? (
                               <Button asChild size="sm" variant="outline" className="w-full">
-                                <a href={KIRVANO_CUSTOMER_PORTAL} target="_blank" rel="noreferrer">
+                                <a href={WIVEN_CUSTOMER_PORTAL} target="_blank" rel="noreferrer">
                                   Gerenciar assinatura
                                   <ExternalLink className="size-3 ml-1" />
                                 </a>
@@ -522,7 +522,7 @@ function RecargaPage() {
                             ) : (
                               <Button asChild size="sm" className="w-full">
                                 <a
-                                  href={`${p.kirvano_checkout_url}${p.kirvano_checkout_url.includes("?") ? "&" : "?"}utm_content=${user?.id ?? ""}`}
+                                  href={`${p.wiven_checkout_url}${p.wiven_checkout_url.includes("?") ? "&" : "?"}utm_content=${user?.id ?? ""}`}
                                   target="_blank"
                                   rel="noreferrer"
                                 >

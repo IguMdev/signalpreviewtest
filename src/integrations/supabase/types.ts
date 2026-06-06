@@ -204,6 +204,7 @@ export type Database = {
           id: string
           is_active: boolean
           kirvano_checkout_url: string | null
+          wiven_checkout_url: string | null
           monthly_members_quota: number
           monthly_quota: number
           monthly_reactions_quota: number
@@ -222,6 +223,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           kirvano_checkout_url?: string | null
+          wiven_checkout_url?: string | null
           monthly_members_quota?: number
           monthly_quota?: number
           monthly_reactions_quota?: number
@@ -240,6 +242,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           kirvano_checkout_url?: string | null
+          wiven_checkout_url?: string | null
           monthly_members_quota?: number
           monthly_quota?: number
           monthly_reactions_quota?: number
@@ -2733,6 +2736,8 @@ export type Database = {
           id: string
           kirvano_customer_email: string | null
           kirvano_sale_id: string | null
+          wiven_customer_email: string | null
+          wiven_sale_id: string | null
           last_event: Json | null
           members_used: number
           plan_id: string
@@ -2753,6 +2758,8 @@ export type Database = {
           id?: string
           kirvano_customer_email?: string | null
           kirvano_sale_id?: string | null
+          wiven_customer_email?: string | null
+          wiven_sale_id?: string | null
           last_event?: Json | null
           members_used?: number
           plan_id: string
@@ -2773,6 +2780,8 @@ export type Database = {
           id?: string
           kirvano_customer_email?: string | null
           kirvano_sale_id?: string | null
+          wiven_customer_email?: string | null
+          wiven_sale_id?: string | null
           last_event?: Json | null
           members_used?: number
           plan_id?: string
