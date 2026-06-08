@@ -435,7 +435,7 @@ function MensagensPage() {
       <div className="relative w-full sm:max-w-md">
         <Search className="size-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
         <Input
-          placeholder="Buscar por título ou conteúdo…"
+          placeholder="Buscar por título, conteúdo, data ou hora…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="pl-9"
