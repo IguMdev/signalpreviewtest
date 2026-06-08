@@ -271,9 +271,10 @@ async function scheduleSignals(): Promise<number> {
     const { weekday, hhmm: nowHHMM } = nowParts(tz);
     if (!w.weekdays.includes(weekday)) continue;
 
-    const entryHHMM = fmtHHMM(nextMinute, tz);
+    const dispatchTime = new Date(nextMinute.getTime() - 120_000);
+    const dispatchHHMM = fmtHHMM(dispatchTime, tz);
     const slots = buildSlots(w.start_time.slice(0, 5), w.end_time.slice(0, 5), w.signals_qty);
-    if (!slots.includes(entryHHMM)) continue;
+    if (!slots.includes(dispatchHHMM)) continue;
     // Cutoff por fim da janela. Para janelas que cruzam a meia-noite
     // (end <= start, ex.: 22:00→00:00), o cutoff só vale na faixa nova
     // (after midnight) — caso contrário a comparação textual quebra.

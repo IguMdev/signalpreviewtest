@@ -188,6 +188,17 @@ export const upsertRoomEngagementSettings = createServerFn({ method: "POST" })
 // =====================================================================
 
 async function assertActiveBotSub(userId: string, botType: "boasvindas" | "encaminhador") {
+  const { data: unlimitedData } = await supabaseAdmin
+    .from("user_engagement_subscriptions")
+    .select("id, plan:engagement_plans!inner(slug)")
+    .eq("user_id", userId)
+    .eq("status", "active")
+    .eq("engagement_plans.slug", "salas-unlimited")
+    .limit(1)
+    .maybeSingle();
+
+  if (unlimitedData) return; // Unlimited plan grants all bots
+
   const { data } = await supabaseAdmin
     .from("user_engagement_subscriptions")
     .select("id")

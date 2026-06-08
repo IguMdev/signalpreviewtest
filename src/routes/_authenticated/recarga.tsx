@@ -14,14 +14,23 @@ import {
   DoorOpen, Sparkles, ExternalLink, Crown,
   Users, Heart, MessageCircle, Forward, Repeat,
   History, CheckCircle2, Clock, XCircle, AlertCircle,
-  Send, Target, Check, Lock,
+  Send, Target, Check, Lock, Code, Database
 } from "lucide-react";
 import { toast } from "sonner";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   listEngagementPlans, getMySubscriptions, listMyPaymentHistory,
   listMyEngagementOrders, setSubscriptionTarget, listEngagementAudit,
 } from "@/lib/engagement.functions";
+import { generateWivenCheckout } from "@/lib/checkout.functions";
 import { useAuth } from "@/lib/auth-context";
+
+import { CustomCheckoutModal } from "@/components/payment/CustomCheckoutModal";
 
 export const Route = createFileRoute("/_authenticated/recarga")({
   component: RecargaPage,
@@ -35,82 +44,55 @@ type SalaPlano = {
   id: string;
   nome: string;
   preco: number;
-  descricao: string;
+  features?: string[];
   destaque?: boolean;
   checkoutUrl?: string;
+  badge?: string;
 };
 
 const salasPlanos: SalaPlano[] = [
   {
     id: "salas-1",
-    nome: "Plano Básico",
-    preco: 150,
-    descricao: "🟡Plano Básico\n✅ Acesso a todas a ferramentas básicas\n✅ Inclui 1 crédito de sala.\n✅ Opera apenas 1 Bot Telegram. \n✅ Suporte 24/7.",
+    nome: "Base",
+    preco: 190,
+    features: [
+      "Dashboard",
+      "1 Conta Telegram",
+      "1 Sala",
+      "Agendamentos",
+    ],
   },
   {
     id: "salas-3",
-    nome: "Plano Premium",
-    preco: 300,
-    descricao: "🟣Plano Premium\n✅ Acesso a todas a ferramentas básicas\n✅ Inclui 3 crédito de sala.\n✅ Opera 3 Bots Telegram.\n✅ Suporte 24/7 Prioritário.",
+    nome: "Premium",
+    preco: 480,
+    features: [
+      "Tudo do Base mais:",
+      "3 Contas Telegram",
+      "3 Salas",
+      "Conta e Emojis Premium",
+      "Vídeos",
+      "Áudios",
+      "Trackeamento",
+    ],
     destaque: true,
+    badge: "MAIS POPULAR",
+  },
+  {
+    id: "salas-unlimited",
+    nome: "Unlimited",
+    preco: 650,
+    features: [
+      "Tudo do Premium mais:",
+      "BotBoasVindas",
+      "BotEncaminhador",
+      "BotFollowUp",
+      "Integrações"
+    ],
   },
 ];
 
-type TrackingPlano = {
-  id: string;
-  nome: string;
-  preco?: number;
-  precoLabel?: string;
-  features: string[];
-  destaque?: boolean;
-  ctaLabel: string;
-  checkoutUrl?: string;
-};
-
-const trackingPlanos: TrackingPlano[] = [
-  {
-    id: "track-starter",
-    nome: "Plano Starter",
-    preco: 297,
-    features: [
-      "2 pixels",
-      "2 domínios",
-      "6 funis",
-      "1 Canal Telegram",
-      "Implementação Plug & Play",
-      "Suporte Especializado",
-    ],
-    ctaLabel: "Assinar agora",
-  },
-  {
-    id: "track-pro",
-    nome: "Plano Pro",
-    preco: 397,
-    features: [
-      "4 pixels",
-      "4 domínios",
-      "12 funis",
-      "3 Canais Telegram",
-      "Implementação Plug & Play",
-      "Suporte Especializado",
-    ],
-    destaque: true,
-    ctaLabel: "Assinar agora",
-  },
-  {
-    id: "track-custom",
-    nome: "Plano Customizado",
-    precoLabel: "Contatar time de vendas",
-    features: [
-      "Suporte Prioritário",
-      "Onboarding Imediato",
-      "Garantia 7 dias",
-      "Implementação completa",
-      "Atendimento Especializado",
-    ],
-    ctaLabel: "Time de vendas",
-  },
-];
+// Tracking planos removed as they are integrated into main plans
 
 type BotType = "inscritos" | "interacoes" | "boasvindas" | "encaminhador" | "followup";
 
@@ -122,16 +104,19 @@ const BOT_META: Record<BotType, { title: string; icon: any; tagline: string; quo
   followup:     { title: "BotFollowUp",     icon: Repeat,        tagline: "Sequência de mensagens para leads do BoasVindas", quotaLabel: "" },
 };
 
-const BOT_ORDER: BotType[] = ["inscritos", "interacoes"];
+const BOT_ORDER: BotType[] = [];
 const BOT_PAIR: BotType[] = ["boasvindas", "encaminhador", "followup"];
 
 function RecargaPage() {
   const { user } = useAuth();
+  const generateUrl = useServerFn(generateWivenCheckout);
   const fetchPlans = useServerFn(listEngagementPlans);
   const fetchSubs = useServerFn(getMySubscriptions);
   const fetchHistory = useServerFn(listMyPaymentHistory);
   const fetchOrders = useServerFn(listMyEngagementOrders);
   const fetchAudit = useServerFn(listEngagementAudit);
+
+  const [billingCycle, setBillingCycle] = useState<"mensal" | "trimestral" | "anual">("mensal");
 
   const plansQ = useQuery({ queryKey: ["engagement-plans"], queryFn: () => fetchPlans() });
   const subsQ = useQuery({
@@ -186,373 +171,205 @@ function RecargaPage() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2 flex-wrap">
           <Sparkles className="size-6 text-primary" />
-          Recarga
-          <Badge variant="secondary" className="text-[11px] font-normal animate-pulse">
-            Role para baixo para mais opções
-          </Badge>
+          Assinatura
         </h1>
         <p className="text-muted-foreground text-sm mt-1">
-          Assine planos de salas e bots de engajamento para impulsionar suas operações.
+          Assine o plano que melhor impulsiona sua operação.
         </p>
       </div>
 
-      {/* Salas de Sinais */}
-      <section className="space-y-3">
-        <div className="flex items-center gap-2">
-          <div className="size-9 rounded-md bg-primary/10 flex items-center justify-center">
-            <DoorOpen className="size-5 text-primary" />
-          </div>
-          <div>
-            <h2 className="font-semibold">Salas de Sinais</h2>
-            <p className="text-xs text-muted-foreground">
-              Cada plano libera créditos de sala — 1 crédito = 1 sala ativa.
-            </p>
-          </div>
-        </div>
+      {/* Salas de Sinais - Premium Pricing Grid */}
+      <section className="pb-12 border-b border-white/5 pt-8">
+        {/* Toggles */}
+        <div className="flex justify-center mb-16 relative z-20">
+          <div className="relative flex items-center p-1.5 bg-[#090a0f] rounded-[32px] border border-white/5 shadow-inner w-full max-w-[460px]">
+            {/* Sliding Pill */}
+            <div 
+              className="absolute inset-y-1.5 bg-gradient-to-r from-[#202434] to-[#1b1e2a] border border-white/10 rounded-[28px] transition-all duration-500 shadow-[0_4px_20px_-5px_rgba(0,0,0,0.5)] ease-out"
+              style={{
+                width: 'calc(33.333% - 4px)',
+                left: '6px',
+                transform: `translateX(${billingCycle === "mensal" ? "0" : billingCycle === "trimestral" ? "100%" : "200%"})`
+              }}
+            />
 
-        <div className="grid gap-3 md:grid-cols-2" data-tour="recharge-plans">
-          {salasPlanosResolved.map((p) => (
-            <Card key={p.id} className={p.destaque ? "border-primary" : ""}>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base flex items-center justify-between">
-                  <span>{p.nome}</span>
-                  {p.destaque && (
-                    <Badge className="text-[10px] gap-1">
-                      <Crown className="size-3" /> Popular
-                    </Badge>
-                  )}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="text-2xl font-bold">
-                  R$ {p.preco.toFixed(2).replace(".", ",")}
-                  <span className="text-xs font-normal text-muted-foreground">/mês</span>
-                </div>
-                <p className="text-xs text-muted-foreground min-h-[32px] whitespace-pre-line">{p.descricao}</p>
-                {p.checkoutUrl ? (
-                  <Button asChild size="sm" className="w-full">
-                    <a href={p.checkoutUrl} target="_blank" rel="noreferrer">
-                      Adquirir agora
-                      <ExternalLink className="size-3 ml-1" />
-                    </a>
-                  </Button>
-                ) : (
-                  <Button
-                    size="sm"
-                    className="w-full"
-                    variant={p.destaque ? "default" : "outline"}
-                    onClick={() => toast.info("Pagamento em breve disponível.")}
-                  >
-                    Adquirir agora
-                  </Button>
-                )}
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </section>
+            <button 
+              onClick={() => setBillingCycle("mensal")}
+              className={`relative z-10 flex-1 py-3 text-sm font-semibold transition-colors duration-500 ${billingCycle === "mensal" ? "text-white" : "text-gray-500 hover:text-gray-300"}`}
+            >
+              Mensal
+            </button>
 
-      {/* Trackeamento — Track4You */}
-      <section className="space-y-3">
-        <div className="flex items-center gap-2">
-          <div className="size-9 rounded-md bg-primary/10 flex items-center justify-center">
-            <Target className="size-5 text-primary" />
-          </div>
-          <div>
-            <h2 className="font-semibold">Trackeamento</h2>
-            <p className="text-xs text-muted-foreground">
-              Planos Track4You — pixels, domínios e funis para escalar suas campanhas.
-            </p>
+            <button 
+              onClick={() => setBillingCycle("trimestral")}
+              className={`relative z-10 flex-1 py-3 text-sm font-semibold transition-colors duration-500 flex items-center justify-center gap-1.5 ${billingCycle === "trimestral" ? "text-white" : "text-gray-500 hover:text-gray-300"}`}
+            >
+              Trimestral
+              <span className={`transition-all duration-500 text-[9px] px-1.5 py-0.5 rounded-md font-bold uppercase tracking-wider ${billingCycle === "trimestral" ? "bg-primary/20 text-primary border border-primary/30" : "bg-white/5 text-gray-400 border border-white/5"}`}>-10%</span>
+            </button>
+
+            <button 
+              onClick={() => setBillingCycle("anual")}
+              className={`relative z-10 flex-1 py-3 text-sm font-semibold transition-colors duration-500 flex items-center justify-center gap-1.5 ${billingCycle === "anual" ? "text-white" : "text-gray-500 hover:text-gray-300"}`}
+            >
+              Anual
+              <span className={`transition-all duration-500 text-[9px] px-1.5 py-0.5 rounded-md font-bold uppercase tracking-wider ${billingCycle === "anual" ? "bg-primary/20 text-primary border border-primary/30" : "bg-white/5 text-gray-400 border border-white/5"}`}>-20%</span>
+            </button>
           </div>
         </div>
 
-        <div className="grid gap-3 md:grid-cols-3">
-          {trackingPlanos.map((p) => (
-            <Card key={p.id} className={p.destaque ? "border-primary" : ""}>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base flex items-center justify-between">
-                  <span>{p.nome}</span>
-                  {p.destaque && (
-                    <Badge className="text-[10px] gap-1">
-                      <Crown className="size-3" /> Vantagem
-                    </Badge>
-                  )}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="text-2xl font-bold">
-                  {p.preco != null ? (
-                    <>
-                      R$ {p.preco.toFixed(2).replace(".", ",")}
-                      <span className="text-xs font-normal text-muted-foreground"> / por mês</span>
-                    </>
-                  ) : (
-                    <span className="text-lg">{p.precoLabel}</span>
-                  )}
-                </div>
-                <div className="space-y-1.5 pt-1">
-                  <div className="text-xs font-semibold text-primary">Channel Tracking</div>
-                  <ul className="space-y-1">
-                    {p.features.map((f) => (
-                      <li key={f} className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <Check className="size-3 text-primary shrink-0" />
-                        <span>{f}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-                {p.checkoutUrl ? (
-                  <Button asChild size="sm" className="w-full">
-                    <a href={p.checkoutUrl} target="_blank" rel="noreferrer">
-                      {p.ctaLabel}
-                      <ExternalLink className="size-3 ml-1" />
-                    </a>
-                  </Button>
-                ) : (
-                  <Button
-                    size="sm"
-                    className="w-full"
-                    variant={p.destaque ? "default" : "outline"}
-                    onClick={() => toast.info("Pagamento em breve disponível.")}
-                  >
-                    {p.ctaLabel}
-                  </Button>
-                )}
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </section>
+        <div className="grid gap-6 md:grid-cols-3 max-w-6xl mx-auto items-stretch">
+          {salasPlanosResolved.map((p) => {
+            const isBase = p.id === "salas-1";
+            const isPremium = p.id === "salas-3";
+            const isUnlimited = p.id === "salas-unlimited";
 
-      {/* Engagement bots */}
-      <div className="space-y-8">
-        {BOT_ORDER.map((bot) => {
-          const meta = BOT_META[bot];
-          const Icon = meta.icon;
-          const plans = plansByBot.get(bot) ?? [];
-          const sub = subByBot.get(bot);
-          const activePlan = sub?.plan;
-          const usagePct = activePlan?.monthly_quota
-            ? Math.min(100, ((sub?.units_used ?? 0) / activePlan.monthly_quota) * 100)
-            : 0;
+            const multiplier = billingCycle === "mensal" ? 1 : billingCycle === "trimestral" ? 3 : 12;
+            const discount = billingCycle === "mensal" ? 1 : billingCycle === "trimestral" ? 0.9 : 0.8;
+            const finalPrice = p.preco * multiplier * discount;
+            const oldPrice = p.preco * multiplier;
+            const equivalentMonthly = finalPrice / multiplier;
 
-          if (plans.length === 0) return null;
-
-          return (
-            <section key={bot} className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="size-9 rounded-md bg-primary/10 flex items-center justify-center">
-                    <Icon className="size-5 text-primary" />
-                  </div>
-                  <div>
-                    <h2 className="font-semibold">{meta.title}</h2>
-                    <p className="text-xs text-muted-foreground">{meta.tagline}</p>
-                  </div>
-                </div>
-                {sub && (
-                  <Badge variant={sub.status === "active" ? "default" : "secondary"} className="gap-1">
-                    <Crown className="size-3" /> {sub.status}
-                  </Badge>
-                )}
-              </div>
-
-              {sub && activePlan && activePlan.monthly_quota > 0 && (
-                <Card className="bg-muted/30">
-                  <CardContent className="py-3 space-y-1.5">
-                    <div className="flex items-center justify-between text-xs">
-                      <span>{activePlan.name}</span>
-                      <span className="text-muted-foreground">
-                        {(sub.units_used ?? 0).toLocaleString("pt-BR")} / {activePlan.monthly_quota.toLocaleString("pt-BR")} {meta.quotaLabel}
-                      </span>
-                    </div>
-                    <Progress value={usagePct} />
-                  </CardContent>
-                </Card>
-              )}
-
-              {sub && bot === "inscritos" && !sub.target_link && (
-                <ChooseChannelCard subscriptionId={sub.id} />
-              )}
-              {sub && bot === "inscritos" && sub.target_link && (
-                <Card className="bg-muted/30">
-                  <CardContent className="py-3 text-xs flex items-center justify-between gap-2">
-                    <span className="text-muted-foreground">Entrega para:</span>
-                    <a href={sub.target_link} target="_blank" rel="noreferrer" className="font-medium truncate text-primary">
-                      {sub.target_link}
-                    </a>
-                  </CardContent>
-                </Card>
-              )}
-
-              <div className={`grid gap-3 ${plans.length >= 3 ? "md:grid-cols-2 lg:grid-cols-4" : "md:grid-cols-2"}`}>
-                {plans.map((p: any) => {
-                  const isCurrent = activePlan?.id === p.id;
-                  return (
-                    <Card key={p.id} className={isCurrent ? "border-primary" : ""}>
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-base flex items-center justify-between">
-                          <span>{p.name}</span>
-                          {isCurrent && <Badge className="text-[10px]">Atual</Badge>}
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-3">
-                        <div className="text-2xl font-bold">
-                          R$ {Number(p.price_brl).toFixed(2)}
-                          <span className="text-xs font-normal text-muted-foreground">/mês</span>
-                        </div>
-                        <p className="text-xs text-muted-foreground min-h-[32px]">{p.description}</p>
-                        {p.wiven_checkout_url ? (
-                          isCurrent ? (
-                            <Button asChild size="sm" variant="outline" className="w-full">
-                              <a href={WIVEN_CUSTOMER_PORTAL} target="_blank" rel="noreferrer">
-                                Gerenciar assinatura
-                                <ExternalLink className="size-3 ml-1" />
-                              </a>
-                            </Button>
-                          ) : (
-                            <Button asChild size="sm" className="w-full">
-                              <a
-                                href={`${p.wiven_checkout_url}${p.wiven_checkout_url.includes("?") ? "&" : "?"}utm_content=${user?.id ?? ""}`}
-                                target="_blank"
-                                rel="noreferrer"
-                              >
-                                Adquirir agora
-                                <ExternalLink className="size-3 ml-1" />
-                              </a>
-                            </Button>
-                          )
-                        ) : (
-                          <Button size="sm" className="w-full" disabled variant="secondary">
-                            Em breve
-                          </Button>
-                        )}
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
-            </section>
-          );
-        })}
-
-        {/* Boas-vindas + Encaminhador lado a lado */}
-        <div className="grid gap-6 md:grid-cols-3">
-          {BOT_PAIR.map((bot) => {
-            const meta = BOT_META[bot];
-            const Icon = meta.icon;
-            const plans = plansByBot.get(bot) ?? [];
-            const sub = subByBot.get(bot);
-            const activePlan = sub?.plan;
-            const usagePct = activePlan?.monthly_quota
-              ? Math.min(100, ((sub?.units_used ?? 0) / activePlan.monthly_quota) * 100)
-              : 0;
-
-            if (plans.length === 0) return null;
-
-            // BotFollowUp só pode ser adquirido se o BotBoasVindas estiver ativo
-            const boasvindasSub = subByBot.get("boasvindas");
-            const requiresBoasvindas = bot === "followup";
-            const boasvindasActive = boasvindasSub?.status === "active";
-            const locked = requiresBoasvindas && !boasvindasActive;
+            let cardBg = "";
+            let textColor = "";
+            let mutedColor = "";
+            let borderColor = "";
+            let btnClass = "";
+            let dividerClass = "";
+            
+            if (isBase) {
+              cardBg = "bg-gradient-to-b from-[#181a25] to-[#10121a] hover:from-[#1c1e2b] hover:to-[#12141c]";
+              textColor = "text-white";
+              mutedColor = "text-gray-400";
+              borderColor = "border-transparent ring-1 ring-white/5 hover:ring-white/10";
+              btnClass = "bg-white/5 text-white hover:bg-white/10 border border-white/5 transition-all group-hover:shadow-[0_0_15px_rgba(255,255,255,0.05)]";
+              dividerClass = "border-white/5";
+            } else if (isPremium) {
+              cardBg = "bg-gradient-to-b from-[#1e1518] to-[#0f0a0d] hover:from-[#261a1e] hover:to-[#140e11]";
+              textColor = "text-white";
+              mutedColor = "text-gray-300";
+              borderColor = "border-transparent ring-1 ring-primary/40 shadow-[0_0_50px_-15px_rgba(var(--primary),0.2)] group-hover:shadow-[0_0_80px_-15px_rgba(var(--primary),0.4)] group-hover:ring-primary/60 md:-translate-y-4 z-20";
+              btnClass = "bg-primary text-primary-foreground hover:opacity-90 shadow-[0_0_20px_rgba(var(--primary),0.4)] transition-all";
+              dividerClass = "border-white/5";
+            } else {
+              cardBg = "bg-gradient-to-b from-[#14151f] to-[#0a0b0f] hover:from-[#181a26] hover:to-[#0c0d12]";
+              textColor = "text-white";
+              mutedColor = "text-gray-400";
+              borderColor = "border-transparent ring-1 ring-white/5 hover:ring-white/10";
+              btnClass = "bg-white text-black hover:bg-gray-200 border border-transparent shadow-[0_0_15px_rgba(255,255,255,0.1)] transition-all";
+              dividerClass = "border-white/5";
+            }
 
             return (
-              <section key={bot} className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="size-9 rounded-md bg-primary/10 flex items-center justify-center">
-                      <Icon className="size-5 text-primary" />
-                    </div>
-                    <div>
-                      <h2 className="font-semibold">{meta.title}</h2>
-                      <p className="text-xs text-muted-foreground">{meta.tagline}</p>
-                    </div>
+              <div
+                key={p.id}
+                className={`group rounded-[32px] p-8 flex flex-col relative overflow-hidden transition-all duration-700 ease-out border ${cardBg} ${textColor} ${borderColor} hover:-translate-y-2`}
+              >
+                {/* Glow effect on hover */}
+                <div className="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none" />
+
+                {p.badge && (
+                  <div className="absolute top-6 right-6 rounded-md bg-primary/10 border border-primary/20 px-3 py-1.5 text-[9px] font-bold text-primary uppercase tracking-widest flex items-center gap-1.5 shadow-[0_0_15px_rgba(var(--primary),0.2)] group-hover:shadow-[0_0_30px_rgba(var(--primary),0.5)] transition-all duration-500 backdrop-blur-sm">
+                    <Sparkles className="size-3 animate-pulse" /> {p.badge}
                   </div>
-                  {sub && (
-                    <Badge variant={sub.status === "active" ? "default" : "secondary"} className="gap-1">
-                      <Crown className="size-3" /> {sub.status}
-                    </Badge>
-                  )}
-                </div>
-
-                {sub && activePlan && activePlan.monthly_quota > 0 && (
-                  <Card className="bg-muted/30">
-                    <CardContent className="py-3 space-y-1.5">
-                      <div className="flex items-center justify-between text-xs">
-                        <span>{activePlan.name}</span>
-                        <span className="text-muted-foreground">
-                          {(sub.units_used ?? 0).toLocaleString("pt-BR")} / {activePlan.monthly_quota.toLocaleString("pt-BR")} {meta.quotaLabel}
-                        </span>
-                      </div>
-                      <Progress value={usagePct} />
-                    </CardContent>
-                  </Card>
                 )}
-
-                <div className="grid gap-3">
-                  {plans.map((p: any) => {
-                    const isCurrent = activePlan?.id === p.id;
-                    return (
-                      <Card key={p.id} className={isCurrent ? "border-primary" : ""}>
-                        <CardHeader className="pb-2">
-                          <CardTitle className="text-base flex items-center justify-between">
-                            <span>{p.name}</span>
-                            {isCurrent && <Badge className="text-[10px]">Atual</Badge>}
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-3">
-                          <div className="text-2xl font-bold">
-                            R$ {Number(p.price_brl).toFixed(2)}
-                            <span className="text-xs font-normal text-muted-foreground">/mês</span>
-                          </div>
-                          <p className="text-xs text-muted-foreground min-h-[32px]">{p.description}</p>
-                          {locked ? (
-                            <Button size="sm" className="w-full" disabled variant="secondary">
-                              <Lock className="size-3 mr-1" />
-                              Requer BotBoasVindas ativo
-                            </Button>
-                          ) : p.wiven_checkout_url ? (
-                            isCurrent ? (
-                              <Button asChild size="sm" variant="outline" className="w-full">
-                                <a href={WIVEN_CUSTOMER_PORTAL} target="_blank" rel="noreferrer">
-                                  Gerenciar assinatura
-                                  <ExternalLink className="size-3 ml-1" />
-                                </a>
-                              </Button>
-                            ) : (
-                              <Button asChild size="sm" className="w-full">
-                                <a
-                                  href={`${p.wiven_checkout_url}${p.wiven_checkout_url.includes("?") ? "&" : "?"}utm_content=${user?.id ?? ""}`}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                >
-                                  Adquirir agora
-                                  <ExternalLink className="size-3 ml-1" />
-                                </a>
-                              </Button>
-                            )
-                          ) : (
-                            isCurrent ? (
-                              <Button size="sm" className="w-full" variant="outline" disabled>
-                                <Check className="size-3 mr-1" /> Ativo
-                              </Button>
-                            ) : (
-                              <Button size="sm" className="w-full" disabled variant="secondary">
-                                Em breve
-                              </Button>
-                            )
-                          )}
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
+                
+                <div className="space-y-3 mb-6 pt-2">
+                   <div className="mb-4 text-current opacity-70">
+                      <Database className="size-6" />
+                   </div>
+                   <h3 className="text-3xl font-bold tracking-tight">{p.nome}</h3>
+                   <p className={`text-sm ${mutedColor} leading-relaxed pr-4 min-h-[40px]`}>
+                      Para quem quer otimizar suas operações de sinal.
+                   </p>
                 </div>
-              </section>
+
+                <div className="mb-8 flex flex-col flex-1">
+                   <div className="min-h-[80px]">
+                     {billingCycle !== "mensal" ? (
+                       <div className={`text-sm line-through opacity-50 mb-1 font-semibold`}>
+                         R$ {oldPrice.toFixed(0)}
+                       </div>
+                     ) : (
+                       <div className="h-5 mb-1" />
+                     )}
+                     
+                     <div className="flex items-end gap-1 font-sans">
+                     <span className={`text-5xl font-black ${textColor}`}>R$ {finalPrice.toFixed(0)}</span>
+                     {billingCycle === "mensal" && (
+                       <span className={`text-base font-medium ${mutedColor} mb-1.5`}>/mês</span>
+                     )}
+                     {billingCycle === "trimestral" && (
+                       <span className={`text-base font-medium ${mutedColor} mb-1.5`}>/trimestre</span>
+                     )}
+                     {billingCycle === "anual" && (
+                       <span className={`text-base font-medium ${mutedColor} mb-1.5`}>/ano</span>
+                     )}
+                   </div>
+
+                     {billingCycle !== "mensal" ? (
+                       <div className={`inline-flex mt-3 items-center px-3 py-1.5 rounded-full text-xs font-semibold ${isUnlimited ? "bg-white/10 text-white" : "bg-primary/10 text-primary"}`}>
+                         <div className={`w-1.5 h-1.5 rounded-full mr-2 ${isUnlimited ? "bg-white" : "bg-primary"}`} />
+                         cobrança {billingCycle} • equivale R${equivalentMonthly.toFixed(0)}/mês
+                       </div>
+                     ) : (
+                        <div className="h-8 mt-3" />
+                     )}
+                   </div>
+
+                   <div className="mt-8 mb-6">
+                     {(() => {
+                        const planNameExt = p.nome + (billingCycle === "trimestral" ? " (Trimestral)" : billingCycle === "anual" ? " (Anual)" : "");
+                        const planIdExt = p.id + (billingCycle === "trimestral" ? "-trimestral" : billingCycle === "anual" ? "-anual" : "");
+
+                        return p.checkoutUrl ? (
+                          <Button 
+                            asChild 
+                            className={`w-full py-6 text-base font-bold rounded-full transition-all ${btnClass}`}
+                          >
+                            <a href={p.checkoutUrl} target="_blank" rel="noreferrer">
+                              Comece agora
+                            </a>
+                          </Button>
+                        ) : (
+                          <CheckoutButton
+                            planId={planIdExt}
+                            customPrice={finalPrice}
+                            customName={planNameExt}
+                            customDescription={p.features?.join("\\n") || ""}
+                            generateUrl={generateUrl}
+                            className={`w-full py-6 text-base font-bold rounded-full transition-all ${btnClass}`}
+                            label="Comece agora"
+                            isSubscription={true}
+                            billingCycle={billingCycle}
+                          />
+                        );
+                     })()}
+                   </div>
+                   
+                   <div className={`pt-6 border-t ${dividerClass} flex-1`}>
+                     <h4 className={`text-sm italic mb-4 font-serif ${mutedColor}`}>Features</h4>
+                     <ul className="space-y-4">
+                        {p.features?.map((feature: string, idx: number) => (
+                          <li key={idx} className={`flex items-start gap-3 text-sm pb-4 ${idx !== p.features!.length - 1 ? `border-b ${dividerClass}` : ''}`}>
+                            <Code className={`size-4 mt-0.5 shrink-0 opacity-50 text-primary`} />
+                            <span className={`text-gray-300 leading-snug`}>{feature}</span>
+                          </li>
+                        ))}
+                     </ul>
+                   </div>
+                </div>
+              </div>
             );
           })}
         </div>
-      </div>
+      </section>
 
+      {/* Trackeamento integrated into main plans */}
+
+      {/* Engagement bots removidos pois estão integrados aos planos principais */}
+
+      {/* 
       <EngagementOrdersSection
         rows={(ordersQ.data ?? []) as any[]}
         isLoading={ordersQ.isLoading}
@@ -562,6 +379,8 @@ function RecargaPage() {
         rows={(auditQ.data ?? []) as any[]}
         isLoading={auditQ.isLoading}
       />
+      */}
+
 
       {/* Payment History */}
       <PaymentHistorySection
@@ -862,5 +681,48 @@ function _PaymentHistorySectionImpl({ rows, isLoading }: { rows: any[]; isLoadin
         </CardContent>
       </Card>
     </section>
+  );
+}
+
+export function CheckoutButton({ 
+  planId, 
+  customPrice, 
+  customName, 
+  customDescription,
+  generateUrl,
+  className,
+  label,
+  isSubscription,
+  billingCycle
+}: { 
+  planId: string, 
+  customPrice?: number, 
+  customName?: string, 
+  customDescription?: string,
+  generateUrl: any,
+  className?: string,
+  label?: string,
+  isSubscription?: boolean,
+  billingCycle?: string
+}) {
+  const [modalOpen, setModalOpen] = useState(false);
+
+  return (
+    <>
+      <Button size="sm" className={className || "w-full"} onClick={() => setModalOpen(true)}>
+        {label || "Adquirir agora"}
+      </Button>
+
+      <CustomCheckoutModal
+        open={modalOpen}
+        onOpenChange={setModalOpen}
+        planId={planId}
+        customPrice={customPrice}
+        customName={customName}
+        customDescription={customDescription}
+        isSubscription={isSubscription}
+        billingCycle={billingCycle}
+      />
+    </>
   );
 }

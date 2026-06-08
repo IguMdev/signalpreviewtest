@@ -2,6 +2,8 @@ import 'dotenv/config';
 import { serve } from '@hono/node-server';
 import { serveStatic } from '@hono/node-server/serve-static';
 import { Hono } from 'hono';
+import { compress } from 'hono/compress';
+import { secureHeaders } from 'hono/secure-headers';
 import fs from 'fs';
 import path from 'path';
 
@@ -9,6 +11,10 @@ import path from 'path';
 import handler from './dist/server/server.js';
 
 const app = new Hono();
+
+// Middlewares for Speed and Security
+app.use('*', secureHeaders());
+app.use('*', compress());
 
 // Serve static assets from dist/client
 app.use('/*', serveStatic({ 

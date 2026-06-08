@@ -211,12 +211,37 @@ function MensagensPage() {
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return folderFiltered;
-    return folderFiltered.filter(
-      (s) =>
-        s.title.toLowerCase().includes(q) ||
-        (s.content ?? "").toLowerCase().includes(q) ||
-        (s.follow_ups ?? []).some((f) => (f.content ?? "").toLowerCase().includes(q)),
-    );
+    
+    const terms = q.split(/\s+/);
+
+    return folderFiltered.filter((s) => {
+      let lastSentCustom = "";
+      if (s.last_sent_at) {
+        const d = new Date(s.last_sent_at);
+        const dd = String(d.getDate()).padStart(2, "0");
+        const mm = String(d.getMonth() + 1).padStart(2, "0");
+        const yyyy = d.getFullYear();
+        const hh = String(d.getHours()).padStart(2, "0");
+        const mins = String(d.getMinutes()).padStart(2, "0");
+        lastSentCustom = `${dd}/${mm}/${yyyy} ${hh}:${mins}`;
+      }
+      
+      const lastSentStr = s.last_sent_at ? new Date(s.last_sent_at).toLocaleString("pt-BR").toLowerCase() : "";
+      const lastSentIso = s.last_sent_at ? s.last_sent_at.toLowerCase() : "";
+      const timesStr = s.times ? s.times.join(" ").toLowerCase() : "";
+      const wdStr = (s.weekdays || []).map((w) => WEEKDAYS.find((x) => x.value === w)?.label).join(" ").toLowerCase();
+
+      return terms.every(term => 
+        s.title.toLowerCase().includes(term) ||
+        (s.content ?? "").toLowerCase().includes(term) ||
+        lastSentStr.includes(term) ||
+        lastSentCustom.includes(term) ||
+        lastSentIso.includes(term) ||
+        timesStr.includes(term) ||
+        wdStr.includes(term) ||
+        (s.follow_ups ?? []).some((f) => (f.content ?? "").toLowerCase().includes(term))
+      );
+    });
   }, [folderFiltered, search]);
 
   const grouped = useMemo(() => {

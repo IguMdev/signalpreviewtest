@@ -428,66 +428,7 @@ function EngagementCard({ roomId }: { roomId: string }) {
       </div>
 
       <div className="grid md:grid-cols-2 gap-4">
-        {/* Reações */}
-        <div className="rounded-lg border border-border p-4 space-y-3">
-          <div className="flex items-center justify-between">
-            <Label className="flex items-center gap-2"><Heart className="size-4" /> BotInterações</Label>
-            <Switch checked={autoReact} onCheckedChange={setAutoReact} disabled={!hasReact} />
-          </div>
-          {!hasReact && <p className="text-xs text-muted-foreground">Requer plano BotInterações ativo.</p>}
-          <div className="space-y-1.5">
-            <Label className="text-xs">Reações por sinal</Label>
-            <Input type="number" min={1} max={10000} value={reactionsPerSignal}
-              onChange={(e) => setReactionsPerSignal(Number(e.target.value))} disabled={!hasReact} />
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs">Emojis usados</Label>
-            <div className="flex flex-wrap gap-1">
-              {emojis.map((e, i) => (
-                <Badge key={i} variant="secondary" className="gap-1">
-                  {e}
-                  <button onClick={() => setEmojis(emojis.filter((_, idx) => idx !== i))} className="hover:text-destructive">
-                    <X className="size-3" />
-                  </button>
-                </Badge>
-              ))}
-            </div>
-            <div className="flex gap-2">
-              <Input value={emojiInput} onChange={(e) => setEmojiInput(e.target.value)} placeholder="🔥" className="w-20" disabled={!hasReact} />
-              <Button size="sm" variant="outline" type="button" disabled={!hasReact || !emojiInput.trim()}
-                onClick={() => { setEmojis([...emojis, emojiInput.trim()]); setEmojiInput(""); }}>
-                <Plus className="size-3" />
-              </Button>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            <div className="space-y-1.5">
-              <Label className="text-xs">Delay mín (s)</Label>
-              <Input type="number" min={0} value={delayMin} onChange={(e) => setDelayMin(Number(e.target.value))} disabled={!hasReact} />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Delay máx (s)</Label>
-              <Input type="number" min={0} value={delayMax} onChange={(e) => setDelayMax(Number(e.target.value))} disabled={!hasReact} />
-            </div>
-          </div>
-        </div>
-
-        {/* Membros */}
-        <div className="rounded-lg border border-border p-4 space-y-3">
-          <div className="flex items-center justify-between">
-            <Label className="flex items-center gap-2"><Users className="size-4" /> BotInscritos</Label>
-            <Switch checked={autoMembers} onCheckedChange={setAutoMembers} disabled={!hasMembers} />
-          </div>
-          {!hasMembers && <p className="text-xs text-muted-foreground">Requer plano BotInscritos ativo.</p>}
-          <div className="space-y-1.5">
-            <Label className="text-xs">Membros por dia</Label>
-            <Input type="number" min={1} max={50000} value={membersPerDay}
-              onChange={(e) => setMembersPerDay(Number(e.target.value))} disabled={!hasMembers} />
-            <p className="text-xs text-muted-foreground">
-              Distribuído ao longo do dia para parecer crescimento orgânico.
-            </p>
-          </div>
-        </div>
+        {/* Reações e Membros temporariamente ocultos a pedido */}
 
         {/* BotBoasVindas */}
         <div className="rounded-lg border border-border p-4 space-y-3">
@@ -566,7 +507,7 @@ function EngagementCard({ roomId }: { roomId: string }) {
       </div>
 
       {/* Boost manual — dispara um pedido pontual usando o canal desta sala */}
-      {(hasReact || hasMembers) && (
+      {false && (
         <div className="rounded-lg border border-dashed border-border p-4 space-y-3">
           <div>
             <Label className="flex items-center gap-2">

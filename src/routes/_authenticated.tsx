@@ -42,7 +42,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
 import { TourProvider } from "@/components/tour/TourProvider";
-import { BoostAllocationDialog } from "@/components/engagement/BoostAllocationDialog";
+
 export const Route = createFileRoute("/_authenticated")({
   component: AuthenticatedLayout,
 });
@@ -56,7 +56,6 @@ const navItems = [
   { to: "/mensagens", label: "Agendamentos", icon: CalendarClock, tour: "nav-mensagens" },
   { to: "/videos", label: "Vídeos", icon: Video, tour: "nav-videos" },
   { to: "/audios", label: "Áudios", icon: Mic, tour: "nav-audios" },
-  { to: "/recarga", label: "Recarga", icon: Wallet, tour: "nav-recarga" },
 ] as const;
 
 const trackingItems = [
@@ -85,6 +84,7 @@ const botItems = [
 const botLogsItem = { to: "/bots/logs", label: "Logs dos Bots", icon: ScrollText } as const;
 
 const accountItems = [
+  { to: "/recarga", label: "Assinatura", icon: Wallet, tour: "nav-recarga" },
   { to: "/perfil", label: "Minha conta", icon: UserCircle, tour: "nav-perfil" },
 ] as const;
 
@@ -138,14 +138,31 @@ function AuthenticatedLayout() {
     queryFn: async () => {
       const { data } = await supabase
         .from("user_engagement_subscriptions")
-        .select("bot_type, status")
+        .select("bot_type, status, plan:engagement_plans(slug)")
         .eq("user_id", user!.id)
         .eq("status", "active");
-      return (data ?? []).map((r: any) => r.bot_type as string);
+      return data ?? [];
     },
   });
-  const activeBots = new Set(botSubsQuery.data ?? []);
-  const visibleBotItems = botItems.filter((b) => activeBots.has(b.type));
+  
+  const activeBots = new Set((botSubsQuery.data ?? []).map((r: any) => r.bot_type as string));
+  
+  let salasTier: "NONE" | "BASE" | "PREMIUM" | "UNLIMITED" = "NONE";
+  for (const sub of (botSubsQuery.data ?? [])) {
+    if (sub.bot_type === "salas") {
+      const slug = (sub.plan as any)?.slug;
+      if (slug === "salas-unlimited") salasTier = "UNLIMITED";
+      else if (slug === "salas-3" && salasTier !== "UNLIMITED") salasTier = "PREMIUM";
+      else if (slug === "salas-1" && salasTier === "NONE") salasTier = "BASE";
+    }
+  }
+
+  const isPremiumOrHigher = salasTier === "PREMIUM" || salasTier === "UNLIMITED";
+  const isUnlimited = salasTier === "UNLIMITED";
+
+  const visibleBotItems = isUnlimited ? botItems : botItems.filter((b) => activeBots.has(b.type));
+
+
 
   const premiumAccountsQuery = useQuery({
     queryKey: ["has-premium-account", user?.id],
@@ -243,6 +260,25 @@ function AuthenticatedLayout() {
                 </div>
               );
             }
+
+            const requiresPremium = to === "/videos" || to === "/audios";
+            if (requiresPremium && !isPremiumOrHigher) {
+              return (
+                <div
+                  key={to}
+                  data-tour={tour}
+                  className="relative flex items-center justify-between gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-foreground/40 cursor-not-allowed"
+                  title="Requer Plano Premium ou superior"
+                >
+                  <span className="flex items-center gap-3">
+                    <Icon className="size-4" />
+                    {label}
+                  </span>
+                  <Lock className="size-3" />
+                </div>
+              );
+            }
+
             const active = location.pathname === to || location.pathname.startsWith(to + "/");
             return (
               <Link
@@ -282,38 +318,41 @@ function AuthenticatedLayout() {
               </button>
             </CollapsibleTrigger>
             <CollapsibleContent className="space-y-1 pl-2">
-              {trackingItems.map(({ to, label, icon: Icon }) => {
-                const active = location.pathname === to || location.pathname.startsWith(to + "/");
-                return (
-                  <Link
-                    key={to}
-                    to={to}
-                    onClick={() => setSidebarOpen(false)}
-                    className={cn(
-                      "relative flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition",
-                      active
-                        ? "cyber-gradient-soft text-foreground cyber-border"
-                        : "text-foreground/70 hover:bg-white/5 hover:text-foreground",
-                    )}
+              {!isPremiumOrHigher ? (
+                trackingItems.map(({ label, icon: Icon }) => (
+                  <div
+                    key={label}
+                    className="relative flex items-center justify-between gap-3 rounded-xl px-3 py-2 text-sm font-medium text-foreground/40 cursor-not-allowed"
+                    title="Requer Plano Premium ou superior"
                   >
-                    <Icon className={cn("size-4", active && "text-primary")} />
-                    {label}
-                  </Link>
-                );
-              })}
-              {trackingLockedItems.map(({ label, icon: Icon }) => (
-                <div
-                  key={label}
-                  className="relative flex items-center justify-between gap-3 rounded-xl px-3 py-2 text-sm font-medium text-foreground/40 cursor-not-allowed"
-                  title="Faça a Assinatura em Recarga"
-                >
-                  <span className="flex items-center gap-3">
-                    <Icon className="size-4" />
-                    {label}
-                  </span>
-                  <Lock className="size-3" />
-                </div>
-              ))}
+                    <span className="flex items-center gap-3">
+                      <Icon className="size-4" />
+                      {label}
+                    </span>
+                    <Lock className="size-3" />
+                  </div>
+                ))
+              ) : (
+                trackingItems.map(({ to, label, icon: Icon }) => {
+                  const active = location.pathname === to || location.pathname.startsWith(to + "/");
+                  return (
+                    <Link
+                      key={to}
+                      to={to}
+                      onClick={() => setSidebarOpen(false)}
+                      className={cn(
+                        "relative flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition",
+                        active
+                          ? "cyber-gradient-soft text-foreground cyber-border"
+                          : "text-foreground/70 hover:bg-white/5 hover:text-foreground",
+                      )}
+                    >
+                      <Icon className={cn("size-4", active && "text-primary")} />
+                      {label}
+                    </Link>
+                  );
+                })
+              )}
             </CollapsibleContent>
           </Collapsible>
 
@@ -356,63 +395,73 @@ function AuthenticatedLayout() {
             </Collapsible>
           )}
 
-          {/* Bots dropdown — só aparece se houver assinatura ativa */}
-          {visibleBotItems.length > 0 && (
-            <Collapsible defaultOpen={visibleBotItems.some((i) => location.pathname === i.to || location.pathname.startsWith(i.to + "/"))}>
-              <CollapsibleTrigger asChild>
-                <button
-                  type="button"
-                  className="w-full relative flex items-center justify-between rounded-xl px-3 py-2.5 text-sm font-medium transition text-foreground/70 hover:bg-white/5 hover:text-foreground"
-                >
-                  <span className="flex items-center gap-3">
-                    <Bot className="size-4" />
-                    Bots
-                  </span>
-                  <ChevronDown className="size-4 transition-transform data-[state=open]:rotate-180" />
-                </button>
-              </CollapsibleTrigger>
-              <CollapsibleContent className="space-y-1 pl-2">
-                {visibleBotItems.map(({ to, label, icon: Icon }) => {
-                  const active = location.pathname === to || location.pathname.startsWith(to + "/");
-                  return (
-                    <Link
-                      key={to}
-                      to={to}
-                      onClick={() => setSidebarOpen(false)}
-                      className={cn(
-                        "relative flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition",
-                        active
-                          ? "cyber-gradient-soft text-foreground cyber-border"
-                          : "text-foreground/70 hover:bg-white/5 hover:text-foreground",
-                      )}
-                    >
-                      <Icon className={cn("size-4", active && "text-primary")} />
+          {/* Bots dropdown — só aparece se houver assinatura ativa ou se for bloqueado */}
+          <Collapsible defaultOpen={location.pathname.startsWith("/bots")}>
+            <CollapsibleTrigger asChild>
+              <button
+                type="button"
+                className="w-full relative flex items-center justify-between rounded-xl px-3 py-2.5 text-sm font-medium transition text-foreground/70 hover:bg-white/5 hover:text-foreground"
+              >
+                <span className="flex items-center gap-3">
+                  <Bot className="size-4" />
+                  Bots
+                </span>
+                <ChevronDown className="size-4 transition-transform data-[state=open]:rotate-180" />
+              </button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="space-y-1 pl-2">
+              {!isUnlimited ? (
+                [...botItems, botLogsItem].map(({ label, icon: Icon }) => (
+                  <div
+                    key={label}
+                    className="relative flex items-center justify-between gap-3 rounded-xl px-3 py-2 text-sm font-medium text-foreground/40 cursor-not-allowed"
+                    title="Requer Plano Unlimited"
+                  >
+                    <span className="flex items-center gap-3">
+                      <Icon className="size-4" />
                       {label}
-                    </Link>
-                  );
-                })}
-                {(() => {
-                  const Icon = botLogsItem.icon;
-                  const active = location.pathname === botLogsItem.to;
-                  return (
-                    <Link
-                      to={botLogsItem.to}
-                      onClick={() => setSidebarOpen(false)}
-                      className={cn(
-                        "relative flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition",
-                        active
-                          ? "cyber-gradient-soft text-foreground cyber-border"
-                          : "text-foreground/70 hover:bg-white/5 hover:text-foreground",
-                      )}
-                    >
-                      <Icon className={cn("size-4", active && "text-primary")} />
-                      {botLogsItem.label}
-                    </Link>
-                  );
-                })()}
-              </CollapsibleContent>
-            </Collapsible>
-          )}
+                    </span>
+                    <Lock className="size-3" />
+                  </div>
+                ))
+              ) : (
+                <>
+                  {botItems.map(({ to, label, icon: Icon }) => {
+                    const active = location.pathname === to || location.pathname.startsWith(to + "/");
+                    return (
+                      <Link
+                        key={to}
+                        to={to}
+                        onClick={() => setSidebarOpen(false)}
+                        className={cn(
+                          "relative flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition",
+                          active
+                            ? "cyber-gradient-soft text-foreground cyber-border"
+                            : "text-foreground/70 hover:bg-white/5 hover:text-foreground",
+                        )}
+                      >
+                        <Icon className={cn("size-4", active && "text-primary")} />
+                        {label}
+                      </Link>
+                    );
+                  })}
+                  <Link
+                    to={botLogsItem.to}
+                    onClick={() => setSidebarOpen(false)}
+                    className={cn(
+                      "relative flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition",
+                      location.pathname === botLogsItem.to
+                        ? "cyber-gradient-soft text-foreground cyber-border"
+                        : "text-foreground/70 hover:bg-white/5 hover:text-foreground",
+                    )}
+                  >
+                    <ScrollText className={cn("size-4", location.pathname === botLogsItem.to && "text-primary")} />
+                    {botLogsItem.label}
+                  </Link>
+                </>
+              )}
+            </CollapsibleContent>
+          </Collapsible>
         </nav>
         <div className="px-3 pt-3 pb-4 mt-2 border-t border-border/60 bg-background/40 backdrop-blur-sm space-y-1">
           <p className="px-3 pb-1.5 text-[10px] uppercase tracking-wider text-muted-foreground/70">
@@ -471,10 +520,48 @@ function AuthenticatedLayout() {
       {/* Content */}
       <main className="pt-16 lg:pl-64 min-h-screen">
         <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
-          <Outlet />
+          {(() => {
+            const p = location.pathname;
+            const requiresPremium = p.startsWith("/videos") || p.startsWith("/audios") || p.startsWith("/trackeamento");
+            const requiresUnlimited = p.startsWith("/bots");
+            
+            let isBlocked = false;
+            let requiredTierName = "";
+
+            if (requiresUnlimited && !isUnlimited) {
+              isBlocked = true;
+              requiredTierName = "Unlimited";
+            } else if (requiresPremium && !isPremiumOrHigher) {
+              isBlocked = true;
+              requiredTierName = "Premium";
+            }
+
+            if (isBlocked) {
+              return (
+                <div className="min-h-[60vh] flex flex-col items-center justify-center text-center max-w-md mx-auto space-y-6">
+                  <div className="size-20 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20">
+                    <Lock className="size-10 text-primary" />
+                  </div>
+                  <div className="space-y-2">
+                    <h2 className="text-2xl font-bold">Acesso Restrito</h2>
+                    <p className="text-muted-foreground">
+                      Esta funcionalidade é exclusiva para assinantes do plano <strong className="text-foreground">{requiredTierName}</strong> ou superior.
+                    </p>
+                  </div>
+                  <Button asChild className="w-full font-bold" size="lg">
+                    <Link to="/recarga">
+                      Fazer Upgrade Agora
+                      <Sparkles className="size-4 ml-2" />
+                    </Link>
+                  </Button>
+                </div>
+              );
+            }
+
+            return <Outlet />;
+          })()}
         </div>
       </main>
-      <BoostAllocationDialog />
     </div>
     </TourProvider>
   );

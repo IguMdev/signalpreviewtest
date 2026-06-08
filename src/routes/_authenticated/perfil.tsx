@@ -46,6 +46,11 @@ function PerfilPage() {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
+  const [address, setAddress] = useState("");
+  const [cpf, setCpf] = useState("");
+  const [birthDate, setBirthDate] = useState("");
+  const [nationality, setNationality] = useState("");
+  const [phone, setPhone] = useState("");
   const [savingInfo, setSavingInfo] = useState(false);
 
   const fetchSubs = useServerFn(getMySubscriptions);
@@ -60,7 +65,14 @@ function PerfilPage() {
     setFirstName(n.first);
     setLastName(n.last);
     if (user?.email) setEmail(user.email);
-  }, [profile?.display_name, user?.email]);
+    if (user?.user_metadata) {
+      setAddress(user.user_metadata.address || "");
+      setCpf(user.user_metadata.cpf || "");
+      setBirthDate(user.user_metadata.birth_date || "");
+      setNationality(user.user_metadata.nationality || "");
+      setPhone(user.user_metadata.phone || "");
+    }
+  }, [profile?.display_name, user]);
 
   const [currentPwd, setCurrentPwd] = useState("");
   const [newPwd, setNewPwd] = useState("");
@@ -113,9 +125,23 @@ function PerfilPage() {
         .eq("id", user.id);
       if (error) throw error;
       
+      const updates: any = {};
       if (email && email !== user.email) {
-        const { error: emailErr } = await supabase.auth.updateUser({ email });
-        if (emailErr) throw emailErr;
+        updates.email = email;
+      }
+      
+      updates.data = {
+        address,
+        cpf,
+        birth_date: birthDate,
+        nationality,
+        phone,
+      };
+
+      const { error: authErr } = await supabase.auth.updateUser(updates);
+      if (authErr) throw authErr;
+      
+      if (email && email !== user.email) {
         toast.info("Enviamos um email de confirmação para o novo endereço.");
       }
 
@@ -204,51 +230,52 @@ function PerfilPage() {
                   {uploading ? "Enviando..." : "Enviar foto"}
                 </Button>
 
-                {/* Subscriptions */}
-                {subsQ.data && subsQ.data.length > 0 && (
-                  <div className="mt-6 pt-6 border-t space-y-4">
-                    <p className="text-sm font-semibold text-foreground/90 uppercase tracking-wide">Assinatura Atual</p>
-                    {subsQ.data.map((sub: any) => {
-                      const isExpired = sub.current_period_end && isPast(new Date(sub.current_period_end));
-                      const timeLeft = sub.current_period_end
-                        ? formatDistanceToNow(new Date(sub.current_period_end), { locale: ptBR })
-                        : null;
-                      
-                      const endDate = sub.current_period_end ? new Date(sub.current_period_end).toLocaleDateString('pt-BR') : '--/--/----';
-
-                      return (
-                        <div key={sub.id} className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-background to-muted/30 p-4 shadow-sm transition-all hover:shadow-md">
-                          <div className="flex items-center justify-between mb-3">
-                            <div className="flex items-center gap-2">
-                              <span className="flex size-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)] animate-pulse" />
-                              <p className="font-bold text-base text-foreground">
-                                {sub.plan?.name || "Plano Customizado"}
-                              </p>
-                            </div>
-                            <span className="px-2.5 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-wider">
-                              {sub.status === 'active' ? 'Ativo' : sub.status}
-                            </span>
-                          </div>
-
-                          <div className="space-y-1.5 mt-4">
-                            <div className="flex justify-between items-center text-xs">
-                              <span className="text-muted-foreground font-medium">Próxima cobrança</span>
-                              <span className="font-semibold">{endDate}</span>
-                            </div>
-                            <div className="flex justify-between items-center text-xs">
-                              <span className="text-muted-foreground font-medium">Tempo restante</span>
-                              <span className="font-semibold text-primary">
-                                {isExpired ? "Expirado" : timeLeft}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
               </div>
             </div>
+
+            {/* Subscriptions */}
+            {subsQ.data && subsQ.data.length > 0 && (
+              <div className="mt-6 pt-6 border-t space-y-4">
+                <p className="text-sm font-semibold text-foreground/90 uppercase tracking-wide">Assinatura Atual</p>
+                {subsQ.data.map((sub: any) => {
+                  const isExpired = sub.current_period_end && isPast(new Date(sub.current_period_end));
+                  const timeLeft = sub.current_period_end
+                    ? formatDistanceToNow(new Date(sub.current_period_end), { locale: ptBR })
+                    : null;
+                  
+                  const endDate = sub.current_period_end ? new Date(sub.current_period_end).toLocaleDateString('pt-BR') : '--/--/----';
+
+                  return (
+                    <div key={sub.id} className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-background to-muted/30 p-4 shadow-sm transition-all hover:shadow-md">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <span className="flex size-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)] animate-pulse" />
+                          <p className="font-bold text-base text-foreground truncate max-w-[150px]">
+                            {sub.plan?.name || "Plano Customizado"}
+                          </p>
+                        </div>
+                        <span className="px-2.5 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-wider shrink-0">
+                          {sub.status === 'active' ? 'Ativo' : sub.status}
+                        </span>
+                      </div>
+
+                      <div className="space-y-1.5 mt-4">
+                        <div className="flex justify-between items-center text-xs">
+                          <span className="text-muted-foreground font-medium">Próxima cobrança</span>
+                          <span className="font-semibold">{endDate}</span>
+                        </div>
+                        <div className="flex justify-between items-center text-xs">
+                          <span className="text-muted-foreground font-medium">Tempo restante</span>
+                          <span className="font-semibold text-primary">
+                            {isExpired ? "Expirado" : timeLeft}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -290,6 +317,59 @@ function PerfilPage() {
                   onChange={(e) => setEmail(e.target.value)} 
                 />
                 <p className="text-xs text-muted-foreground">Ao trocar o email, você precisará confirmar a alteração no novo e no antigo endereço.</p>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label htmlFor="cpf">CPF</Label>
+                  <Input
+                    id="cpf"
+                    placeholder="Digite seu CPF"
+                    value={cpf}
+                    onChange={(e) => setCpf(e.target.value)}
+                    maxLength={14}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="phone">Telefone</Label>
+                  <Input
+                    id="phone"
+                    placeholder="Digite seu número"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="address">Endereço</Label>
+                <Input
+                  id="address"
+                  placeholder="Digite seu endereço"
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                />
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label htmlFor="birthDate">Data de Nascimento</Label>
+                  <Input
+                    id="birthDate"
+                    placeholder="DD/MM/AAAA"
+                    value={birthDate}
+                    onChange={(e) => setBirthDate(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="nationality">Nacionalidade</Label>
+                  <Input
+                    id="nationality"
+                    placeholder="Sua nacionalidade"
+                    value={nationality}
+                    onChange={(e) => setNationality(e.target.value)}
+                  />
+                </div>
               </div>
               <Button onClick={saveInfo} disabled={savingInfo}>
                 {savingInfo ? "Salvando..." : "Salvar tudo"}

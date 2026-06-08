@@ -249,11 +249,11 @@ export const testSchedule = createServerFn({ method: "POST" })
     };
     const loadAudio = async (audioId: string | null | undefined): Promise<AudioRow | null> => {
       if (!audioId) return null;
-      const { data: a } = (await supabaseAdmin
-        .from("audios" as any)
+      const { data: a } = await (supabaseAdmin as any)
+        .from("audios")
         .select("storage_path, duration_seconds, title")
-        .eq("id" as any, audioId)
-        .maybeSingle()) as any;
+        .eq("id", audioId)
+        .maybeSingle();
       return (a as AudioRow | null) ?? null;
     };
 
