@@ -40,6 +40,7 @@ import { Route as AuthenticatedBotsLogsRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedBotsFollowupRouteImport } from './routes/_authenticated/bots.followup'
 import { Route as AuthenticatedBotsEncaminhadorRouteImport } from './routes/_authenticated/bots.encaminhador'
 import { Route as AuthenticatedBotsBoasvindasRouteImport } from './routes/_authenticated/bots.boasvindas'
+import { Route as ApiPublicWivenWebhookRouteImport } from './routes/api/public/wiven/webhook'
 import { Route as ApiPublicTrackClickRouteImport } from './routes/api/public/track/click'
 import { Route as ApiPublicKirvanoWebhookRouteImport } from './routes/api/public/kirvano/webhook'
 import { Route as ApiPublicGoDispatchIdRouteImport } from './routes/api/public/go.$dispatchId'
@@ -232,6 +233,11 @@ const AuthenticatedBotsBoasvindasRoute =
     path: '/bots/boasvindas',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const ApiPublicWivenWebhookRoute = ApiPublicWivenWebhookRouteImport.update({
+  id: '/api/public/wiven/webhook',
+  path: '/api/public/wiven/webhook',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicTrackClickRoute = ApiPublicTrackClickRouteImport.update({
   id: '/api/public/track/click',
   path: '/api/public/track/click',
@@ -395,6 +401,7 @@ export interface FileRoutesByFullPath {
   '/api/public/go/$dispatchId': typeof ApiPublicGoDispatchIdRoute
   '/api/public/kirvano/webhook': typeof ApiPublicKirvanoWebhookRoute
   '/api/public/track/click': typeof ApiPublicTrackClickRoute
+  '/api/public/wiven/webhook': typeof ApiPublicWivenWebhookRoute
   '/api/public/telegram/webhook/$accountId': typeof ApiPublicTelegramWebhookAccountIdRoute
   '/api/public/track/dr/$pixelId': typeof ApiPublicTrackDrPixelIdRoute
   '/api/public/track/postback/$pixelId': typeof ApiPublicTrackPostbackPixelIdRoute
@@ -447,6 +454,7 @@ export interface FileRoutesByTo {
   '/api/public/go/$dispatchId': typeof ApiPublicGoDispatchIdRoute
   '/api/public/kirvano/webhook': typeof ApiPublicKirvanoWebhookRoute
   '/api/public/track/click': typeof ApiPublicTrackClickRoute
+  '/api/public/wiven/webhook': typeof ApiPublicWivenWebhookRoute
   '/api/public/telegram/webhook/$accountId': typeof ApiPublicTelegramWebhookAccountIdRoute
   '/api/public/track/dr/$pixelId': typeof ApiPublicTrackDrPixelIdRoute
   '/api/public/track/postback/$pixelId': typeof ApiPublicTrackPostbackPixelIdRoute
@@ -501,6 +509,7 @@ export interface FileRoutesById {
   '/api/public/go/$dispatchId': typeof ApiPublicGoDispatchIdRoute
   '/api/public/kirvano/webhook': typeof ApiPublicKirvanoWebhookRoute
   '/api/public/track/click': typeof ApiPublicTrackClickRoute
+  '/api/public/wiven/webhook': typeof ApiPublicWivenWebhookRoute
   '/api/public/telegram/webhook/$accountId': typeof ApiPublicTelegramWebhookAccountIdRoute
   '/api/public/track/dr/$pixelId': typeof ApiPublicTrackDrPixelIdRoute
   '/api/public/track/postback/$pixelId': typeof ApiPublicTrackPostbackPixelIdRoute
@@ -555,6 +564,7 @@ export interface FileRouteTypes {
     | '/api/public/go/$dispatchId'
     | '/api/public/kirvano/webhook'
     | '/api/public/track/click'
+    | '/api/public/wiven/webhook'
     | '/api/public/telegram/webhook/$accountId'
     | '/api/public/track/dr/$pixelId'
     | '/api/public/track/postback/$pixelId'
@@ -607,6 +617,7 @@ export interface FileRouteTypes {
     | '/api/public/go/$dispatchId'
     | '/api/public/kirvano/webhook'
     | '/api/public/track/click'
+    | '/api/public/wiven/webhook'
     | '/api/public/telegram/webhook/$accountId'
     | '/api/public/track/dr/$pixelId'
     | '/api/public/track/postback/$pixelId'
@@ -660,6 +671,7 @@ export interface FileRouteTypes {
     | '/api/public/go/$dispatchId'
     | '/api/public/kirvano/webhook'
     | '/api/public/track/click'
+    | '/api/public/wiven/webhook'
     | '/api/public/telegram/webhook/$accountId'
     | '/api/public/track/dr/$pixelId'
     | '/api/public/track/postback/$pixelId'
@@ -686,6 +698,7 @@ export interface RootRouteChildren {
   ApiPublicGoDispatchIdRoute: typeof ApiPublicGoDispatchIdRoute
   ApiPublicKirvanoWebhookRoute: typeof ApiPublicKirvanoWebhookRoute
   ApiPublicTrackClickRoute: typeof ApiPublicTrackClickRoute
+  ApiPublicWivenWebhookRoute: typeof ApiPublicWivenWebhookRoute
   ApiPublicTelegramWebhookAccountIdRoute: typeof ApiPublicTelegramWebhookAccountIdRoute
   ApiPublicTrackDrPixelIdRoute: typeof ApiPublicTrackDrPixelIdRoute
   ApiPublicTrackPostbackPixelIdRoute: typeof ApiPublicTrackPostbackPixelIdRoute
@@ -910,6 +923,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/bots/boasvindas'
       preLoaderRoute: typeof AuthenticatedBotsBoasvindasRouteImport
       parentRoute: typeof AuthenticatedRoute
+    }
+    '/api/public/wiven/webhook': {
+      id: '/api/public/wiven/webhook'
+      path: '/api/public/wiven/webhook'
+      fullPath: '/api/public/wiven/webhook'
+      preLoaderRoute: typeof ApiPublicWivenWebhookRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/public/track/click': {
       id: '/api/public/track/click'
@@ -1150,6 +1170,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicGoDispatchIdRoute: ApiPublicGoDispatchIdRoute,
   ApiPublicKirvanoWebhookRoute: ApiPublicKirvanoWebhookRoute,
   ApiPublicTrackClickRoute: ApiPublicTrackClickRoute,
+  ApiPublicWivenWebhookRoute: ApiPublicWivenWebhookRoute,
   ApiPublicTelegramWebhookAccountIdRoute:
     ApiPublicTelegramWebhookAccountIdRoute,
   ApiPublicTrackDrPixelIdRoute: ApiPublicTrackDrPixelIdRoute,
