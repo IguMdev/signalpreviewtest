@@ -54,7 +54,7 @@ const salasPlanos: SalaPlano[] = [
   {
     id: "salas-1",
     nome: "Base",
-    preco: 190,
+    preco: 207,
     features: [
       "Dashboard",
       "1 Conta Telegram",
@@ -65,7 +65,7 @@ const salasPlanos: SalaPlano[] = [
   {
     id: "salas-3",
     nome: "Premium",
-    preco: 480,
+    preco: 520,
     features: [
       "Tudo do Base mais:",
       "3 Contas Telegram",
@@ -81,7 +81,7 @@ const salasPlanos: SalaPlano[] = [
   {
     id: "salas-unlimited",
     nome: "Unlimited",
-    preco: 650,
+    preco: 700,
     features: [
       "Tudo do Premium mais:",
       "BotBoasVindas",
