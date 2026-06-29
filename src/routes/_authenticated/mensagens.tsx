@@ -1796,7 +1796,7 @@ function ScheduleDialog({
             </Card>
 
             {/* Horários por dia (override) */}
-            {weekdays.length > 0 && (
+            {scheduleType === "weekly" && weekdays.length > 0 && (
               <Card className="p-4 sm:p-5 space-y-3">
                 <h3 className="font-semibold">Horários específicos por dia (opcional)</h3>
                 <p className="text-xs text-muted-foreground">
