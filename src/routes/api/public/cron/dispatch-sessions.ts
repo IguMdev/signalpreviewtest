@@ -53,10 +53,10 @@ export const Route = createFileRoute("/api/public/cron/dispatch-sessions")({
         for (const w of windows) {
           const { data: room } = await supabaseAdmin
             .from("rooms")
-            .select("timezone, default_account_id")
+            .select("timezone, default_account_id, is_active")
             .eq("id", w.room_id)
             .maybeSingle();
-          if (!room) continue;
+          if (!room || !room.is_active) continue;
           const tz = room.timezone ?? "America/Sao_Paulo";
           const { weekday, hhmm } = nowParts(tz);
           if (!(w.weekdays as number[]).includes(weekday)) continue;

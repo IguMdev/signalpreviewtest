@@ -188,9 +188,10 @@ export async function mirrorIfMarked(opts: {
 
   const { data: room } = await supabaseAdmin
     .from("rooms")
-    .select("default_account_id")
+    .select("default_account_id, is_active")
     .eq("id", opts.roomId)
     .maybeSingle();
+  if (!room?.is_active) return;
   const accountId = room?.default_account_id;
   if (!accountId) return;
   const { data: acc } = await supabaseAdmin

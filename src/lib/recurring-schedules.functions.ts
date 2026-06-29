@@ -204,10 +204,18 @@ export const testSchedule = createServerFn({ method: "POST" })
     if (!accountId) {
       const { data: room } = await supabaseAdmin
         .from("rooms")
-        .select("default_account_id")
+        .select("default_account_id, is_active")
         .eq("id", s.room_id)
         .maybeSingle();
+      if (!room?.is_active) throw new Error("Sala inativa (is_active=false). Ignorando envio.");
       accountId = (room?.default_account_id as string | null) ?? null;
+    } else {
+      const { data: room } = await supabaseAdmin
+        .from("rooms")
+        .select("is_active")
+        .eq("id", s.room_id)
+        .maybeSingle();
+      if (!room?.is_active) throw new Error("Sala inativa (is_active=false). Ignorando envio.");
     }
     if (!accountId) throw new Error("Nenhuma conta de bot configurada");
 

@@ -355,10 +355,11 @@ async function runForwarder(opts: {
   if (!opts.botToken) return;
   const { data: cfgs } = await supabaseAdmin
     .from("room_engagement_settings")
-    .select("forwarder_enabled, forwarder_target_chat_ids, forwarder_allowed_types, forwarder_premium_enabled, forwarder_premium_account_id")
+    .select("forwarder_enabled, forwarder_target_chat_ids, forwarder_allowed_types, forwarder_premium_enabled, forwarder_premium_account_id, rooms!inner(is_active)")
     .eq("user_id", opts.userId)
     .eq("forwarder_enabled", true)
-    .eq("forwarder_source_chat_id", opts.fromChatId);
+    .eq("forwarder_source_chat_id", opts.fromChatId)
+    .eq("rooms.is_active", true);
   if (!cfgs?.length) return; // não loga: barulho de mensagens não relacionadas
 
   // Dedupe: se esta mensagem foi enviada pelo nosso próprio sistema (quick-send/agendado/recorrente)

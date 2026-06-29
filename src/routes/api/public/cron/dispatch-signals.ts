@@ -202,10 +202,10 @@ async function sendToRoom(opts: {
 async function getRoomContext(roomId: string) {
   const { data: room } = await supabaseAdmin
     .from("rooms")
-    .select("id, user_id, timezone, default_account_id")
+    .select("id, user_id, timezone, default_account_id, is_active")
     .eq("id", roomId)
     .maybeSingle();
-  if (!room) return null;
+  if (!room || !room.is_active) return null;
   const { data: chats } = await supabaseAdmin
     .from("room_chats")
     .select("chat_id")
@@ -264,9 +264,10 @@ async function scheduleSignals(): Promise<number> {
   for (const w of windows as Window[]) {
     const { data: room } = await supabaseAdmin
       .from("rooms")
-      .select("timezone")
+      .select("timezone, is_active")
       .eq("id", w.room_id)
       .maybeSingle();
+    if (!room?.is_active) continue;
     const tz = room?.timezone ?? "America/Sao_Paulo";
     const { weekday, hhmm: nowHHMM } = nowParts(tz);
     if (!w.weekdays.includes(weekday)) continue;
