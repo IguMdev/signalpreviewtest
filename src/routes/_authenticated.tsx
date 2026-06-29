@@ -2,6 +2,7 @@ import { createFileRoute, Outlet, Link, useNavigate, useLocation } from "@tansta
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { useQuery } from "@tanstack/react-query";
+import { useTheme } from "@/lib/theme-context";
 import { supabase } from "@/integrations/supabase/client";
 import {
   LayoutDashboard,
@@ -97,26 +98,12 @@ function AuthenticatedLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [dark, setDark] = useState(false);
+  const { theme, toggleTheme } = useTheme();
+  const dark = theme === "dark";
 
   useEffect(() => {
     if (!loading && !user) navigate({ to: "/login" });
   }, [user, loading, navigate]);
-
-  useEffect(() => {
-    const isDark =
-      localStorage.getItem("theme") === "dark" ||
-      (!localStorage.getItem("theme") && window.matchMedia("(prefers-color-scheme: dark)").matches);
-    setDark(isDark);
-    document.documentElement.classList.toggle("dark", isDark);
-  }, []);
-
-  const toggleTheme = () => {
-    const next = !dark;
-    setDark(next);
-    document.documentElement.classList.toggle("dark", next);
-    localStorage.setItem("theme", next ? "dark" : "light");
-  };
 
   const profileQuery = useQuery({
     queryKey: ["profile", user?.id],

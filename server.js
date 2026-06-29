@@ -11,6 +11,17 @@ import path from 'path';
 // Import the TanStack Start server handler
 import handler from './dist/server/server.js';
 
+// Prevent GramJS timeouts and other unhandled rejections from crashing the PM2 process
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  // Do not exit the process. PM2 will not restart it, allowing it to survive intermittent network errors.
+});
+
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception thrown:', err);
+  // Same here, keep the bot alive.
+});
+
 const app = new Hono();
 
 // Middlewares for Speed and Security

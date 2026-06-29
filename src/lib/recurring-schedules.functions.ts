@@ -93,6 +93,8 @@ const ScheduleInput = z.object({
   weekdayOverrides: z
     .record(z.string().regex(/^[1-7]$/), z.array(z.string().regex(TimeRe)).max(24))
     .default({}),
+  scheduleType: z.enum(["weekly", "monthly"]).default("weekly"),
+  monthDays: z.array(z.number().int().min(1).max(31)).default([]),
   followUps: z.array(FollowUpInput).max(10).default([]),
   isPremium: z.boolean().default(false),
   isActive: z.boolean().default(true),
@@ -129,6 +131,8 @@ export const upsertSchedule = createServerFn({ method: "POST" })
           .map(([k, v]) => [k, Array.from(new Set(v)).sort()] as const)
           .filter(([, v]) => v.length > 0),
       ),
+      schedule_type: data.scheduleType,
+      month_days: Array.from(new Set(data.monthDays)).sort((a, b) => a - b),
       follow_ups: (data.followUps ?? []).map((f) => ({
         delay_minutes: f.delayMinutes,
         delay_seconds: f.delaySeconds ?? null,

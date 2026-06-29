@@ -73,6 +73,7 @@ function nowParts(tz: string) {
   const fmt = new Intl.DateTimeFormat("en-GB", {
     timeZone: tz,
     weekday: "short",
+    day: "numeric",
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
@@ -89,9 +90,10 @@ function nowParts(tz: string) {
     Sun: 7,
   };
   const weekday = wdMap[get("weekday")] ?? 0;
+  const monthDay = parseInt(get("day"), 10) || 1;
   const hh = get("hour").padStart(2, "0");
   const mm = get("minute").padStart(2, "0");
-  return { weekday, hhmm: `${hh}:${mm}` };
+  return { weekday, monthDay, hhmm: `${hh}:${mm}` };
 }
 
 type Schedule = {
@@ -108,6 +110,8 @@ type Schedule = {
   is_premium: boolean;
   times: string[];
   weekdays: number[];
+  schedule_type: string;
+  month_days: number[];
   weekday_overrides: Record<string, string[]> | null;
   follow_ups: Array<{
     delay_minutes: number;
@@ -231,7 +235,7 @@ export const Route = createFileRoute("/api/public/cron/dispatch-recurring")({
         const { data: schedules, error } = await supabaseAdmin
           .from("recurring_schedules" as never)
           .select(
-            "id, user_id, room_id, account_id, content, video_id, audio_id, image_path, image_mime, parse_mode, is_premium, times, weekdays, weekday_overrides, follow_ups, timezone, last_fire_key, button_text, button_url",
+            "id, user_id, room_id, account_id, content, video_id, audio_id, image_path, image_mime, parse_mode, is_premium, times, weekdays, schedule_type, month_days, weekday_overrides, follow_ups, timezone, last_fire_key, button_text, button_url",
           )
           .eq("is_active", true);
         if (error) {
@@ -247,11 +251,17 @@ export const Route = createFileRoute("/api/public/cron/dispatch-recurring")({
         let fired = 0;
 
         for (const s of (schedules ?? []) as Schedule[]) {
-          const { weekday, hhmm } = nowParts(s.timezone);
-          if (!s.weekdays.includes(weekday)) continue;
-          const override = s.weekday_overrides?.[String(weekday)];
-          const effectiveTimes = override && override.length > 0 ? override : s.times;
-          if (!effectiveTimes.includes(hhmm)) continue;
+          const { weekday, monthDay, hhmm } = nowParts(s.timezone);
+          
+          if (s.schedule_type === "monthly") {
+            if (!s.month_days || !s.month_days.includes(monthDay)) continue;
+            if (!s.times.includes(hhmm)) continue;
+          } else {
+            if (!s.weekdays.includes(weekday)) continue;
+            const override = s.weekday_overrides?.[String(weekday)];
+            const effectiveTimes = override && override.length > 0 ? override : s.times;
+            if (!effectiveTimes.includes(hhmm)) continue;
+          }
           if (s.last_fire_key === dateKey) continue;
 
           // claim this minute atomically

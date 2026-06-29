@@ -48,6 +48,12 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
         <p className="mt-2 text-sm text-muted-foreground">
           Something went wrong on our end. You can try refreshing or head back home.
         </p>
+
+        <div className="mt-4 p-4 bg-red-500/10 border border-red-500/20 rounded text-left overflow-auto max-h-64">
+          <p className="text-sm font-bold text-red-500">{error?.name}: {error?.message}</p>
+          <pre className="text-xs text-red-400 mt-2 whitespace-pre-wrap font-mono">{error?.stack}</pre>
+        </div>
+
         <div className="mt-6 flex flex-wrap justify-center gap-2">
           <button
             onClick={() => {
@@ -105,9 +111,37 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="pt-BR" className="dark">
       <head>
+        <script dangerouslySetInnerHTML={{ __html: `
+          try {
+            if (localStorage.getItem('telesignal-theme') === 'light') {
+              document.documentElement.classList.remove('dark');
+            }
+          } catch(e) {}
+        ` }} />
         <HeadContent />
+        <script dangerouslySetInnerHTML={{ __html: `
+          if (typeof Node === 'function' && Node.prototype) {
+            const originalRemoveChild = Node.prototype.removeChild;
+            Node.prototype.removeChild = function(child) {
+              if (child.parentNode !== this) {
+                if (console) console.warn('Cannot remove a child from a different parent', child, this);
+                return child;
+              }
+              return originalRemoveChild.apply(this, arguments);
+            };
+          
+            const originalInsertBefore = Node.prototype.insertBefore;
+            Node.prototype.insertBefore = function(newNode, referenceNode) {
+              if (referenceNode && referenceNode.parentNode !== this) {
+                if (console) console.warn('Cannot insert before a reference node from a different parent', referenceNode, this);
+                return newNode;
+              }
+              return originalInsertBefore.apply(this, arguments);
+            };
+          }
+        ` }} />
       </head>
       <body>
         {children}

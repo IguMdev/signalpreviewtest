@@ -356,6 +356,8 @@ function MensagensPage() {
       parse_mode: "HTML",
       times: ["08:00"],
       weekdays: [1, 2, 3, 4, 5, 6, 7],
+      schedule_type: "weekly",
+      month_days: [],
       weekday_overrides: {},
       follow_ups: [],
       is_premium: false,
@@ -539,15 +541,23 @@ function MensagensPage() {
                               {t}
                             </span>
                           ))}
-                          {s.weekdays.map((w) => {
-                            const wd = WEEKDAYS.find((x) => x.value === w);
-                            return (
-                              <Badge key={w} variant="secondary" className="bg-sky-500/15 text-sky-300 border-0 font-normal">
-                                <span className="hidden sm:inline">{wd?.label}</span>
-                                <span className="sm:hidden">{wd?.short}</span>
+                          {s.schedule_type === "monthly" ? (
+                            s.month_days?.map((d: number) => (
+                              <Badge key={d} variant="secondary" className="bg-sky-500/15 text-sky-300 border-0 font-normal">
+                                Dia {d}
                               </Badge>
-                            );
-                          })}
+                            ))
+                          ) : (
+                            s.weekdays.map((w: number) => {
+                              const wd = WEEKDAYS.find((x) => x.value === w);
+                              return (
+                                <Badge key={w} variant="secondary" className="bg-sky-500/15 text-sky-300 border-0 font-normal">
+                                  <span className="hidden sm:inline">{wd?.label}</span>
+                                  <span className="sm:hidden">{wd?.short}</span>
+                                </Badge>
+                              );
+                            })
+                          )}
                           {s.is_premium && (
                             <Badge className="bg-amber-500/15 text-amber-400 border-0 font-normal">
                               <Sparkles className="size-3 mr-1" />
@@ -944,6 +954,8 @@ function ScheduleDialog({
     parseMode: "HTML" | "Markdown" | "MarkdownV2";
     times: string[];
     weekdays: number[];
+    scheduleType: "weekly" | "monthly";
+    monthDays: number[];
     weekdayOverrides: Record<string, string[]>;
     followUps: Array<{
       delayMinutes: number;
@@ -977,6 +989,8 @@ function ScheduleDialog({
   const [uploading, setUploading] = useState(false);
   const [times, setTimes] = useState<string[]>([]);
   const [weekdays, setWeekdays] = useState<number[]>([]);
+  const [scheduleType, setScheduleType] = useState<"weekly" | "monthly">("weekly");
+  const [monthDays, setMonthDays] = useState<number[]>([]);
   const [weekdayOverrides, setWeekdayOverrides] = useState<Record<string, string[]>>({});
   const [overrideInputs, setOverrideInputs] = useState<Record<string, string>>({});
   const [followUps, setFollowUps] = useState<
@@ -1011,6 +1025,8 @@ function ScheduleDialog({
       setImageMime(editing.image_mime ?? "");
       setTimes(editing.times);
       setWeekdays(editing.weekdays);
+      setScheduleType((editing as any).schedule_type ?? "weekly");
+      setMonthDays((editing as any).month_days ?? []);
       setWeekdayOverrides(editing.weekday_overrides ?? {});
       setOverrideInputs({});
       setFollowUps(
@@ -1079,10 +1095,14 @@ function ScheduleDialog({
   };
 
   const toggleWeekday = (v: number) => {
-    setWeekdays((cur) => (cur.includes(v) ? cur.filter((x) => x !== v) : [...cur, v].sort()));
+    setWeekdays((cur) => (cur.includes(v) ? cur.filter((x) => x !== v) : [...cur, v].sort((a, b) => a - b)));
   };
 
-  const canSave = title.trim() && roomId && times.length > 0 && weekdays.length > 0;
+  const toggleMonthDay = (v: number) => {
+    setMonthDays((cur) => (cur.includes(v) ? cur.filter((x) => x !== v) : [...cur, v].sort((a, b) => a - b)));
+  };
+
+  const canSave = title.trim() && roomId && times.length > 0 && (scheduleType === "weekly" ? weekdays.length > 0 : monthDays.length > 0);
 
   async function runPartTest(
     key: string,
@@ -1660,34 +1680,78 @@ function ScheduleDialog({
 
           {/* RIGHT COLUMN */}
           <div className="space-y-4">
-            {/* Dias da semana */}
+            {/* Frequência (Dias) */}
             <Card className="p-4 sm:p-5 space-y-3">
-              <h3 className="font-semibold">
-                Dias da semana <span className="text-destructive">*</span>
-              </h3>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                {WEEKDAYS.map((d) => {
-                  const on = weekdays.includes(d.value);
-                  return (
-                    <label
-                      key={d.value}
-                      className={`flex items-center gap-2 px-3 py-2.5 rounded-md border cursor-pointer transition ${
-                        on
-                          ? "border-primary bg-primary/10"
-                          : "border-border hover:bg-muted/50"
-                      }`}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={on}
-                        onChange={() => toggleWeekday(d.value)}
-                        className="size-4 rounded accent-primary"
-                      />
-                      <span className="text-sm font-medium">{d.label}</span>
-                    </label>
-                  );
-                })}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <h3 className="font-semibold">
+                  Dias de envio <span className="text-destructive">*</span>
+                </h3>
+                <div className="flex bg-muted p-1 rounded-md w-fit">
+                  <button
+                    type="button"
+                    onClick={() => setScheduleType("weekly")}
+                    className={`px-3 py-1.5 rounded text-sm font-medium transition ${scheduleType === "weekly" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                  >
+                    Dias da Semana
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setScheduleType("monthly")}
+                    className={`px-3 py-1.5 rounded text-sm font-medium transition ${scheduleType === "monthly" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                  >
+                    Dias do Mês
+                  </button>
+                </div>
               </div>
+              
+              {scheduleType === "weekly" ? (
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-2">
+                  {WEEKDAYS.map((d) => {
+                    const on = weekdays.includes(d.value);
+                    return (
+                      <label
+                        key={d.value}
+                        className={`flex items-center gap-2 px-3 py-2.5 rounded-md border cursor-pointer transition ${
+                          on
+                            ? "border-primary bg-primary/10"
+                            : "border-border hover:bg-muted/50"
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={on}
+                          onChange={() => toggleWeekday(d.value)}
+                          className="size-4 rounded accent-primary"
+                        />
+                        <span className="text-sm font-medium">{d.label}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="space-y-3 mt-2">
+                  <p className="text-xs text-muted-foreground">Selecione os dias do mês em que a mensagem será enviada de forma recorrente (todo mês).</p>
+                  <div className="grid grid-cols-7 gap-1.5 sm:gap-2">
+                    {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => {
+                      const on = monthDays.includes(day);
+                      return (
+                        <button
+                          key={day}
+                          type="button"
+                          onClick={() => toggleMonthDay(day)}
+                          className={`h-9 sm:h-10 rounded-md border text-sm font-medium transition flex items-center justify-center ${
+                            on
+                              ? "border-primary bg-primary text-primary-foreground shadow-sm"
+                              : "border-border bg-card hover:bg-muted/50 text-foreground"
+                          }`}
+                        >
+                          {day}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </Card>
 
             {/* Horários */}
@@ -1841,6 +1905,8 @@ function ScheduleDialog({
                 parseMode: "HTML",
                 times,
                 weekdays,
+                scheduleType,
+                monthDays,
                 weekdayOverrides,
                 followUps: followUps.map((f) => ({
                   delayMinutes:
