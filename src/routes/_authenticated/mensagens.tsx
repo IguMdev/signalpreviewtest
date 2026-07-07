@@ -15,6 +15,7 @@ import {
   deleteFolder,
   moveScheduleToFolder,
 } from "@/lib/schedule-folders.functions";
+import { bulkReplaceLinks } from "@/lib/bulk-replace.functions";
 import { syncRoomPhoto } from "@/lib/room-photos.functions";
 import { createVideoThumbnailBlob, thumbnailPathForVideoPath } from "@/lib/video-thumbnail";
 import { QuickTemplatesBar } from "@/components/QuickTemplatesBar";
@@ -60,6 +61,7 @@ import {
   Folder,
   FolderPlus,
   FolderOpen,
+  Link2,
 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/mensagens")({
@@ -88,6 +90,8 @@ type Schedule = {
   parse_mode: string;
   times: string[];
   weekdays: number[];
+  schedule_type?: string;
+  month_days?: number[];
   weekday_overrides: Record<string, string[]> | null;
   follow_ups: Array<{
     delay_minutes: number;
@@ -146,12 +150,14 @@ function MensagensPage() {
   const upsertFolderFn = useServerFn(upsertFolder);
   const deleteFolderFn = useServerFn(deleteFolder);
   const moveFolderFn = useServerFn(moveScheduleToFolder);
+  const bulkReplaceFn = useServerFn(bulkReplaceLinks);
 
   const [search, setSearch] = useState("");
   const [editing, setEditing] = useState<Schedule | null>(null);
   const [presetRoomId, setPresetRoomId] = useState<string | null>(null);
   const [activeFolder, setActiveFolder] = useState<string>("all"); // "all" | "none" | folder id
   const [manageOpen, setManageOpen] = useState(false);
+  const [bulkReplaceOpen, setBulkReplaceOpen] = useState(false);
 
   const folders = useQuery({
     queryKey: ["schedule-folders"],
@@ -432,6 +438,7 @@ function MensagensPage() {
           <span className="hidden sm:inline">Gerenciar pastas</span>
           <span className="sm:hidden">Pastas</span>
         </Button>
+
       </div>
 
       <div className="relative w-full sm:max-w-md">
@@ -494,15 +501,12 @@ function MensagensPage() {
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={() => syncPhotoMut.mutate(room.id)}
-                    disabled={syncPhotoMut.isPending && syncPhotoMut.variables === room.id}
-                    title="Atualizar foto do grupo"
+                    onClick={() => setBulkReplaceOpen(true)}
+                    title="Substituir links em todos os agendamentos"
                     className="flex-1 sm:flex-none"
                   >
-                    <RefreshCw
-                      className={`size-4 ${syncPhotoMut.isPending && syncPhotoMut.variables === room.id ? "animate-spin" : ""}`}
-                    />
-                    Foto
+                    <Link2 className="size-4" />
+                    Substituir Links
                   </Button>
                   <Button size="sm" onClick={() => openNew(room.id)} data-tour="add-schedule" className="flex-1 sm:flex-none">
                     <Plus className="size-4" />
@@ -701,6 +705,16 @@ function MensagensPage() {
           await qc.invalidateQueries({ queryKey: ["schedule-folders"] });
           await qc.invalidateQueries({ queryKey: ["recurring-schedules"] });
           if (activeFolder === id) setActiveFolder("all");
+        }}
+      />
+
+      <BulkReplaceDialog
+        open={bulkReplaceOpen}
+        onClose={() => setBulkReplaceOpen(false)}
+        onSubmit={async (oldLink, newLink) => {
+          const res = await bulkReplaceFn({ data: { oldLink, newLink } });
+          await qc.invalidateQueries({ queryKey: ["recurring-schedules"] });
+          toast.success(`Atualizados ${res.recurringUpdated} agendamentos recorrentes e ${res.scheduledUpdated} únicos.`);
         }}
       />
     </div>
@@ -1936,6 +1950,74 @@ function ScheduleDialog({
           </Button>
           <Button variant="secondary" onClick={onClose} className="w-full sm:w-auto">Cancelar</Button>
         </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+
+function BulkReplaceDialog({
+  open,
+  onClose,
+  onSubmit,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onSubmit: (oldLink: string, newLink: string) => Promise<void>;
+}) {
+  const [oldLink, setOldLink] = useState("");
+  const [newLink, setNewLink] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="max-w-md w-[calc(100vw-1rem)] sm:w-auto p-4 sm:p-6">
+        <DialogHeader>
+          <DialogTitle>Substituir Links em Massa</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            Encontre e substitua um link (ou texto) em todos os seus agendamentos recorrentes e mensagens pendentes únicas.
+          </p>
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <Label>Link ou texto antigo</Label>
+              <Input
+                placeholder="Ex: https://t.me/suporte_velho"
+                value={oldLink}
+                onChange={(e) => setOldLink(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1">
+              <Label>Novo link ou texto</Label>
+              <Input
+                placeholder="Ex: https://t.me/suporte_novo"
+                value={newLink}
+                onChange={(e) => setNewLink(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter className="mt-4">
+            <Button
+              disabled={!oldLink.trim() || !newLink.trim() || busy}
+              onClick={async () => {
+                setBusy(true);
+                try {
+                  await onSubmit(oldLink.trim(), newLink.trim());
+                  setOldLink("");
+                  setNewLink("");
+                  onClose();
+                } catch (e) {
+                  toast.error((e as Error).message);
+                } finally {
+                  setBusy(false);
+                }
+              }}
+            >
+              {busy ? "Substituindo..." : "Substituir em todos"}
+            </Button>
+          </DialogFooter>
+        </div>
       </DialogContent>
     </Dialog>
   );
