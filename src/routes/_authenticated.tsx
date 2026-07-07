@@ -200,11 +200,6 @@ function AuthenticatedLayout() {
           <img src="/favicon.png" alt="Logo" className="size-9 rounded-lg" />
         </Link>
         <div className="ml-auto flex items-center gap-3">
-          <div className="hidden sm:flex items-center gap-2 rounded-full glass cyber-border px-3 py-1.5 text-sm">
-            <Wallet className="size-4 text-primary" />
-            <span className="font-medium">{profileQuery.data?.credits ?? 0}</span>
-            <span className="text-muted-foreground text-xs">créditos</span>
-          </div>
           <Button variant="ghost" size="icon" onClick={toggleTheme}>
             {dark ? <Sun className="size-4" /> : <Moon className="size-4" />}
           </Button>
