@@ -750,8 +750,9 @@ export const testNativeWebhook = createServerFn({ method: "POST" })
     webhook_url: z.string().url(),
     platform: z.string(),
   }).parse(d))
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
     const { pixel_id, webhook_url } = data;
+    const { userId } = context;
     
     const fakeClickId = "test_" + Math.random().toString(36).substring(2);
     const fakeEmail = "teste_" + Math.random().toString(36).substring(2, 6) + "@telesignal.com.br";
@@ -761,6 +762,7 @@ export const testNativeWebhook = createServerFn({ method: "POST" })
     // Insere o Lead usando Admin (bypassa RLS)
     const { error: insErr } = await supabaseAdmin.from("tracking_clicks").insert({
       pixel_id,
+      user_id: userId,
       click_id: fakeClickId,
       ip: "127.0.0.1",
       user_agent: "Telesignal Test Bot",
