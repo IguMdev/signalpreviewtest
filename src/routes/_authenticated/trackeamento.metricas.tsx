@@ -248,7 +248,7 @@ function MetricsView({ pixelId, mode, isWhatsapp }: { pixelId: string | null; mo
                       <td className="p-3 whitespace-nowrap">{format(d, "dd/MM/yyyy")}</td>
                       <td className="p-3 whitespace-nowrap">{format(d, "HH:mm")}</td>
                       <td className="p-3">{tracked ? <Check className="size-4 text-emerald-500" /> : <X className="size-4 text-muted-foreground" />}</td>
-                      <td className="p-3 whitespace-nowrap">{c.external_id ? `${String(c.external_id).slice(0,10)}…` : "-"}</td>
+                      <td className="p-3 whitespace-nowrap text-muted-foreground max-w-[200px] truncate" title={c.external_id || ""}>{c.external_id || "(vazio)"}</td>
                       <td className={`p-3 whitespace-nowrap ${
                         c.refunded_at ? "text-red-400" :
                         c.chargeback_at ? "text-red-500" :
