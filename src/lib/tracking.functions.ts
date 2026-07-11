@@ -478,6 +478,7 @@ export const getDRDashboardStats = createServerFn({ method: "POST" })
       a.roi = a.spend > 0 ? a.profit / a.spend : 0;
       a.cpa = a.purchases > 0 ? a.spend / a.purchases : 0;
       a.cpi = a.checkouts > 0 ? a.spend / a.checkouts : 0;
+      a.cpl = a.leads > 0 ? a.spend / a.leads : 0;
       a.convRate = a.clicks > 0 ? (a.purchases / a.clicks) * 100 : 0;
       return a;
     }).sort((a, b) => b.revenue - a.revenue);

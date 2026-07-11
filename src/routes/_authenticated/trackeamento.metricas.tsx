@@ -441,6 +441,8 @@ function DRDashboardTable({ pixelId, days }: { pixelId: string; days: number }) 
               <th className="px-4 py-3 text-right font-medium text-muted-foreground">CPA</th>
               <th className="px-4 py-3 text-right font-medium text-muted-foreground">IC</th>
               <th className="px-4 py-3 text-right font-medium text-muted-foreground">CPI</th>
+              <th className="px-4 py-3 text-right font-medium text-muted-foreground">Leads</th>
+              <th className="px-4 py-3 text-right font-medium text-muted-foreground">CPL</th>
               <th className="px-4 py-3 text-right font-medium text-muted-foreground">Cliques</th>
             </tr>
           </thead>
@@ -480,6 +482,8 @@ function DRDashboardTable({ pixelId, days }: { pixelId: string; days: number }) 
                   <td className="px-4 py-3 text-right text-muted-foreground">R$ {item.cpa.toFixed(2)}</td>
                   <td className="px-4 py-3 text-right text-muted-foreground">{item.checkouts}</td>
                   <td className="px-4 py-3 text-right text-muted-foreground">R$ {item.cpi.toFixed(2)}</td>
+                  <td className="px-4 py-3 text-right font-medium text-blue-400">{item.leads}</td>
+                  <td className="px-4 py-3 text-right text-muted-foreground">R$ {item.cpl.toFixed(2)}</td>
                   <td className="px-4 py-3 text-right text-muted-foreground">{item.clicks}</td>
                 </tr>
               );
@@ -493,7 +497,7 @@ function DRDashboardTable({ pixelId, days }: { pixelId: string; days: number }) 
   return (
     <div className="space-y-4">
       {/* Cards de Topo */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         {/* Sumarizando todos */}
         <Card className="bg-card">
           <CardContent className="p-6">
@@ -536,6 +540,17 @@ function DRDashboardTable({ pixelId, days }: { pixelId: string; days: number }) 
             </div>
             <p className="text-3xl font-bold">
               {data.campaigns.reduce((a:any,b:any) => a + b.purchases, 0)}
+            </p>
+          </CardContent>
+        </Card>
+        <Card className="bg-card">
+          <CardContent className="p-6">
+            <div className="flex items-center gap-2 text-muted-foreground mb-2">
+              <Users className="size-4 text-purple-500" />
+              <p className="text-xs uppercase tracking-wider font-semibold">Leads</p>
+            </div>
+            <p className="text-3xl font-bold text-purple-500">
+              {data.campaigns.reduce((a:any,b:any) => a + (b.leads || 0), 0)}
             </p>
           </CardContent>
         </Card>
