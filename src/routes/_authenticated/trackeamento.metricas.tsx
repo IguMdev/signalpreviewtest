@@ -48,7 +48,7 @@ function MetricasPage() {
           </CardContent>
         </Card>
       )}
-      <MetricsView pixelId={effectiveId} mode={mode} />
+      <MetricsView pixelId={effectiveId} mode={mode} isWhatsapp={(currentPixel as any)?.dr_config?.is_whatsapp === true} />
     </div>
   );
 }
@@ -70,7 +70,7 @@ function detectDevice(ua: string | null | undefined): string {
   return "Outros";
 }
 
-function MetricsView({ pixelId, mode }: { pixelId: string | null; mode: "telegram" | "direct_response" }) {
+function MetricsView({ pixelId, mode, isWhatsapp }: { pixelId: string | null; mode: "telegram" | "direct_response"; isWhatsapp?: boolean }) {
   const [range, setRange] = useState<DateRange | undefined>(undefined);
   const [filters, setFilters] = useState<ActiveFilter[]>([]);
   const days = rangeToDays(range);
@@ -114,7 +114,7 @@ function MetricsView({ pixelId, mode }: { pixelId: string | null; mode: "telegra
 
   const clicksTotal = stats.data?.clicks ?? 0;
   const trackeadas = filtered.filter((r) => r.utm_source || r.fbclid).length || clicksTotal;
-  const isDR = mode === "direct_response";
+  const isDR = mode === "direct_response" || isWhatsapp;
   const entradas = isDR ? (stats.data?.views ?? 0) : (stats.data?.joins ?? 0);
   const saidas = isDR ? (stats.data?.purchases ?? 0) : 0;
   const leadsCount = isDR ? (stats.data?.leads ?? 0) : 0;
@@ -197,8 +197,7 @@ function MetricsView({ pixelId, mode }: { pixelId: string | null; mode: "telegra
         )}
       </div>
 
-      {/* Visao Geral & Leads (Somente Telegram) */}
-      {!isDR && (
+      {/* Visao Geral & Leads */}
         <>
           <Card>
             <CardContent className="p-6 space-y-4">
@@ -294,7 +293,6 @@ function MetricsView({ pixelId, mode }: { pixelId: string | null; mode: "telegra
         </CardContent>
       </Card>
       </>
-      )}
     </>
   );
 }

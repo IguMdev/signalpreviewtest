@@ -239,7 +239,7 @@ export const listRecentClicks = createServerFn({ method: "GET" })
     const { supabase } = context;
     const { data: rows, error } = await supabase
       .from("tracking_clicks" as never)
-      .select("click_id, created_at, utm_source, utm_medium, utm_campaign, utm_content, utm_term, fbclid, ttclid, gclid, ip, joined_at, clicked_offer_at, registered_at, deposited_at, tg_username, tg_user_id, sale_value, sale_currency, viewed_at, lead_at, checkout_at, payment_info_at, purchased_at, abandoned_cart_at, chargeback_at, refunded_at")
+      .select("click_id, created_at, utm_source, utm_medium, utm_campaign, utm_content, utm_term, fbclid, ttclid, gclid, ip, joined_at, clicked_offer_at, registered_at, deposited_at, tg_username, tg_user_id, sale_value, sale_currency, viewed_at, lead_at, checkout_at, payment_info_at, purchased_at, abandoned_cart_at, chargeback_at, refunded_at, landing_url, user_agent, external_id")
       .eq("pixel_id", data.pixel_id)
       .order("created_at", { ascending: false })
       .limit(data.limit);
