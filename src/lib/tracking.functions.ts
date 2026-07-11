@@ -742,3 +742,73 @@ export const deleteIntegration = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+export const testNativeWebhook = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({
+    pixel_id: z.string().uuid(),
+    webhook_url: z.string().url(),
+    platform: z.string(),
+  }).parse(d))
+  .handler(async ({ data }) => {
+    const { pixel_id, webhook_url } = data;
+    
+    const fakeClickId = "test_" + Math.random().toString(36).substring(2);
+    const fakeEmail = "teste_" + Math.random().toString(36).substring(2, 6) + "@telesignal.com.br";
+    
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    // Insere o Lead usando Admin (bypassa RLS)
+    const { error: insErr } = await supabaseAdmin.from("tracking_clicks").insert({
+      pixel_id,
+      click_id: fakeClickId,
+      ip: "127.0.0.1",
+      user_agent: "Telesignal Test Bot",
+      lead_at: new Date().toISOString(),
+      utm_source: "teste_webhook"
+    });
+
+    if (insErr) {
+      console.error("Test Webhook Insert Error", insErr);
+      throw new Error("Falha ao criar lead de teste");
+    }
+
+    const payload = {
+      status: "approved",
+      email: fakeEmail,
+      amount: 97.50,
+      currency: "BRL",
+      metadata: { click_id: fakeClickId, utm_source: fakeClickId },
+      transaction_status: "approved",
+      sale_amount: 97.50,
+      tracking: { src: fakeClickId, utm_source: fakeClickId, source: fakeClickId },
+      data: {
+        buyer: { email: fakeEmail },
+        purchase: { status: "approved", price: { value: 97.50, currency_code: "BRL" }, tracking: { source: fakeClickId } },
+        amount: 97.50,
+        customer_email: fakeEmail,
+        customer: { email: fakeEmail },
+        payment_total: 97.50,
+        metadata: { utm_source: fakeClickId }
+      },
+      Customer: { email: fakeEmail },
+      customer: { email: fakeEmail },
+      order_status: "paid",
+      event: "transaction.approved",
+      Commissions: { charge_amount: 97.50 },
+      TrackingParameters: { src: fakeClickId }
+    };
+
+    try {
+      const res = await fetch(webhook_url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) throw new Error("Webhook endpoint failed with status " + res.status);
+      return { ok: true, clickId: fakeClickId };
+    } catch (e: any) {
+      console.error("Fetch Webhook Error:", e);
+      throw new Error("Erro ao disparar para a URL do Webhook");
+    }
+  });

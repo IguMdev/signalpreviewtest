@@ -6,8 +6,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Copy, Link as LinkIcon, CheckCircle2 } from "lucide-react";
+import { Copy, Link as LinkIcon, CheckCircle2, PlayCircle } from "lucide-react";
 import { toast } from "sonner";
+import { useServerFn } from "@tanstack/react-start";
+import { testNativeWebhook } from "@/lib/tracking.functions";
 
 export const Route = createFileRoute("/_authenticated/trackeamento/webhooks")({
   component: WebhooksPage,
@@ -21,6 +23,8 @@ const PLATFORMS = [
 function WebhooksPage() {
   const [selectedPlatform, setSelectedPlatform] = useState<string | null>(null);
   const [selectedPixelId, setSelectedPixelId] = useState<string>("");
+  const testFn = useServerFn(testNativeWebhook);
+  const [isTesting, setIsTesting] = useState(false);
 
   const { data: pixels = [] } = useQuery({
     queryKey: ["tracking-pixels-list"],
@@ -37,6 +41,19 @@ function WebhooksPage() {
   const generatedUrl = selectedPlatform && selectedPixel 
     ? `${baseHost}/api/public/webhook/${selectedPlatform.toLowerCase()}/${selectedPixel.id}?token=${selectedPixel.postback_secret}`
     : "";
+
+  const handleTest = async () => {
+    if (!generatedUrl || !selectedPixel || !selectedPlatform) return;
+    setIsTesting(true);
+    try {
+      await testFn({ pixel_id: selectedPixel.id, webhook_url: generatedUrl, platform: selectedPlatform });
+      toast.success("Teste enviado! Verifique as Métricas do seu pixel, deve aparecer uma Venda Fictícia de 97,50.");
+    } catch (e: any) {
+      toast.error(e.message || "Falha ao testar webhook.");
+    } finally {
+      setIsTesting(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -119,6 +136,16 @@ function WebhooksPage() {
                       </Button>
                     </div>
                   </div>
+                </div>
+                
+                <div className="mt-4 pt-4 border-t flex flex-col sm:flex-row items-center justify-between gap-4">
+                  <p className="text-xs text-muted-foreground">
+                    Quer saber se está funcionando? Faça um disparo simulado para essa URL.
+                  </p>
+                  <Button size="sm" variant="secondary" className="w-full sm:w-auto gap-2" onClick={handleTest} disabled={isTesting}>
+                    <PlayCircle className="size-4" />
+                    {isTesting ? "Testando..." : "Testar Integração"}
+                  </Button>
                 </div>
               </div>
             )}
