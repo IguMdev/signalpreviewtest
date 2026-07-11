@@ -46,7 +46,7 @@ function WebhooksPage() {
     if (!generatedUrl || !selectedPixel || !selectedPlatform) return;
     setIsTesting(true);
     try {
-      await testFn({ pixel_id: selectedPixel.id, webhook_url: generatedUrl, platform: selectedPlatform });
+      await testFn({ data: { pixel_id: selectedPixel.id, webhook_url: generatedUrl, platform: selectedPlatform } });
       toast.success("Teste enviado! Verifique as Métricas do seu pixel, deve aparecer uma Venda Fictícia de 97,50.");
     } catch (e: any) {
       toast.error(e.message || "Falha ao testar webhook.");
