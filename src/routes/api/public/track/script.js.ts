@@ -87,6 +87,31 @@ export const Route = createFileRoute("/api/public/track/script/js")({
     }).catch(()=>{});
 
   });
+
+  // 3. Intercepta formulários para registrar lead
+  document.addEventListener('submit', function(e) {
+    const form = e.target;
+    if (!form || form.tagName !== 'FORM') return;
+
+    // Tenta pegar email e telefone se existirem
+    const emailInput = form.querySelector('input[type="email"], input[name*="email" i]');
+    const phoneInput = form.querySelector('input[type="tel"], input[name*="phone" i], input[name*="telefone" i], input[name*="whatsapp" i]');
+
+    const clickId = sessionStorage.getItem('__ts_click_id');
+    const leadPayload = {
+      stage: 'lead',
+      click_id: clickId,
+      email: emailInput ? emailInput.value : undefined,
+      phone: phoneInput ? phoneInput.value : undefined
+    };
+
+    fetch(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(leadPayload),
+      keepalive: true
+    }).catch(()=>{});
+  });
 })();
 `;
         return new Response(scriptContent, {
