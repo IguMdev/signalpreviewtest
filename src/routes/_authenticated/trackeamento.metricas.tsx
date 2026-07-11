@@ -115,8 +115,9 @@ function MetricsView({ pixelId, mode, isWhatsapp }: { pixelId: string | null; mo
   const clicksTotal = stats.data?.clicks ?? 0;
   const trackeadas = filtered.filter((r) => r.utm_source || r.fbclid).length || clicksTotal;
   const isDR = mode === "direct_response" || isWhatsapp;
-  const entradas = isDR ? (stats.data?.views ?? 0) : (stats.data?.joins ?? 0);
-  const saidas = isDR ? (stats.data?.purchases ?? 0) : 0;
+  const isDRDashboard = mode === "direct_response";
+  const entradas = isWhatsapp ? (stats.data?.leads ?? 0) : (isDRDashboard ? (stats.data?.views ?? 0) : (stats.data?.joins ?? 0));
+  const saidas = (isDRDashboard || isWhatsapp) ? (stats.data?.purchases ?? 0) : 0;
   const leadsCount = isDR ? (stats.data?.leads ?? 0) : 0;
   const revenue = stats.data?.revenue ?? 0;
   const taxaEntrada = entradas > 0 ? 100 : 0;
@@ -184,7 +185,7 @@ function MetricsView({ pixelId, mode, isWhatsapp }: { pixelId: string | null; mo
 
       {/* Big stat cards / DR Table */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {isDR ? (
+        {isDRDashboard ? (
           <div className="col-span-1 md:col-span-3">
             <DRDashboardTable pixelId={pixelId!} days={days} />
           </div>
