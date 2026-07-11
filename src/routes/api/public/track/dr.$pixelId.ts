@@ -26,7 +26,7 @@ const bodySchema = z.object({
   fbp: z.string().max(128).nullable().optional(),
   fbc: z.string().max(256).nullable().optional(),
   fbclid: z.string().max(256).nullable().optional(),
-  landing_url: z.string().url().nullable().optional(),
+  landing_url: z.string().max(2048).nullable().optional(),
   referrer: z.string().max(1024).nullable().optional(),
   utm_source: z.string().max(128).nullable().optional(),
   utm_medium: z.string().max(128).nullable().optional(),
