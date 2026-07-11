@@ -39,6 +39,7 @@ import {
   Mic,
   Bell,
   Tag,
+  Webhook,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -68,6 +69,7 @@ const trackingItems = [
   { to: "/trackeamento/funis", label: "Funis", icon: Funnel },
   { to: "/trackeamento/metricas", label: "Métricas", icon: BarChart3 },
   { to: "/trackeamento/mensagens", label: "Mensagens", icon: MessageCircle },
+  { to: "/trackeamento/webhooks", label: "Webhooks", icon: Webhook },
   { to: "/trackeamento/postbacks", label: "Postbacks", icon: Repeat },
   { to: "/trackeamento/integracoes", label: "Integrações", icon: Link2 },
   { to: "/trackeamento/utms", label: "UTMs", icon: Tag },

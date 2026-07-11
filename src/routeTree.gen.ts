@@ -20,12 +20,14 @@ import { Route as AuthenticatedRecargaRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedPremiumEmojisRouteImport } from './routes/_authenticated/premium-emojis'
 import { Route as AuthenticatedPerfilRouteImport } from './routes/_authenticated/perfil'
 import { Route as AuthenticatedNotificacoesRouteImport } from './routes/_authenticated/notificacoes'
+import { Route as AuthenticatedMetaCallbackRouteImport } from './routes/_authenticated/meta-callback'
 import { Route as AuthenticatedMensagensRouteImport } from './routes/_authenticated/mensagens'
 import { Route as AuthenticatedMembrosRouteImport } from './routes/_authenticated/membros'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedAudiosRouteImport } from './routes/_authenticated/audios'
 import { Route as AuthenticatedTrackeamentoIndexRouteImport } from './routes/_authenticated/trackeamento.index'
 import { Route as AuthenticatedRoomsIndexRouteImport } from './routes/_authenticated/rooms.index'
+import { Route as AuthenticatedTrackeamentoWebhooksRouteImport } from './routes/_authenticated/trackeamento.webhooks'
 import { Route as AuthenticatedTrackeamentoUtmsRouteImport } from './routes/_authenticated/trackeamento.utms'
 import { Route as AuthenticatedTrackeamentoPostbacksRouteImport } from './routes/_authenticated/trackeamento.postbacks'
 import { Route as AuthenticatedTrackeamentoPixelsRouteImport } from './routes/_authenticated/trackeamento.pixels'
@@ -59,7 +61,9 @@ import { Route as ApiPublicCronDispatchFollowupsRouteImport } from './routes/api
 import { Route as ApiPublicCronCheckTelegramWebhooksRouteImport } from './routes/api/public/cron/check-telegram-webhooks'
 import { Route as ApiPublicCronCheckPremiumAccountsRouteImport } from './routes/api/public/cron/check-premium-accounts'
 import { Route as AuthenticatedRoomsRoomIdEditRouteImport } from './routes/_authenticated/rooms.$roomId.edit'
+import { Route as ApiPublicWebhookPlatformPixelIdRouteImport } from './routes/api/public/webhook/$platform.$pixelId'
 import { Route as ApiPublicTrackScriptJsRouteImport } from './routes/api/public/track/script.js'
+import { Route as ApiPublicTrackRedirectPixelIdRouteImport } from './routes/api/public/track/redirect.$pixelId'
 import { Route as ApiPublicTrackPostbackPixelIdRouteImport } from './routes/api/public/track/postback.$pixelId'
 import { Route as ApiPublicTrackDrPixelIdRouteImport } from './routes/api/public/track/dr.$pixelId'
 import { Route as ApiPublicTelegramWebhookAccountIdRouteImport } from './routes/api/public/telegram/webhook.$accountId'
@@ -122,6 +126,12 @@ const AuthenticatedNotificacoesRoute =
     path: '/notificacoes',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedMetaCallbackRoute =
+  AuthenticatedMetaCallbackRouteImport.update({
+    id: '/meta-callback',
+    path: '/meta-callback',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedMensagensRoute = AuthenticatedMensagensRouteImport.update({
   id: '/mensagens',
   path: '/mensagens',
@@ -153,6 +163,12 @@ const AuthenticatedRoomsIndexRoute = AuthenticatedRoomsIndexRouteImport.update({
   path: '/rooms/',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedTrackeamentoWebhooksRoute =
+  AuthenticatedTrackeamentoWebhooksRouteImport.update({
+    id: '/trackeamento/webhooks',
+    path: '/trackeamento/webhooks',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedTrackeamentoUtmsRoute =
   AuthenticatedTrackeamentoUtmsRouteImport.update({
     id: '/trackeamento/utms',
@@ -345,11 +361,23 @@ const AuthenticatedRoomsRoomIdEditRoute =
     path: '/rooms/$roomId/edit',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const ApiPublicWebhookPlatformPixelIdRoute =
+  ApiPublicWebhookPlatformPixelIdRouteImport.update({
+    id: '/api/public/webhook/$platform/$pixelId',
+    path: '/api/public/webhook/$platform/$pixelId',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicTrackScriptJsRoute = ApiPublicTrackScriptJsRouteImport.update({
   id: '/api/public/track/script/js',
   path: '/api/public/track/script/js',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicTrackRedirectPixelIdRoute =
+  ApiPublicTrackRedirectPixelIdRouteImport.update({
+    id: '/api/public/track/redirect/$pixelId',
+    path: '/api/public/track/redirect/$pixelId',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicTrackPostbackPixelIdRoute =
   ApiPublicTrackPostbackPixelIdRouteImport.update({
     id: '/api/public/track/postback/$pixelId',
@@ -382,6 +410,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/membros': typeof AuthenticatedMembrosRoute
   '/mensagens': typeof AuthenticatedMensagensRoute
+  '/meta-callback': typeof AuthenticatedMetaCallbackRoute
   '/notificacoes': typeof AuthenticatedNotificacoesRoute
   '/perfil': typeof AuthenticatedPerfilRoute
   '/premium-emojis': typeof AuthenticatedPremiumEmojisRoute
@@ -405,6 +434,7 @@ export interface FileRoutesByFullPath {
   '/trackeamento/pixels': typeof AuthenticatedTrackeamentoPixelsRoute
   '/trackeamento/postbacks': typeof AuthenticatedTrackeamentoPostbacksRoute
   '/trackeamento/utms': typeof AuthenticatedTrackeamentoUtmsRoute
+  '/trackeamento/webhooks': typeof AuthenticatedTrackeamentoWebhooksRoute
   '/rooms/': typeof AuthenticatedRoomsIndexRoute
   '/trackeamento/': typeof AuthenticatedTrackeamentoIndexRoute
   '/rooms/$roomId/edit': typeof AuthenticatedRoomsRoomIdEditRoute
@@ -427,7 +457,9 @@ export interface FileRoutesByFullPath {
   '/api/public/telegram/webhook/$accountId': typeof ApiPublicTelegramWebhookAccountIdRoute
   '/api/public/track/dr/$pixelId': typeof ApiPublicTrackDrPixelIdRoute
   '/api/public/track/postback/$pixelId': typeof ApiPublicTrackPostbackPixelIdRoute
+  '/api/public/track/redirect/$pixelId': typeof ApiPublicTrackRedirectPixelIdRoute
   '/api/public/track/script/js': typeof ApiPublicTrackScriptJsRoute
+  '/api/public/webhook/$platform/$pixelId': typeof ApiPublicWebhookPlatformPixelIdRoute
   '/api/public/track/g/$clickId/$offerSlug': typeof ApiPublicTrackGClickIdOfferSlugRoute
 }
 export interface FileRoutesByTo {
@@ -438,6 +470,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/membros': typeof AuthenticatedMembrosRoute
   '/mensagens': typeof AuthenticatedMensagensRoute
+  '/meta-callback': typeof AuthenticatedMetaCallbackRoute
   '/notificacoes': typeof AuthenticatedNotificacoesRoute
   '/perfil': typeof AuthenticatedPerfilRoute
   '/premium-emojis': typeof AuthenticatedPremiumEmojisRoute
@@ -461,6 +494,7 @@ export interface FileRoutesByTo {
   '/trackeamento/pixels': typeof AuthenticatedTrackeamentoPixelsRoute
   '/trackeamento/postbacks': typeof AuthenticatedTrackeamentoPostbacksRoute
   '/trackeamento/utms': typeof AuthenticatedTrackeamentoUtmsRoute
+  '/trackeamento/webhooks': typeof AuthenticatedTrackeamentoWebhooksRoute
   '/rooms': typeof AuthenticatedRoomsIndexRoute
   '/trackeamento': typeof AuthenticatedTrackeamentoIndexRoute
   '/rooms/$roomId/edit': typeof AuthenticatedRoomsRoomIdEditRoute
@@ -483,7 +517,9 @@ export interface FileRoutesByTo {
   '/api/public/telegram/webhook/$accountId': typeof ApiPublicTelegramWebhookAccountIdRoute
   '/api/public/track/dr/$pixelId': typeof ApiPublicTrackDrPixelIdRoute
   '/api/public/track/postback/$pixelId': typeof ApiPublicTrackPostbackPixelIdRoute
+  '/api/public/track/redirect/$pixelId': typeof ApiPublicTrackRedirectPixelIdRoute
   '/api/public/track/script/js': typeof ApiPublicTrackScriptJsRoute
+  '/api/public/webhook/$platform/$pixelId': typeof ApiPublicWebhookPlatformPixelIdRoute
   '/api/public/track/g/$clickId/$offerSlug': typeof ApiPublicTrackGClickIdOfferSlugRoute
 }
 export interface FileRoutesById {
@@ -496,6 +532,7 @@ export interface FileRoutesById {
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/membros': typeof AuthenticatedMembrosRoute
   '/_authenticated/mensagens': typeof AuthenticatedMensagensRoute
+  '/_authenticated/meta-callback': typeof AuthenticatedMetaCallbackRoute
   '/_authenticated/notificacoes': typeof AuthenticatedNotificacoesRoute
   '/_authenticated/perfil': typeof AuthenticatedPerfilRoute
   '/_authenticated/premium-emojis': typeof AuthenticatedPremiumEmojisRoute
@@ -519,6 +556,7 @@ export interface FileRoutesById {
   '/_authenticated/trackeamento/pixels': typeof AuthenticatedTrackeamentoPixelsRoute
   '/_authenticated/trackeamento/postbacks': typeof AuthenticatedTrackeamentoPostbacksRoute
   '/_authenticated/trackeamento/utms': typeof AuthenticatedTrackeamentoUtmsRoute
+  '/_authenticated/trackeamento/webhooks': typeof AuthenticatedTrackeamentoWebhooksRoute
   '/_authenticated/rooms/': typeof AuthenticatedRoomsIndexRoute
   '/_authenticated/trackeamento/': typeof AuthenticatedTrackeamentoIndexRoute
   '/_authenticated/rooms/$roomId/edit': typeof AuthenticatedRoomsRoomIdEditRoute
@@ -541,7 +579,9 @@ export interface FileRoutesById {
   '/api/public/telegram/webhook/$accountId': typeof ApiPublicTelegramWebhookAccountIdRoute
   '/api/public/track/dr/$pixelId': typeof ApiPublicTrackDrPixelIdRoute
   '/api/public/track/postback/$pixelId': typeof ApiPublicTrackPostbackPixelIdRoute
+  '/api/public/track/redirect/$pixelId': typeof ApiPublicTrackRedirectPixelIdRoute
   '/api/public/track/script/js': typeof ApiPublicTrackScriptJsRoute
+  '/api/public/webhook/$platform/$pixelId': typeof ApiPublicWebhookPlatformPixelIdRoute
   '/api/public/track/g/$clickId/$offerSlug': typeof ApiPublicTrackGClickIdOfferSlugRoute
 }
 export interface FileRouteTypes {
@@ -554,6 +594,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/membros'
     | '/mensagens'
+    | '/meta-callback'
     | '/notificacoes'
     | '/perfil'
     | '/premium-emojis'
@@ -577,6 +618,7 @@ export interface FileRouteTypes {
     | '/trackeamento/pixels'
     | '/trackeamento/postbacks'
     | '/trackeamento/utms'
+    | '/trackeamento/webhooks'
     | '/rooms/'
     | '/trackeamento/'
     | '/rooms/$roomId/edit'
@@ -599,7 +641,9 @@ export interface FileRouteTypes {
     | '/api/public/telegram/webhook/$accountId'
     | '/api/public/track/dr/$pixelId'
     | '/api/public/track/postback/$pixelId'
+    | '/api/public/track/redirect/$pixelId'
     | '/api/public/track/script/js'
+    | '/api/public/webhook/$platform/$pixelId'
     | '/api/public/track/g/$clickId/$offerSlug'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -610,6 +654,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/membros'
     | '/mensagens'
+    | '/meta-callback'
     | '/notificacoes'
     | '/perfil'
     | '/premium-emojis'
@@ -633,6 +678,7 @@ export interface FileRouteTypes {
     | '/trackeamento/pixels'
     | '/trackeamento/postbacks'
     | '/trackeamento/utms'
+    | '/trackeamento/webhooks'
     | '/rooms'
     | '/trackeamento'
     | '/rooms/$roomId/edit'
@@ -655,7 +701,9 @@ export interface FileRouteTypes {
     | '/api/public/telegram/webhook/$accountId'
     | '/api/public/track/dr/$pixelId'
     | '/api/public/track/postback/$pixelId'
+    | '/api/public/track/redirect/$pixelId'
     | '/api/public/track/script/js'
+    | '/api/public/webhook/$platform/$pixelId'
     | '/api/public/track/g/$clickId/$offerSlug'
   id:
     | '__root__'
@@ -667,6 +715,7 @@ export interface FileRouteTypes {
     | '/_authenticated/dashboard'
     | '/_authenticated/membros'
     | '/_authenticated/mensagens'
+    | '/_authenticated/meta-callback'
     | '/_authenticated/notificacoes'
     | '/_authenticated/perfil'
     | '/_authenticated/premium-emojis'
@@ -690,6 +739,7 @@ export interface FileRouteTypes {
     | '/_authenticated/trackeamento/pixels'
     | '/_authenticated/trackeamento/postbacks'
     | '/_authenticated/trackeamento/utms'
+    | '/_authenticated/trackeamento/webhooks'
     | '/_authenticated/rooms/'
     | '/_authenticated/trackeamento/'
     | '/_authenticated/rooms/$roomId/edit'
@@ -712,7 +762,9 @@ export interface FileRouteTypes {
     | '/api/public/telegram/webhook/$accountId'
     | '/api/public/track/dr/$pixelId'
     | '/api/public/track/postback/$pixelId'
+    | '/api/public/track/redirect/$pixelId'
     | '/api/public/track/script/js'
+    | '/api/public/webhook/$platform/$pixelId'
     | '/api/public/track/g/$clickId/$offerSlug'
   fileRoutesById: FileRoutesById
 }
@@ -740,7 +792,9 @@ export interface RootRouteChildren {
   ApiPublicTelegramWebhookAccountIdRoute: typeof ApiPublicTelegramWebhookAccountIdRoute
   ApiPublicTrackDrPixelIdRoute: typeof ApiPublicTrackDrPixelIdRoute
   ApiPublicTrackPostbackPixelIdRoute: typeof ApiPublicTrackPostbackPixelIdRoute
+  ApiPublicTrackRedirectPixelIdRoute: typeof ApiPublicTrackRedirectPixelIdRoute
   ApiPublicTrackScriptJsRoute: typeof ApiPublicTrackScriptJsRoute
+  ApiPublicWebhookPlatformPixelIdRoute: typeof ApiPublicWebhookPlatformPixelIdRoute
   ApiPublicTrackGClickIdOfferSlugRoute: typeof ApiPublicTrackGClickIdOfferSlugRoute
 }
 
@@ -823,6 +877,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedNotificacoesRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/meta-callback': {
+      id: '/_authenticated/meta-callback'
+      path: '/meta-callback'
+      fullPath: '/meta-callback'
+      preLoaderRoute: typeof AuthenticatedMetaCallbackRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/mensagens': {
       id: '/_authenticated/mensagens'
       path: '/mensagens'
@@ -863,6 +924,13 @@ declare module '@tanstack/react-router' {
       path: '/rooms'
       fullPath: '/rooms/'
       preLoaderRoute: typeof AuthenticatedRoomsIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/trackeamento/webhooks': {
+      id: '/_authenticated/trackeamento/webhooks'
+      path: '/trackeamento/webhooks'
+      fullPath: '/trackeamento/webhooks'
+      preLoaderRoute: typeof AuthenticatedTrackeamentoWebhooksRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/trackeamento/utms': {
@@ -1096,11 +1164,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedRoomsRoomIdEditRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/api/public/webhook/$platform/$pixelId': {
+      id: '/api/public/webhook/$platform/$pixelId'
+      path: '/api/public/webhook/$platform/$pixelId'
+      fullPath: '/api/public/webhook/$platform/$pixelId'
+      preLoaderRoute: typeof ApiPublicWebhookPlatformPixelIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/track/script/js': {
       id: '/api/public/track/script/js'
       path: '/api/public/track/script/js'
       fullPath: '/api/public/track/script/js'
       preLoaderRoute: typeof ApiPublicTrackScriptJsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/track/redirect/$pixelId': {
+      id: '/api/public/track/redirect/$pixelId'
+      path: '/api/public/track/redirect/$pixelId'
+      fullPath: '/api/public/track/redirect/$pixelId'
+      preLoaderRoute: typeof ApiPublicTrackRedirectPixelIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/track/postback/$pixelId': {
@@ -1139,6 +1221,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedMembrosRoute: typeof AuthenticatedMembrosRoute
   AuthenticatedMensagensRoute: typeof AuthenticatedMensagensRoute
+  AuthenticatedMetaCallbackRoute: typeof AuthenticatedMetaCallbackRoute
   AuthenticatedNotificacoesRoute: typeof AuthenticatedNotificacoesRoute
   AuthenticatedPerfilRoute: typeof AuthenticatedPerfilRoute
   AuthenticatedPremiumEmojisRoute: typeof AuthenticatedPremiumEmojisRoute
@@ -1162,6 +1245,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedTrackeamentoPixelsRoute: typeof AuthenticatedTrackeamentoPixelsRoute
   AuthenticatedTrackeamentoPostbacksRoute: typeof AuthenticatedTrackeamentoPostbacksRoute
   AuthenticatedTrackeamentoUtmsRoute: typeof AuthenticatedTrackeamentoUtmsRoute
+  AuthenticatedTrackeamentoWebhooksRoute: typeof AuthenticatedTrackeamentoWebhooksRoute
   AuthenticatedRoomsIndexRoute: typeof AuthenticatedRoomsIndexRoute
   AuthenticatedTrackeamentoIndexRoute: typeof AuthenticatedTrackeamentoIndexRoute
   AuthenticatedRoomsRoomIdEditRoute: typeof AuthenticatedRoomsRoomIdEditRoute
@@ -1172,6 +1256,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedMembrosRoute: AuthenticatedMembrosRoute,
   AuthenticatedMensagensRoute: AuthenticatedMensagensRoute,
+  AuthenticatedMetaCallbackRoute: AuthenticatedMetaCallbackRoute,
   AuthenticatedNotificacoesRoute: AuthenticatedNotificacoesRoute,
   AuthenticatedPerfilRoute: AuthenticatedPerfilRoute,
   AuthenticatedPremiumEmojisRoute: AuthenticatedPremiumEmojisRoute,
@@ -1201,6 +1286,8 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedTrackeamentoPostbacksRoute:
     AuthenticatedTrackeamentoPostbacksRoute,
   AuthenticatedTrackeamentoUtmsRoute: AuthenticatedTrackeamentoUtmsRoute,
+  AuthenticatedTrackeamentoWebhooksRoute:
+    AuthenticatedTrackeamentoWebhooksRoute,
   AuthenticatedRoomsIndexRoute: AuthenticatedRoomsIndexRoute,
   AuthenticatedTrackeamentoIndexRoute: AuthenticatedTrackeamentoIndexRoute,
   AuthenticatedRoomsRoomIdEditRoute: AuthenticatedRoomsRoomIdEditRoute,
@@ -1239,19 +1326,11 @@ const rootRouteChildren: RootRouteChildren = {
     ApiPublicTelegramWebhookAccountIdRoute,
   ApiPublicTrackDrPixelIdRoute: ApiPublicTrackDrPixelIdRoute,
   ApiPublicTrackPostbackPixelIdRoute: ApiPublicTrackPostbackPixelIdRoute,
+  ApiPublicTrackRedirectPixelIdRoute: ApiPublicTrackRedirectPixelIdRoute,
   ApiPublicTrackScriptJsRoute: ApiPublicTrackScriptJsRoute,
+  ApiPublicWebhookPlatformPixelIdRoute: ApiPublicWebhookPlatformPixelIdRoute,
   ApiPublicTrackGClickIdOfferSlugRoute: ApiPublicTrackGClickIdOfferSlugRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
