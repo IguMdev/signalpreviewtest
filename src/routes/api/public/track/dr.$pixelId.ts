@@ -53,7 +53,7 @@ export const Route = createFileRoute("/api/public/track/dr/$pixelId")({
 
         const { data: pixel } = await supabaseAdmin
           .from("tracking_pixels" as never)
-          .select("id, user_id, is_active, tracking_mode")
+          .select("id, user_id, is_active, tracking_mode, dr_config")
           .eq("id", params.pixelId)
           .maybeSingle();
         if (!pixel) return jsonCors({ ok: false, error: "pixel_not_found" }, 404);
@@ -61,6 +61,11 @@ export const Route = createFileRoute("/api/public/track/dr/$pixelId")({
         if (!p.is_active) return jsonCors({ ok: false, error: "pixel_inactive" }, 403);
         if (p.tracking_mode !== "direct_response") {
           return jsonCors({ ok: false, error: "pixel_not_direct_response" }, 400);
+        }
+
+        // Se for um funil de WhatsApp, o clique no botão (checkout no script) é o Lead real
+        if (parsed.stage === "checkout" && p.dr_config?.is_whatsapp) {
+          parsed.stage = "lead";
         }
 
         // Resolve / create click_id
