@@ -612,9 +612,9 @@ function EditPixelForm({ pixel, onClose, metaAcc }: { pixel: any; onClose: () =>
             <div className="space-y-2">
               <Label>Código do Pixel</Label>
               <div className="flex gap-2">
-                <Input readOnly value={`<script> window.pixelId = "${pixel.id}"; var a = document.createElement("script"); a.setAttribute("async", ""); a.setAttribute("defer", ""); a.setAttribute("src", "${window.location.origin}/api/public/track/script.js"); document.head.appendChild(a); </script>`} className="font-mono text-xs text-muted-foreground bg-muted/30" />
+                <Input readOnly value={`<script> window.pixelId = "${pixel.id}"; var a = document.createElement("script"); a.setAttribute("async", ""); a.setAttribute("defer", ""); a.setAttribute("src", "${window.location.origin}/api/public/track/script/js"); document.head.appendChild(a); </script>`} className="font-mono text-xs text-muted-foreground bg-muted/30" />
                 <Button variant="outline" size="icon" onClick={() => {
-                  navigator.clipboard.writeText(`<script> window.pixelId = "${pixel.id}"; var a = document.createElement("script"); a.setAttribute("async", ""); a.setAttribute("defer", ""); a.setAttribute("src", "${window.location.origin}/api/public/track/script.js"); document.head.appendChild(a); </script>`);
+                  navigator.clipboard.writeText(`<script> window.pixelId = "${pixel.id}"; var a = document.createElement("script"); a.setAttribute("async", ""); a.setAttribute("defer", ""); a.setAttribute("src", "${window.location.origin}/api/public/track/script/js"); document.head.appendChild(a); </script>`);
                   toast.success("Código copiado!");
                 }}><Code2 className="size-4" /></Button>
               </div>
