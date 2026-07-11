@@ -8,6 +8,7 @@ import {
   listPixels, createPixel, deletePixel, updatePixel,
   VERTICALS, EVENT_OPTIONS, TRACKING_MODES, MODE_PRESETS,
 } from "@/lib/tracking.functions";
+import { getConnectedMetaAccount, getMetaAuthUrl, disconnectMetaAccount, listAdAccounts } from "@/lib/meta-ads.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -39,8 +40,12 @@ function PixelsPage() {
   const listFn = useServerFn(listPixels);
   const createFn = useServerFn(createPixel);
   const delFn = useServerFn(deletePixel);
+  const getMetaAccFn = useServerFn(getConnectedMetaAccount);
+  const getAuthUrlFn = useServerFn(getMetaAuthUrl);
+  const disconnectFn = useServerFn(disconnectMetaAccount);
 
   const pixels = useQuery({ queryKey: ["tracking-pixels"], queryFn: () => listFn() });
+  const metaAcc = useQuery({ queryKey: ["meta-connected-acc"], queryFn: () => getMetaAccFn() });
 
   const accounts = useQuery({
     queryKey: ["telegram-accounts-mini"],
@@ -74,6 +79,7 @@ function PixelsPage() {
           <DialogContent className="max-w-2xl">
             <NewPixelWizard
               accounts={accounts.data ?? []}
+              metaAcc={metaAcc.data}
               onDone={() => {
                 setOpen(false);
                 qc.invalidateQueries({ queryKey: ["tracking-pixels"] });
@@ -82,6 +88,19 @@ function PixelsPage() {
           </DialogContent>
         </Dialog>
       </div>
+
+      <MetaConnectionCard 
+        metaAcc={metaAcc.data} 
+        onConnect={async () => {
+          const res = await getAuthUrlFn({ data: { redirectUri: window.location.origin + "/meta-callback" } });
+          window.location.href = res.url;
+        }}
+        onDisconnect={async () => {
+          await disconnectFn();
+          qc.invalidateQueries({ queryKey: ["meta-connected-acc"] });
+          toast.success("Conta desconectada.");
+        }}
+      />
 
       {pixels.isLoading ? (
         <p className="text-sm text-muted-foreground">Carregando...</p>
@@ -126,15 +145,54 @@ function PixelsPage() {
         </Card>
       )}
 
-      <EditPixelDialog pixel={editing} onClose={() => setEditing(null)} />
+      <EditPixelDialog pixel={editing} onClose={() => setEditing(null)} metaAcc={metaAcc.data} />
     </div>
   );
 }
 
+function MetaConnectionCard({ metaAcc, onConnect, onDisconnect }: { metaAcc: any, onConnect: () => void, onDisconnect: () => void }) {
+  if (metaAcc) {
+    return (
+      <Card className="border-emerald-500/20 bg-emerald-500/5">
+        <CardContent className="flex items-center justify-between p-4">
+          <div className="flex items-center gap-3">
+            <div className="flex size-10 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-500">
+              <Globe className="size-5" />
+            </div>
+            <div>
+              <p className="font-semibold text-emerald-500">Facebook Conectado</p>
+              <p className="text-sm text-muted-foreground">Perfil: {metaAcc.fb_name} (ID: {metaAcc.fb_user_id})</p>
+            </div>
+          </div>
+          <Button variant="outline" size="sm" onClick={onDisconnect}>Desconectar</Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card className="border-blue-500/20 bg-blue-500/5">
+      <CardContent className="flex flex-col sm:flex-row items-center justify-between p-4 gap-4">
+        <div className="flex items-center gap-3">
+          <div className="flex size-10 items-center justify-center rounded-full bg-blue-500/20 text-blue-500">
+            <Globe className="size-5" />
+          </div>
+          <div>
+            <p className="font-semibold text-blue-500">Dashboard DR Completo (Requer Facebook)</p>
+            <p className="text-sm text-muted-foreground">Conecte sua conta para cruzar as vendas com seus custos de campanha, ROI e CPA reais no painel de Métricas.</p>
+          </div>
+        </div>
+        <Button onClick={onConnect} className="bg-[#1877F2] text-white hover:bg-[#1877F2]/90 whitespace-nowrap">Conectar com Facebook</Button>
+      </CardContent>
+    </Card>
+  );
+}
+
 function NewPixelWizard({
-  accounts, onDone,
-}: { accounts: any[]; onDone: () => void }) {
+  accounts, onDone, metaAcc
+}: { accounts: any[]; onDone: () => void; metaAcc?: any }) {
   const createFn = useServerFn(createPixel);
+  const listAdsFn = useServerFn(listAdAccounts);
   const [step, setStep] = useState<1 | 2>(1);
   const [trackingMode, setTrackingMode] = useState<"telegram" | "direct_response">("telegram");
   const [name, setName] = useState("");
@@ -144,6 +202,13 @@ function NewPixelWizard({
   const [vertical, setVertical] = useState<(typeof VERTICALS)[number]>("bet");
   const [accountId, setAccountId] = useState<string>("");
   const [salesPageUrl, setSalesPageUrl] = useState<string>("");
+  const [metaAdAccountId, setMetaAdAccountId] = useState<string>("");
+
+  const adAccounts = useQuery({ 
+    queryKey: ["meta-ad-accounts"], 
+    queryFn: () => listAdsFn(),
+    enabled: !!metaAcc
+  });
 
   const create = useMutation({
     mutationFn: () => createFn({ data: {
@@ -160,6 +225,7 @@ function NewPixelWizard({
       meta_pixel_id: metaPixelId || null,
       meta_access_token: accessToken || null,
       meta_test_event_code: testEventCode || null,
+      meta_ad_account_id: trackingMode === "direct_response" ? (metaAdAccountId || null) : null,
     } }),
     onSuccess: () => { toast.success("Pixel criado"); onDone(); },
     onError: (e: Error) => toast.error(e.message),
@@ -177,7 +243,7 @@ function NewPixelWizard({
 
       {step === 1 ? (
         <TooltipProvider delayDuration={150}>
-          <div className="space-y-5">
+          <div className="space-y-5 max-h-[70vh] overflow-y-auto pr-2 -mr-2">
             <div className="space-y-2">
               <Label>Modo de trackeamento</Label>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -269,10 +335,30 @@ function NewPixelWizard({
                   </Select>
                 </div>
               ) : (
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-1"><Globe className="size-3.5" /> URL da página de vendas <span className="text-muted-foreground text-xs">(opcional)</span></Label>
-                  <Input value={salesPageUrl} onChange={(e) => setSalesPageUrl(e.target.value)} placeholder="https://seusite.com/oferta" />
-                </div>
+                <>
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-1"><Globe className="size-3.5" /> URL da página de vendas <span className="text-muted-foreground text-xs">(opcional)</span></Label>
+                    <Input value={salesPageUrl} onChange={(e) => setSalesPageUrl(e.target.value)} placeholder="https://seusite.com/oferta" />
+                  </div>
+                  {metaAcc && (
+                    <div className="space-y-2 col-span-1 sm:col-span-2">
+                      <Label>Conta de Anúncios Meta <span className="text-muted-foreground text-xs">(Para o Dashboard DR)</span></Label>
+                      <Select value={metaAdAccountId || "none"} onValueChange={(v) => setMetaAdAccountId(v === "none" ? "" : v)}>
+                        <SelectTrigger>
+                          <SelectValue placeholder={adAccounts.isLoading ? "Carregando..." : "Selecione a Conta"} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Nenhuma</SelectItem>
+                          {adAccounts.data?.map((acc: any) => (
+                            <SelectItem key={acc.id} value={acc.id}>
+                              {acc.name} (act_{acc.id}) - {acc.business}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                </>
               )}
             </div>
 
@@ -286,7 +372,7 @@ function NewPixelWizard({
         </TooltipProvider>
       ) : (
         <TooltipProvider delayDuration={150}>
-          <div className="space-y-5">
+          <div className="space-y-5 max-h-[70vh] overflow-y-auto pr-2 -mr-2">
             <div className="rounded-xl border bg-muted/30 p-4 space-y-3">
               <InstructionRow
                 index={1}
@@ -410,20 +496,21 @@ function InstructionRow({
   );
 }
 
-function EditPixelDialog({ pixel, onClose }: { pixel: any | null; onClose: () => void }) {
+function EditPixelDialog({ pixel, onClose, metaAcc }: { pixel: any | null; onClose: () => void; metaAcc?: any }) {
   return (
     <Dialog open={!!pixel} onOpenChange={(o) => { if (!o) onClose(); }}>
       <DialogContent className="max-w-2xl">
         <DialogHeader><DialogTitle>Editar pixel</DialogTitle></DialogHeader>
-        {pixel && <EditPixelForm key={pixel.id} pixel={pixel} onClose={onClose} />}
+        {pixel && <EditPixelForm key={pixel.id} pixel={pixel} onClose={onClose} metaAcc={metaAcc} />}
       </DialogContent>
     </Dialog>
   );
 }
 
-function EditPixelForm({ pixel, onClose }: { pixel: any; onClose: () => void }) {
+function EditPixelForm({ pixel, onClose, metaAcc }: { pixel: any; onClose: () => void; metaAcc?: any }) {
   const qc = useQueryClient();
   const updFn = useServerFn(updatePixel);
+  const listAdsFn = useServerFn(listAdAccounts);
   const [name, setName] = useState<string>(pixel.name);
   const [vertical, setVertical] = useState<string>(pixel.vertical);
   const [isActive, setIsActive] = useState<boolean>(pixel.is_active);
@@ -441,6 +528,22 @@ function EditPixelForm({ pixel, onClose }: { pixel: any; onClose: () => void }) 
   const [metaPixelId, setMetaPixelId] = useState<string>(pixel.meta_pixel_id ?? "");
   const [accessToken, setAccessToken] = useState<string>(pixel.meta_access_token ?? "");
   const [testEventCode, setTestEventCode] = useState<string>(pixel.meta_test_event_code ?? "");
+  const [metaAdAccountId, setMetaAdAccountId] = useState<string>(pixel.meta_ad_account_id ?? "");
+  const adAccounts = useQuery({ 
+    queryKey: ["meta-ad-accounts"], 
+    queryFn: () => listAdsFn(),
+    enabled: !!metaAcc
+  });
+  const [drConfig, setDrConfig] = useState<any>(pixel.dr_config ?? {
+    enable_lead: false,
+    enable_add_to_cart: false,
+    enable_initiate_checkout: true,
+    initiate_checkout_url_contains: "",
+    purchase_approval_only: true,
+    purchase_value_mode: "Valor da venda",
+    purchase_product: "Qualquer",
+    ipv6_enabled: true
+  });
 
   const save = useMutation({
     mutationFn: () => updFn({ data: {
@@ -455,6 +558,8 @@ function EditPixelForm({ pixel, onClose }: { pixel: any; onClose: () => void }) 
       meta_pixel_id: metaPixelId || null,
       meta_access_token: accessToken || null,
       meta_test_event_code: testEventCode || null,
+      meta_ad_account_id: trackingMode === "direct_response" ? (metaAdAccountId || null) : null,
+      dr_config: drConfig,
     } }),
     onSuccess: () => {
       toast.success("Salvo");
@@ -465,7 +570,7 @@ function EditPixelForm({ pixel, onClose }: { pixel: any; onClose: () => void }) 
   });
   return (
     <>
-      <div className="space-y-4">
+      <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-2 -mr-2">
         <div className="space-y-2"><Label>Nome</Label><Input value={name} onChange={(e) => setName(e.target.value)} /></div>
         <div className="space-y-2">
           <Label>Modo de trackeamento</Label>
@@ -479,9 +584,121 @@ function EditPixelForm({ pixel, onClose }: { pixel: any; onClose: () => void }) 
           <p className="text-xs text-muted-foreground">{MODE_PRESETS[trackingMode].description}</p>
         </div>
         {trackingMode === "direct_response" && (
-          <div className="space-y-2">
-            <Label>URL da página de vendas</Label>
-            <Input value={salesPageUrl} onChange={(e) => setSalesPageUrl(e.target.value)} placeholder="https://seusite.com/oferta" />
+          <div className="space-y-6">
+            <div className="space-y-2">
+              <Label>URL da página de vendas</Label>
+              <Input value={salesPageUrl} onChange={(e) => setSalesPageUrl(e.target.value)} placeholder="https://seusite.com/oferta" />
+            </div>
+
+            {metaAcc && (
+              <div className="space-y-2">
+                <Label>Conta de Anúncios Meta <span className="text-muted-foreground text-xs">(Para o Dashboard DR)</span></Label>
+                <Select value={metaAdAccountId || "none"} onValueChange={(v) => setMetaAdAccountId(v === "none" ? "" : v)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder={adAccounts.isLoading ? "Carregando..." : "Selecione a Conta"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Nenhuma</SelectItem>
+                    {adAccounts.data?.map((acc: any) => (
+                      <SelectItem key={acc.id} value={acc.id}>
+                        {acc.name} (act_{acc.id}) - {acc.business}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <Label>Código do Pixel</Label>
+              <div className="flex gap-2">
+                <Input readOnly value={`<script> window.pixelId = "${pixel.id}"; var a = document.createElement("script"); a.setAttribute("async", ""); a.setAttribute("defer", ""); a.setAttribute("src", "${window.location.origin}/api/public/track/script.js"); document.head.appendChild(a); </script>`} className="font-mono text-xs text-muted-foreground bg-muted/30" />
+                <Button variant="outline" size="icon" onClick={() => {
+                  navigator.clipboard.writeText(`<script> window.pixelId = "${pixel.id}"; var a = document.createElement("script"); a.setAttribute("async", ""); a.setAttribute("defer", ""); a.setAttribute("src", "${window.location.origin}/api/public/track/script.js"); document.head.appendChild(a); </script>`);
+                  toast.success("Código copiado!");
+                }}><Code2 className="size-4" /></Button>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between rounded-lg border p-4 bg-emerald-500/5 border-emerald-500/20">
+              <div className="space-y-0.5 pr-4">
+                <div className="flex items-center gap-2">
+                  <Label className="text-base text-emerald-600 font-semibold">Pixel para WhatsApp</Label>
+                  <TooltipProvider delayDuration={150}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <HelpCircle className="size-4 text-emerald-500 cursor-help" />
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-sm space-y-2 p-3">
+                        <p className="font-semibold text-sm">Rastreamento de Grupos e Privado</p>
+                        <p className="text-xs">Para rastrear <strong>Grupos</strong>: coloque o Script na sua página e adicione o código <code className="bg-muted px-1 rounded">window.Telesignal.track('Lead')</code> no botão que leva para o grupo.</p>
+                        <p className="text-xs">Para <strong>Privado (1x1)</strong>: você pode usar a mesma lógica, disparando o evento quando o cliente clica para falar com o atendente. O Telesignal registrará o clique como conversão no Meta.</p>
+                        <p className="text-xs mt-2 text-emerald-500 font-semibold">Obs: Para saber quem saiu do grupo, o rastreamento via página (pixel) não consegue descobrir, pois acontece fora do site. Apenas bots de Telegram ou APIs oficiais do WhatsApp identificam retenção.</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+                <p className="text-xs text-muted-foreground">Marque se este funil direciona leads para o WhatsApp.</p>
+              </div>
+              <Switch checked={drConfig.is_whatsapp || false} onCheckedChange={(v) => setDrConfig({...drConfig, is_whatsapp: v})} className="data-[state=checked]:bg-emerald-500" />
+            </div>
+
+            <div className="space-y-3 pt-2 border-t">
+              <p className="text-sm font-semibold">Regras Avançadas</p>
+              
+              <div className="space-y-2 bg-muted/20 p-3 rounded-lg border">
+                <Label className="text-xs">Regra de Lead (Envio de Lead)</Label>
+                <Select value={drConfig.enable_lead ? "true" : "false"} onValueChange={(v) => setDrConfig({...drConfig, enable_lead: v === "true"})}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent><SelectItem value="true">Habilitado</SelectItem><SelectItem value="false">Desabilitado</SelectItem></SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2 bg-muted/20 p-3 rounded-lg border">
+                <Label className="text-xs">Regra de Add To Cart</Label>
+                <Select value={drConfig.enable_add_to_cart ? "true" : "false"} onValueChange={(v) => setDrConfig({...drConfig, enable_add_to_cart: v === "true"})}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent><SelectItem value="true">Habilitado</SelectItem><SelectItem value="false">Desabilitado</SelectItem></SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-4 bg-muted/20 p-3 rounded-lg border">
+                <Label className="text-xs font-semibold">Regra de Initiate Checkout</Label>
+                <div className="space-y-2">
+                  <Label className="text-[10px]">Envio de Initiate Checkout</Label>
+                  <Select value={drConfig.enable_initiate_checkout ? "true" : "false"} onValueChange={(v) => setDrConfig({...drConfig, enable_initiate_checkout: v === "true"})}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent><SelectItem value="true">Habilitado</SelectItem><SelectItem value="false">Desabilitado</SelectItem></SelectContent>
+                  </Select>
+                </div>
+                {drConfig.enable_initiate_checkout && (
+                  <div className="space-y-2">
+                    <Label className="text-[10px]">Regra de Detecção / Marcar se o botão de compra contém a URL do checkout</Label>
+                    <Input placeholder="https://pay.cakto.com.br/" value={drConfig.initiate_checkout_url_contains} onChange={(e) => setDrConfig({...drConfig, initiate_checkout_url_contains: e.target.value})} />
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-4 bg-muted/20 p-3 rounded-lg border">
+                <Label className="text-xs font-semibold">Regra de Purchase</Label>
+                <div className="space-y-2">
+                  <Label className="text-[10px]">Configuração de envio</Label>
+                  <Select value={drConfig.purchase_approval_only ? "true" : "false"} onValueChange={(v) => setDrConfig({...drConfig, purchase_approval_only: v === "true"})}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent><SelectItem value="true">Apenas vendas aprovadas</SelectItem><SelectItem value="false">Todas as vendas</SelectItem></SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="space-y-2 bg-muted/20 p-3 rounded-lg border">
+                <Label className="text-xs">Envio de IP nos eventos</Label>
+                <Select value={drConfig.ipv6_enabled ? "true" : "false"} onValueChange={(v) => setDrConfig({...drConfig, ipv6_enabled: v === "true"})}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent><SelectItem value="true">Enviar IPv6 se houver. Enviar IPv4 se não houver IPv6</SelectItem><SelectItem value="false">Apenas IPv4</SelectItem></SelectContent>
+                </Select>
+              </div>
+
+            </div>
           </div>
         )}
         <div className="space-y-2">

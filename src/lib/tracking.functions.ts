@@ -37,6 +37,18 @@ export const EVENT_OPTIONS = [
   "InitiateCheckout", "AddPaymentInfo", "AddToCart", "Purchase", "StartTrial",
 ] as const;
 
+const drConfigSchema = z.object({
+  enable_lead: z.boolean().default(false),
+  enable_add_to_cart: z.boolean().default(false),
+  enable_initiate_checkout: z.boolean().default(true),
+  initiate_checkout_url_contains: z.string().default(""),
+  purchase_approval_only: z.boolean().default(true),
+  purchase_value_mode: z.string().default("Valor da venda"),
+  purchase_product: z.string().default("Qualquer"),
+  ipv6_enabled: z.boolean().default(true),
+  is_whatsapp: z.boolean().default(false).optional(),
+});
+
 const pixelSchema = z.object({
   name: z.string().min(1).max(120),
   vertical: z.enum(VERTICALS).default("outro"),
@@ -58,6 +70,7 @@ const pixelSchema = z.object({
   meta_pixel_id: z.string().trim().max(64).nullable().optional(),
   meta_access_token: z.string().trim().max(1024).nullable().optional(),
   meta_test_event_code: z.string().trim().max(64).nullable().optional(),
+  dr_config: drConfigSchema.default({}),
 });
 
 export const listPixels = createServerFn({ method: "GET" })
@@ -226,7 +239,7 @@ export const listRecentClicks = createServerFn({ method: "GET" })
     const { supabase } = context;
     const { data: rows, error } = await supabase
       .from("tracking_clicks" as never)
-      .select("click_id, created_at, utm_source, utm_medium, utm_campaign, utm_content, utm_term, fbclid, ttclid, gclid, ip, joined_at, clicked_offer_at, registered_at, deposited_at, tg_username, tg_user_id, sale_value, sale_currency")
+      .select("click_id, created_at, utm_source, utm_medium, utm_campaign, utm_content, utm_term, fbclid, ttclid, gclid, ip, joined_at, clicked_offer_at, registered_at, deposited_at, tg_username, tg_user_id, sale_value, sale_currency, viewed_at, lead_at, checkout_at, payment_info_at, purchased_at, abandoned_cart_at, chargeback_at, refunded_at")
       .eq("pixel_id", data.pixel_id)
       .order("created_at", { ascending: false })
       .limit(data.limit);
@@ -249,7 +262,7 @@ export const listClicksFiltered = createServerFn({ method: "POST" })
     const { supabase } = context;
     let q = supabase
       .from("tracking_clicks" as never)
-      .select("click_id, created_at, utm_source, utm_medium, utm_campaign, utm_content, utm_term, fbclid, ttclid, gclid, ip, joined_at, clicked_offer_at, registered_at, deposited_at, tg_username, tg_user_id, sale_value, sale_currency, external_user_id")
+      .select("click_id, created_at, utm_source, utm_medium, utm_campaign, utm_content, utm_term, fbclid, ttclid, gclid, ip, joined_at, clicked_offer_at, registered_at, deposited_at, tg_username, tg_user_id, sale_value, sale_currency, external_user_id, viewed_at, lead_at, checkout_at, payment_info_at, purchased_at, abandoned_cart_at, chargeback_at, refunded_at")
       .eq("pixel_id", data.pixel_id)
       .order("created_at", { ascending: false })
       .limit(data.limit);
@@ -283,7 +296,7 @@ export const getPixelStats = createServerFn({ method: "GET" })
     const from = new Date(Date.now() - data.days * 86400000).toISOString();
     const { data: rows, error } = await supabaseAdmin
       .from("tracking_clicks" as never)
-      .select("created_at, joined_at, clicked_offer_at, registered_at, deposited_at, viewed_at, lead_at, checkout_at, payment_info_at, purchased_at, sale_value")
+      .select("created_at, joined_at, clicked_offer_at, registered_at, deposited_at, viewed_at, lead_at, checkout_at, payment_info_at, purchased_at, abandoned_cart_at, chargeback_at, refunded_at, sale_value")
       .eq("pixel_id", data.pixel_id)
       .eq("user_id", userId)
       .gte("created_at", from);
@@ -292,6 +305,7 @@ export const getPixelStats = createServerFn({ method: "GET" })
     const clicks = rows?.length ?? 0;
     let joins = 0, offerClicks = 0, registers = 0, deposits = 0, revenue = 0;
     let views = 0, leads = 0, checkouts = 0, paymentInfos = 0, purchases = 0;
+    let abandonedCarts = 0, chargebacks = 0, refunds = 0;
     for (const r of (rows ?? []) as any[]) {
       if (r.joined_at) joins++;
       if (r.clicked_offer_at) offerClicks++;
@@ -302,7 +316,10 @@ export const getPixelStats = createServerFn({ method: "GET" })
       if (r.checkout_at) checkouts++;
       if (r.payment_info_at) paymentInfos++;
       if (r.purchased_at) purchases++;
-      if (r.sale_value) revenue += Number(r.sale_value);
+      if (r.abandoned_cart_at) abandonedCarts++;
+      if (r.chargeback_at) chargebacks++;
+      if (r.refunded_at) refunds++;
+      if (r.sale_value && !r.refunded_at && !r.chargeback_at) revenue += Number(r.sale_value);
     }
 
     // daily series
@@ -320,7 +337,7 @@ export const getPixelStats = createServerFn({ method: "GET" })
       .sort((a, b) => a[0].localeCompare(b[0]))
       .map(([day, v]) => ({ day, ...v }));
 
-    return { clicks, joins, offerClicks, registers, deposits, views, leads, checkouts, paymentInfos, purchases, revenue, series };
+    return { clicks, joins, offerClicks, registers, deposits, views, leads, checkouts, paymentInfos, purchases, abandonedCarts, chargebacks, refunds, revenue, series };
   });
 
 export const getAttribution = createServerFn({ method: "GET" })
@@ -368,6 +385,109 @@ export const getAttribution = createServerFn({ method: "GET" })
       agg.set(key, cur);
     }
     return Array.from(agg.values()).sort((a, b) => b.clicks - a.clicks).slice(0, 200);
+  });
+
+export const getDRDashboardStats = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({
+    pixel_id: z.string().uuid(),
+    days: z.number().min(1).max(365).default(30),
+  }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    // ownership
+    const { data: pixel } = await supabase
+      .from("tracking_pixels" as never)
+      .select("id, meta_ad_account_id")
+      .eq("id", data.pixel_id)
+      .maybeSingle();
+    if (!pixel) throw new Error("Pixel não encontrado");
+
+    const from = new Date(Date.now() - data.days * 86400000).toISOString();
+    const { data: rows, error } = await supabaseAdmin
+      .from("tracking_clicks" as never)
+      .select(`utm_source, utm_medium, utm_campaign, utm_content, viewed_at, lead_at, checkout_at, payment_info_at, purchased_at, abandoned_cart_at, refunded_at, chargeback_at, sale_value`)
+      .eq("pixel_id", data.pixel_id)
+      .eq("user_id", userId)
+      .gte("created_at", from);
+    
+    if (error) throw new Error(error.message);
+
+    // Agregação local (Telesignal)
+    const campaigns = new Map<string, any>();
+    const adsets = new Map<string, any>();
+    const ads = new Map<string, any>();
+
+    const getAgg = (map: Map<string, any>, key: string) => {
+      const k = key || "(sem valor)";
+      if (!map.has(k)) {
+        map.set(k, { name: k, clicks: 0, leads: 0, checkouts: 0, purchases: 0, paymentInfos: 0, revenue: 0, spend: 0, cpc: 0, cpm: 0, ctr: 0 });
+      }
+      return map.get(k);
+    };
+
+    for (const r of (rows ?? []) as any[]) {
+      // Usar fallback se null, mas para simplificar:
+      const cCamp = getAgg(campaigns, r.utm_campaign);
+      const cAdset = getAgg(adsets, r.utm_medium);
+      const cAd = getAgg(ads, r.utm_content);
+
+      [cCamp, cAdset, cAd].forEach(c => {
+        if (r.viewed_at) c.clicks++;
+        if (r.lead_at) c.leads++;
+        if (r.checkout_at) c.checkouts++;
+        if (r.purchased_at) c.purchases++;
+        if (r.payment_info_at) c.paymentInfos++;
+        if (r.sale_value && !r.refunded_at && !r.chargeback_at) c.revenue += Number(r.sale_value);
+      });
+    }
+
+    // Busca gastos do Meta Ads se configurado
+    let metaCampaigns: any[] = [];
+    if ((pixel as any).meta_ad_account_id) {
+      try {
+        const { fetchMetaInsights } = await import("./meta-ads.functions");
+        metaCampaigns = await fetchMetaInsights({ data: { accountId: (pixel as any).meta_ad_account_id, level: "campaign", days: data.days }, context });
+        
+        // Merge nos gastos da campanha baseados no nome ou ID
+        for (const meta of metaCampaigns) {
+          const spend = Number(meta.spend || 0);
+          const cpm = Number(meta.cpm || 0);
+          const cpc = Number(meta.cpc || 0);
+          const ctr = Number(meta.ctr || 0);
+          
+          // Procurar na UTM se há o ID da campanha ou o nome exato
+          for (const [k, v] of campaigns.entries()) {
+            if (k.includes(meta.campaign_id) || k === meta.campaign_name) {
+              v.spend += spend;
+              v.cpm = cpm;
+              v.cpc = cpc;
+              v.ctr = ctr;
+              v.meta_id = meta.campaign_id;
+              // break; (não break para caso tenha várias UTMs da mesma)
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Falha ao buscar insights Meta:", err);
+      }
+    }
+
+    const calcMetrics = (arr: any[]) => arr.map(a => {
+      a.profit = a.revenue - a.spend;
+      a.roi = a.spend > 0 ? a.profit / a.spend : 0;
+      a.cpa = a.purchases > 0 ? a.spend / a.purchases : 0;
+      a.cpi = a.checkouts > 0 ? a.spend / a.checkouts : 0;
+      a.convRate = a.clicks > 0 ? (a.purchases / a.clicks) * 100 : 0;
+      return a;
+    }).sort((a, b) => b.revenue - a.revenue);
+
+    return {
+      campaigns: calcMetrics(Array.from(campaigns.values())),
+      adsets: calcMetrics(Array.from(adsets.values())),
+      ads: calcMetrics(Array.from(ads.values())),
+      rawMetaCampaigns: metaCampaigns,
+    };
   });
 
 // ============ DOMAINS ============
