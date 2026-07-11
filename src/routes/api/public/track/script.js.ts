@@ -9,8 +9,8 @@ export const Route = createFileRoute("/api/public/track/script/js")({
       GET: async ({ request }) => {
         const url = new URL(request.url);
         // Garante que usa https em produção se não for localhost
-        const origin = url.hostname === "localhost" ? url.origin : \`https://\${url.hostname}\`;
-        const scriptContent = \`
+        const origin = url.hostname === "localhost" ? url.origin : `https://${url.hostname}`;
+        const scriptContent = `
 (function() {
   if (window.__TELE_SIGNAL_TRACKED) return;
   window.__TELE_SIGNAL_TRACKED = true;
@@ -21,7 +21,7 @@ export const Route = createFileRoute("/api/public/track/script/js")({
     return;
   }
 
-  const endpoint = "\${origin}/api/public/track/dr/" + PIXEL_ID;
+  const endpoint = "${origin}/api/public/track/dr/" + PIXEL_ID;
   const urlParams = new URLSearchParams(window.location.search);
   
   // Extrai as UTMs e ids
