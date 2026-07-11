@@ -121,13 +121,20 @@ export async function fireTrackingEvent(opts: {
     customData,
   });
 
+  // SEMPRE atualiza a data no banco para que o dashboard mostre os dados.
+  // Só atualiza meta_events_sent se o Meta aceitar com sucesso.
+  const updatePayload: any = {
+    [STAGE_TO_COLUMN[opts.stage]]: new Date().toISOString()
+  };
+
   if (result.ok) {
-    const nextSent = { ...sent, [opts.stage]: eventId };
-    await supabaseAdmin
-      .from("tracking_clicks")
-      .update({ meta_events_sent: nextSent as never, [STAGE_TO_COLUMN[opts.stage]]: new Date().toISOString() } as never)
-      .eq("click_id", opts.clickId);
+    updatePayload.meta_events_sent = { ...sent, [opts.stage]: eventId };
   }
+
+  await supabaseAdmin
+    .from("tracking_clicks")
+    .update(updatePayload as never)
+    .eq("click_id", opts.clickId);
 
   return { ok: result.ok, eventName, eventId, error: result.error };
 }
