@@ -1,0 +1,4 @@
+ALTER TABLE public.tracking_clicks
+  ADD COLUMN IF NOT EXISTS abandoned_cart_at TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS chargeback_at TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS refunded_at TIMESTAMPTZ;

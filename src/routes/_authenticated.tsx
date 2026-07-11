@@ -37,6 +37,8 @@ import {
   ShoppingBag,
   BarChart2,
   Mic,
+  Bell,
+  Tag,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -68,6 +70,7 @@ const trackingItems = [
   { to: "/trackeamento/mensagens", label: "Mensagens", icon: MessageCircle },
   { to: "/trackeamento/postbacks", label: "Postbacks", icon: Repeat },
   { to: "/trackeamento/integracoes", label: "Integrações", icon: Link2 },
+  { to: "/trackeamento/utms", label: "UTMs", icon: Tag },
 ] as const;
 
 const trackingLockedItems: { label: string; icon: any }[] = [];
@@ -86,6 +89,7 @@ const botLogsItem = { to: "/bots/logs", label: "Logs dos Bots", icon: ScrollText
 
 const accountItems = [
   { to: "/recarga", label: "Assinatura", icon: Wallet, tour: "nav-recarga" },
+  { to: "/notificacoes", label: "Notificações", icon: Bell, tour: "nav-notificacoes" },
   { to: "/perfil", label: "Minha conta", icon: UserCircle, tour: "nav-perfil" },
 ] as const;
 

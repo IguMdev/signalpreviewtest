@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { allocateAndAutoDispatch } from "@/lib/engagement.functions";
+import { sendWebPushNotification } from "@/lib/webpush.server";
 
 // Kirvano envia POST com payload da venda. Autenticamos via header
 // `x-kirvano-token` comparado ao secret KIRVANO_WEBHOOK_TOKEN.
@@ -61,7 +62,16 @@ export const Route = createFileRoute("/api/public/kirvano/webhook")({
         const isApproved = event.includes("APPROVED") || event.includes("PAID") || event.includes("ACTIVE");
         const isCanceled = event.includes("CANCEL") || event.includes("REFUND") || event.includes("CHARGEBACK");
 
+
         if (isApproved) {
+          try {
+            await sendWebPushNotification(userId, {
+              title: "Venda aprovada! | Telesignal",
+              body: `Valor: ${payload.currency === "BRL" ? "R$ " : ""}${payload.total_price || ""}`,
+              icon: "/favicon.ico"
+            });
+          } catch(e) {}
+          
           const now = new Date();
           const periodEnd = new Date(now);
           periodEnd.setMonth(periodEnd.getMonth() + 1);

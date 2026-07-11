@@ -28,7 +28,7 @@ export function deriveFbc(fbc: string | null | undefined, fbclid: string | null 
 
 export type TrackingStage =
   | "join" | "offer_click" | "register" | "deposit"            // telegram
-  | "view" | "lead" | "checkout" | "payment_info" | "purchase"; // direct response
+  | "view" | "lead" | "checkout" | "payment_info" | "purchase" | "abandoned_cart" | "chargeback" | "refund"; // direct response
 
 const STAGE_TO_COLUMN: Record<TrackingStage, string> = {
   join: "joined_at",
@@ -40,6 +40,9 @@ const STAGE_TO_COLUMN: Record<TrackingStage, string> = {
   checkout: "checkout_at",
   payment_info: "payment_info_at",
   purchase: "purchased_at",
+  abandoned_cart: "abandoned_cart_at",
+  chargeback: "chargeback_at",
+  refund: "refunded_at",
 };
 
 /**
@@ -81,7 +84,10 @@ export async function fireTrackingEvent(opts: {
     opts.stage === "lead" ? pixel.event_on_lead :
     opts.stage === "checkout" ? pixel.event_on_checkout :
     opts.stage === "payment_info" ? pixel.event_on_payment_info :
-    pixel.event_on_purchase;
+    opts.stage === "purchase" ? pixel.event_on_purchase :
+    opts.stage === "abandoned_cart" ? "off" :
+    opts.stage === "chargeback" ? "off" :
+    opts.stage === "refund" ? "off" : "off";
 
   if (!eventName || eventName === "off") {
     return { ok: false, error: "event disabled for stage" };

@@ -14,7 +14,7 @@ import { getMySubscriptions } from "@/lib/engagement.functions";
 import { useServerFn } from "@tanstack/react-start";
 import { formatDistanceToNow, isPast } from "date-fns";
 import { ptBR } from "date-fns/locale";
-
+import { WebPushButton } from "@/components/WebPushButton";
 export const Route = createFileRoute("/_authenticated/perfil")({
   component: PerfilPage,
 });
@@ -188,10 +188,12 @@ function PerfilPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Minha Conta</h1>
-          <p className="text-sm text-muted-foreground">Gerencie sua conta e preferências.</p>
+      <div className="flex items-center justify-between mb-8">
+        <div className="flex flex-col gap-2">
+          <h1 className="text-3xl font-bold tracking-tight">Minha Conta</h1>
+          <p className="text-muted-foreground">
+            Gerencie sua conta e preferências.
+          </p>
         </div>
         <Button variant="outline" size="sm" onClick={() => signOut()}>
           <LogOut className="size-4 mr-1.5" /> Sair

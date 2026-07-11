@@ -10,7 +10,7 @@ import {
   type TrackingStage,
 } from "@/lib/tracking.server";
 
-const DR_STAGES = ["view", "lead", "checkout", "payment_info", "purchase"] as const;
+const DR_STAGES = ["view", "lead", "checkout", "payment_info", "purchase", "abandoned_cart", "chargeback", "refund"] as const;
 
 const bodySchema = z.object({
   stage: z.enum(DR_STAGES),

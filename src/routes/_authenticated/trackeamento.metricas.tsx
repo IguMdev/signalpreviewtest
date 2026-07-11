@@ -1,14 +1,18 @@
 import { createFileRoute, ClientOnly } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { useQuery } from "@tanstack/react-query";
-import { getPixelStats, listRecentClicks } from "@/lib/tracking.functions";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { getPixelStats, listRecentClicks, getDRDashboardStats } from "@/lib/tracking.functions";
+import { toggleMetaCampaign } from "@/lib/meta-ads.functions";
+import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Calendar as CalendarIcon, Filter, Download, Check, X, ChevronDown } from "lucide-react";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Switch } from "@/components/ui/switch";
+import { Calendar as CalendarIcon, Filter, Download, Check, X, ChevronDown, DollarSign, Users, MousePointer2 } from "lucide-react";
 import { PixelFilterBar, usePixelFilter } from "@/components/tracking/PixelFilter";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { format } from "date-fns";
@@ -99,7 +103,7 @@ function MetricsView({ pixelId, mode }: { pixelId: string | null; mode: "telegra
           case "UTM Campaign": return (r.utm_campaign ?? "").toLowerCase().includes(v);
           case "UTM Content": return (r.utm_content ?? "").toLowerCase().includes(v);
           case "Pagina (URL)": return (r.landing_url ?? "").toLowerCase().includes(v);
-          case "Status": return ((r.deposited_at ? "deposito" : r.registered_at ? "cadastro" : r.joined_at ? "entrou" : "clique")).includes(v);
+          case "Status": return ((r.refunded_at ? "reembolso" : r.chargeback_at ? "chargeback" : r.abandoned_cart_at ? "abandono" : r.purchased_at ? "compra" : r.payment_info_at ? "pgto" : r.checkout_at ? "checkout" : r.lead_at ? "lead" : r.viewed_at ? "view" : r.deposited_at ? "deposito" : r.registered_at ? "cadastro" : r.joined_at ? "entrou" : "clique")).includes(v);
           case "Trackeado": return (r.utm_source || r.fbclid) ? v === "sim" : v === "nao";
           case "Start Bot": return r.joined_at ? v === "sim" : v === "nao";
           default: return true;
@@ -178,30 +182,12 @@ function MetricsView({ pixelId, mode }: { pixelId: string | null; mode: "telegra
         </DropdownMenu>
       </div>
 
-      {/* Big stat cards */}
+      {/* Big stat cards / DR Table */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {isDR ? (
-          <>
-            <BigStatCard
-              label="Visualizações"
-              value={entradas}
-              subA={{ label: "Leads", value: leadsCount }}
-              subB={{ label: "Lead rate", value: `${entradas > 0 ? Math.round((leadsCount/entradas)*100) : 0}%`, percent: entradas > 0 ? Math.round((leadsCount/entradas)*100) : 0 }}
-            />
-            <BigStatCard
-              label="Compras"
-              value={saidas}
-              subA={{ label: "Checkouts", value: stats.data?.checkouts ?? 0 }}
-              subB={{ label: "Conversão", value: `${taxaConv}%`, percent: taxaConv }}
-            />
-            <BigStatCard
-              label="Receita"
-              value={`R$ ${revenue.toFixed(2)}`}
-              valueSuffix=""
-              subA={{ label: "Ticket médio", value: saidas > 0 ? `R$ ${(revenue/saidas).toFixed(2)}` : "—" }}
-              subB={{ label: "Dados pgto", value: String(stats.data?.paymentInfos ?? 0), percent: entradas > 0 ? Math.round(((stats.data?.paymentInfos ?? 0)/entradas)*100) : 0 }}
-            />
-          </>
+          <div className="col-span-1 md:col-span-3">
+            <DRDashboardTable pixelId={pixelId!} days={days} />
+          </div>
         ) : (
           <>
             <BigStatCard label="Entradas" value={entradas} subA={{ label: "Trackeadas", value: trackeadas }} subB={{ label: "Taxa de trackeamento", value: `${taxaEntrada}%`, percent: taxaEntrada }} />
@@ -211,9 +197,11 @@ function MetricsView({ pixelId, mode }: { pixelId: string | null; mode: "telegra
         )}
       </div>
 
-      {/* Visao Geral */}
-      <Card>
-        <CardContent className="p-6 space-y-4">
+      {/* Visao Geral & Leads (Somente Telegram) */}
+      {!isDR && (
+        <>
+          <Card>
+            <CardContent className="p-6 space-y-4">
           <h2 className="text-lg font-semibold">Visao Geral</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
             <DonutCard title="Por Pais" data={byCountry} />
@@ -252,7 +240,7 @@ function MetricsView({ pixelId, mode }: { pixelId: string | null; mode: "telegra
                 {filtered.map((c) => {
                   const d = new Date(c.created_at);
                   const status = isDR
-                    ? (c.purchased_at ? "Compra" : c.payment_info_at ? "Pgto" : c.checkout_at ? "Checkout" : c.lead_at ? "Lead" : c.viewed_at ? "View" : "Clique")
+                    ? (c.refunded_at ? "Reembolso" : c.chargeback_at ? "Chargeback" : c.purchased_at ? "Compra" : c.abandoned_cart_at ? "Abandono" : c.payment_info_at ? "Pgto" : c.checkout_at ? "Checkout" : c.lead_at ? "Lead" : c.viewed_at ? "View" : "Clique")
                     : (c.deposited_at ? "Depósito" : c.registered_at ? "Cadastro" : c.joined_at ? "Entrou" : "Clique");
                   const tracked = !!(c.utm_source || c.fbclid);
                   if (isDR) return (
@@ -261,7 +249,12 @@ function MetricsView({ pixelId, mode }: { pixelId: string | null; mode: "telegra
                       <td className="p-3 whitespace-nowrap">{format(d, "HH:mm")}</td>
                       <td className="p-3">{tracked ? <Check className="size-4 text-emerald-500" /> : <X className="size-4 text-muted-foreground" />}</td>
                       <td className="p-3 whitespace-nowrap">{c.external_id ? `${String(c.external_id).slice(0,10)}…` : "-"}</td>
-                      <td className="p-3 text-emerald-500 whitespace-nowrap">{status}</td>
+                      <td className={`p-3 whitespace-nowrap ${
+                        c.refunded_at ? "text-red-400" :
+                        c.chargeback_at ? "text-red-500" :
+                        c.purchased_at ? "text-emerald-500" :
+                        c.abandoned_cart_at ? "text-yellow-500" : "text-emerald-500"
+                      }`}>{status}</td>
                       <td className="p-3 whitespace-nowrap">{c.sale_value ? `R$ ${Number(c.sale_value).toFixed(2)}` : "-"}</td>
                       <td className="p-3 max-w-[180px] truncate text-primary">{c.landing_url ?? "-"}</td>
                       <td className="p-3 whitespace-nowrap">{c.utm_source ?? "-"}</td>
@@ -300,6 +293,8 @@ function MetricsView({ pixelId, mode }: { pixelId: string | null; mode: "telegra
           </div>
         </CardContent>
       </Card>
+      </>
+      )}
     </>
   );
 }
@@ -318,7 +313,7 @@ function exportCsv(rows: any[]) {
   const lines = [header.join(",")];
   for (const c of rows) {
     const d = new Date(c.created_at);
-    const status = c.deposited_at ? "Deposito" : c.registered_at ? "Cadastro" : c.joined_at ? "Entrou" : "Clique";
+    const status = c.refunded_at ? "Reembolso" : c.chargeback_at ? "Chargeback" : c.purchased_at ? "Compra" : c.abandoned_cart_at ? "Abandono" : c.deposited_at ? "Deposito" : c.registered_at ? "Cadastro" : c.joined_at ? "Entrou" : "Clique";
     lines.push([
       format(d, "dd/MM/yyyy"), format(d, "HH:mm"), (c.utm_source || c.fbclid) ? "sim" : "nao",
       c.tg_user_id ?? "", c.tg_username ?? "", status, c.landing_url ?? "",
@@ -400,6 +395,173 @@ function DonutCard({ title, data }: { title: string; data: { name: string; value
           </span>
         ))}
       </div>
+    </div>
+  );
+}
+
+// ============== DR DASHBOARD TABLE (UTMIFY STYLE) ==============
+
+function DRDashboardTable({ pixelId, days }: { pixelId: string; days: number }) {
+  const getStatsFn = useServerFn(getDRDashboardStats);
+  const toggleFn = useServerFn(toggleMetaCampaign);
+  const [activeTab, setActiveTab] = useState("campaigns");
+
+  const query = useQuery({
+    queryKey: ["dr-stats", pixelId, days],
+    queryFn: () => getStatsFn({ data: { pixel_id: pixelId, days } }),
+  });
+
+  const toggleStatus = useMutation({
+    mutationFn: (data: { objectId: string, status: "ACTIVE" | "PAUSED" }) => toggleFn({ data }),
+    onSuccess: () => {
+      toast.success("Status atualizado no Meta Ads!");
+      // Nao invalidar query para nao dar flash na UI, ou dar refetch com quiet mode
+    },
+    onError: (err: any) => toast.error(err.message),
+  });
+
+  if (query.isLoading) {
+    return <div className="p-12 text-center text-muted-foreground animate-pulse">Carregando métricas avançadas...</div>;
+  }
+
+  const data = query.data;
+  if (!data) return null;
+
+  const renderTable = (items: any[]) => (
+    <div className="rounded-xl border bg-card overflow-hidden mt-4">
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b bg-muted/30">
+              <th className="px-4 py-3 text-left font-medium text-muted-foreground">Nome</th>
+              <th className="px-4 py-3 text-right font-medium text-muted-foreground">Vendas</th>
+              <th className="px-4 py-3 text-right font-medium text-muted-foreground">Faturamento</th>
+              <th className="px-4 py-3 text-right font-medium text-muted-foreground">Gasto</th>
+              <th className="px-4 py-3 text-right font-medium text-muted-foreground">Lucro</th>
+              <th className="px-4 py-3 text-right font-medium text-muted-foreground">ROI</th>
+              <th className="px-4 py-3 text-right font-medium text-muted-foreground">CPA</th>
+              <th className="px-4 py-3 text-right font-medium text-muted-foreground">IC</th>
+              <th className="px-4 py-3 text-right font-medium text-muted-foreground">CPI</th>
+              <th className="px-4 py-3 text-right font-medium text-muted-foreground">Cliques</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border">
+            {items.length === 0 && (
+              <tr><td colSpan={10} className="p-8 text-center text-muted-foreground">Nenhum dado encontrado para este período.</td></tr>
+            )}
+            {items.map((item, i) => {
+              const metaId = item.meta_id; // Se houver match com Meta
+              // Achar o status original se for campanha (pra simplificar, vamos assumir que o rawMetaCampaigns tem os originais)
+              const metaInfo = data.rawMetaCampaigns?.find((r:any) => r.campaign_id === metaId);
+              
+              return (
+                <tr key={i} className="hover:bg-muted/30 transition-colors">
+                  <td className="px-4 py-3 max-w-[200px]">
+                    <div className="flex items-center gap-3">
+                      {metaId && (
+                        <Switch 
+                          checked={true} // Simplificação: a API não retorna o status no 'insights'. Mas podemos injetar depois.
+                          onCheckedChange={(checked) => {
+                            toggleStatus.mutate({ objectId: metaId, status: checked ? "ACTIVE" : "PAUSED" });
+                          }}
+                        />
+                      )}
+                      <span className="truncate font-medium">{item.name}</span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 text-right font-medium">{item.purchases}</td>
+                  <td className="px-4 py-3 text-right font-medium text-emerald-500">R$ {item.revenue.toFixed(2)}</td>
+                  <td className="px-4 py-3 text-right text-muted-foreground">R$ {item.spend.toFixed(2)}</td>
+                  <td className={`px-4 py-3 text-right font-medium ${item.profit >= 0 ? "text-emerald-500" : "text-red-500"}`}>
+                    R$ {item.profit.toFixed(2)}
+                  </td>
+                  <td className={`px-4 py-3 text-right font-medium ${item.roi >= 1 ? "text-emerald-500" : item.roi > 0 ? "text-yellow-500" : "text-muted-foreground"}`}>
+                    {item.roi.toFixed(2)}
+                  </td>
+                  <td className="px-4 py-3 text-right text-muted-foreground">R$ {item.cpa.toFixed(2)}</td>
+                  <td className="px-4 py-3 text-right text-muted-foreground">{item.checkouts}</td>
+                  <td className="px-4 py-3 text-right text-muted-foreground">R$ {item.cpi.toFixed(2)}</td>
+                  <td className="px-4 py-3 text-right text-muted-foreground">{item.clicks}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="space-y-4">
+      {/* Cards de Topo */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Sumarizando todos */}
+        <Card className="bg-card">
+          <CardContent className="p-6">
+            <div className="flex items-center gap-2 text-muted-foreground mb-2">
+              <DollarSign className="size-4 text-emerald-500" />
+              <p className="text-xs uppercase tracking-wider font-semibold">Faturamento</p>
+            </div>
+            <p className="text-3xl font-bold text-emerald-500">
+              R$ {data.campaigns.reduce((a:any,b:any) => a + b.revenue, 0).toFixed(2)}
+            </p>
+          </CardContent>
+        </Card>
+        <Card className="bg-card">
+          <CardContent className="p-6">
+            <div className="flex items-center gap-2 text-muted-foreground mb-2">
+              <DollarSign className="size-4 text-red-400" />
+              <p className="text-xs uppercase tracking-wider font-semibold">Gasto</p>
+            </div>
+            <p className="text-3xl font-bold">
+              R$ {data.campaigns.reduce((a:any,b:any) => a + b.spend, 0).toFixed(2)}
+            </p>
+          </CardContent>
+        </Card>
+        <Card className="bg-card">
+          <CardContent className="p-6">
+            <div className="flex items-center gap-2 text-muted-foreground mb-2">
+              <DollarSign className="size-4 text-primary" />
+              <p className="text-xs uppercase tracking-wider font-semibold">Lucro Líquido</p>
+            </div>
+            <p className="text-3xl font-bold text-primary">
+              R$ {data.campaigns.reduce((a:any,b:any) => a + b.profit, 0).toFixed(2)}
+            </p>
+          </CardContent>
+        </Card>
+        <Card className="bg-card">
+          <CardContent className="p-6">
+            <div className="flex items-center gap-2 text-muted-foreground mb-2">
+              <MousePointer2 className="size-4 text-blue-500" />
+              <p className="text-xs uppercase tracking-wider font-semibold">Vendas</p>
+            </div>
+            <p className="text-3xl font-bold">
+              {data.campaigns.reduce((a:any,b:any) => a + b.purchases, 0)}
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Tabela de Abas */}
+      <Tabs defaultValue="campaigns" value={activeTab} onValueChange={setActiveTab}>
+        <div className="flex items-center justify-between border-b pb-2">
+          <TabsList className="bg-transparent h-auto p-0 gap-6">
+            <TabsTrigger value="campaigns" className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary rounded-none px-0 py-2 font-medium">Campanhas</TabsTrigger>
+            <TabsTrigger value="adsets" className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary rounded-none px-0 py-2 font-medium">Conjuntos</TabsTrigger>
+            <TabsTrigger value="ads" className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary rounded-none px-0 py-2 font-medium">Anúncios</TabsTrigger>
+          </TabsList>
+        </div>
+
+        <TabsContent value="campaigns" className="mt-0">
+          {renderTable(data.campaigns)}
+        </TabsContent>
+        <TabsContent value="adsets" className="mt-0">
+          {renderTable(data.adsets)}
+        </TabsContent>
+        <TabsContent value="ads" className="mt-0">
+          {renderTable(data.ads)}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
