@@ -133,7 +133,7 @@ function UtmsRoute() {
         <CardContent className="p-0">
           <div className="divide-y divide-border/40">
             {UTM_SOURCES.map((source) => (
-              <div key={source.id} className="flex items-center justify-between p-4 hover:bg-white/5 transition-colors">
+              <div key={source.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 hover:bg-white/5 transition-colors">
                 <div className="flex items-center gap-4">
                   <div className="flex-shrink-0 w-10 h-10 rounded-full bg-background flex items-center justify-center shadow-sm">
                     {source.icon}
@@ -145,7 +145,7 @@ function UtmsRoute() {
                 </div>
                 <Button 
                   variant="secondary" 
-                  className="bg-primary/10 hover:bg-primary/20 text-primary border-primary/20"
+                  className="w-full sm:w-auto bg-primary/10 hover:bg-primary/20 text-primary border-primary/20"
                   onClick={() => setSelectedSource(source)}
                 >
                   <List className="w-4 h-4 mr-2" />
@@ -162,7 +162,7 @@ function UtmsRoute() {
           <CardTitle className="text-lg">Scripts</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="flex items-center justify-between p-4 hover:bg-white/5 transition-colors">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 hover:bg-white/5 transition-colors">
             <div className="flex items-center gap-4">
               <div className="flex-shrink-0 w-10 h-10 rounded-full bg-background flex items-center justify-center shadow-sm">
                 <Code2 className="w-5 h-5 text-primary" />
@@ -174,7 +174,7 @@ function UtmsRoute() {
             </div>
             <Button 
               variant="secondary" 
-              className="bg-primary/10 hover:bg-primary/20 text-primary border-primary/20"
+              className="w-full sm:w-auto bg-primary/10 hover:bg-primary/20 text-primary border-primary/20"
               onClick={handleCopyScript}
             >
               <Copy className="w-4 h-4 mr-2" />
@@ -208,7 +208,7 @@ function UtmsRoute() {
       </Card>
 
       <Dialog open={!!selectedSource} onOpenChange={(open) => !open && setSelectedSource(null)}>
-        <DialogContent className="sm:max-w-[500px] glass cyber-border">
+        <DialogContent className="sm:max-w-[500px] glass border border-primary/20">
           <DialogHeader>
             <DialogTitle>Plataforma de Vendas</DialogTitle>
             <DialogDescription>
